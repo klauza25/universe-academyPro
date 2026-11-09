@@ -130,15 +130,11 @@
 
     <div class="sheet">
         <div class="letterhead">
-            <img src="{% static 'img/logo-univers.jpg' %}" alt="Univers Academy">
+            <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}">
             <div class="org">
-                <strong>Univers Academy</strong>
-                N° RCCM : CG-BZV-01-2025-A10-02201<br>
-                NIU : P23000000257459H<br>
-                CNSS : 12052348/65<br>
-                {% blocktrans %}1<sup>er</sup> étage immeuble Monte Cristo{% endblocktrans %}<br>
-                +242-06-851-7179<br>
-                universacademy70@gmail.com
+                <strong>{{ plateforme.nom }}</strong>
+                {% for ligne in plateforme.bloc_legal %}{{ ligne }}<br>{% endfor %}
+                {% for ligne in plateforme.contacts %}{{ ligne }}<br>{% endfor %}
             </div>
         </div>
 
@@ -193,7 +189,7 @@
         </table>
 
         <div class="footer">
-            <span>Univers Academy — {% translate "Feuille de suivi de l'apprenant" %}</span>
+            <span>{{ plateforme.nom }} — {% translate "Feuille de suivi de l'apprenant" %}</span>
             <span>{% blocktrans with d=today|date:"d/m/Y" %}Édité le {{ d }}{% endblocktrans %}</span>
         </div>
     </div>

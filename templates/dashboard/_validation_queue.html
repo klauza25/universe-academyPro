@@ -29,7 +29,7 @@
                         </div>
                     </td>
                     <td>{{ enrollment.session.course.title }}</td>
-                    <td>{{ enrollment.net_amount }} FCFA</td>
+                    <td>{{ enrollment.net_amount }} {{ plateforme.devise }}</td>
                     <td>{{ enrollment.enrolled_at|date:"d/m/Y H:i" }}</td>
                     <td class="flex flex-wrap gap-2">
                         <a class="ua-btn ua-btn-ghost ua-btn-sm"

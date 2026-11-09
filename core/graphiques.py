@@ -125,7 +125,7 @@ def restes_par_formation(limite: int = 8) -> dict:
     )
     par_formation: dict = {}
     for dossier in dossiers:
-        reste = max(dossier.net_amount - (dossier.paye or 0), 0)
+        reste = max(dossier.total_due - (dossier.paye or 0), 0)
         if not reste:
             continue
         titre = dossier.session.course.title if dossier.session_id else _('Sans groupe')

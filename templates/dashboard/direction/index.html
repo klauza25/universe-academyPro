@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Direction — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Direction" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}
 <a href="{% url 'core:dashboard:direction-dashboard' %}" class="ua-nav-link is-active">
@@ -29,16 +29,17 @@
 
 {% block hero_title %}{% translate "Pilotage financier et académique" %}{% endblock %}
 {% block hero_text %}
-{% blocktrans with t=total_students s=active_sessions r=total_revenue|floatformat:0 %}{{ t }} étudiant(s) actif(s), {{ s }} session(s) en cours et {{ r }} FCFA de recettes encaissées.{% endblocktrans %}
+{% blocktrans with dv=plateforme.devise t=active_students s=active_sessions r=total_revenue|floatformat:0 %}{{ t }} étudiant(s) actif(s), {{ s }} session(s) en cours et {{ r }} {{ dv }} de recettes encaissées.{% endblocktrans %}
 {% endblock %}
 {% block hero_aside %}
 <div class="ua-hero-card">
     <p class="ua-hero-card-value">{{ total_revenue|floatformat:0 }}</p>
-    <p class="ua-hero-card-label">{% translate "FCFA de recettes" %}</p>
+    <p class="ua-hero-card-label">{% blocktrans with dv=plateforme.devise trimmed %}{{ dv }} de recettes{% endblocktrans %}</p>
 </div>
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 <section class="ua-card ua-card-pad mb-5">
     <form method="get" class="flex flex-wrap gap-3 items-end">
         <div>
@@ -74,7 +75,7 @@
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
     {% include "dashboard/_stat.html" with label=lbl_recettes value=total_revenue|floatformat:0 icon="wallet" tone="green" hint=hint_recettes %}
     {% include "dashboard/_stat.html" with label=lbl_depenses value=total_expenses|floatformat:0 icon="trending-up" tone="rose" hint=hint_depenses %}
-    {% include "dashboard/_stat.html" with label=lbl_etudiants value=total_students icon="graduation" tone="indigo" hint=hint_etudiants %}
+    {% include "dashboard/_stat.html" with label=lbl_etudiants value=active_students icon="graduation" tone="indigo" hint=hint_etudiants %}
     {% include "dashboard/_stat.html" with label=lbl_sessions value=active_sessions icon="presentation" tone="sky" hint=hint_sessions %}
 </div>
 
@@ -103,7 +104,7 @@
                 <p class="text-sm font-semibold">{{ row.account.name }}</p>
                 <p class="text-xs ua-muted">{{ row.account.get_kind_display }}</p>
             </div>
-            <span class="text-sm font-bold">{{ row.balance }} FCFA</span>
+            <span class="text-sm font-bold">{{ row.balance }} {{ plateforme.devise }}</span>
         </div>
         {% empty %}
         <p class="ua-empty">{% translate "Aucune caisse active." %}</p>
@@ -151,7 +152,7 @@
                         </td>
                         <td class="font-mono text-xs">{{ payment.reference }}</td>
                         <td class="ua-muted whitespace-nowrap">{{ payment.paid_at|date:"d/m/Y" }}</td>
-                        <td class="text-right font-bold" style="color:#15803d;">{{ payment.amount|floatformat:0 }} FCFA</td>
+                        <td class="text-right font-bold" style="color:#15803d;">{{ payment.amount|floatformat:0 }} {{ plateforme.devise }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="4" class="ua-empty">{% translate "Aucun paiement enregistré" %}</td></tr>
@@ -176,7 +177,7 @@
                         <td>{{ tx.label }}</td>
                         <td>{{ tx.account.name }}</td>
                         <td class="text-right font-semibold" {% if tx.tx_type == 'OUT' %}style="color:#be123c;"{% else %}style="color:#15803d;"{% endif %}>
-                            {% if tx.tx_type == 'OUT' %}−{% endif %}{{ tx.amount }} FCFA
+                            {% if tx.tx_type == 'OUT' %}−{% endif %}{{ tx.amount }} {{ plateforme.devise }}
                         </td>
                     </tr>
                     {% empty %}

@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Détail utilisateur — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Détail utilisateur" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
 
@@ -60,14 +60,6 @@
             <div>
                 <p class="ua-stat-label">{% translate "Code interne" %}</p>
                 <p class="text-sm font-semibold font-mono mt-1" style="color:#1e2044;">{{ profile_user.internal_code|default:"—" }}</p>
-            </div>
-            <div>
-                <p class="ua-stat-label">{% translate "Compte Clerk" %}</p>
-                {% if profile_user.clerk_user_id %}
-                <p class="text-sm font-semibold font-mono mt-1 break-all" style="color:#1e2044;">{{ profile_user.clerk_user_id }}</p>
-                {% else %}
-                <p class="text-xs ua-muted mt-1">{% translate "Non lié — liaison automatique à la première connexion" %}</p>
-                {% endif %}
             </div>
         </div>
     </section>

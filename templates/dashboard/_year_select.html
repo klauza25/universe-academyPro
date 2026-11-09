@@ -1,0 +1,12 @@
+{% load i18n %}
+{# Le même sélecteur d'année sur tous les écrans filtrés : « Toutes les années » ou l'année posée. #}
+<div class="min-w-56">
+    <label class="text-xs ua-muted block mb-1" for="id_annee_academique">{% translate "Année académique" %}</label>
+    <select id="id_annee_academique" name="annee_academique" onchange="this.form.submit()"
+            class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
+        <option value="{{ toutes }}" {% if not annee_academique %}selected{% endif %}>{% translate "Toutes les années" %}</option>
+        {% for une_annee in annees %}
+        <option value="{{ une_annee.id }}" {% if annee_academique and annee_academique.id == une_annee.id %}selected{% endif %}>{{ une_annee.label }}</option>
+        {% endfor %}
+    </select>
+</div>

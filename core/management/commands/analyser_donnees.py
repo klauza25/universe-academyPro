@@ -887,8 +887,8 @@ class Command(BaseCommand):
             '6. **Mois et années** : dans les onglets, les colonnes ne portent que le nom du '
             'mois ; l\'année est déduite de la date d\'inscription. Le journal, lui, indique '
             '« Mois payé » et « De l\'année » : c\'est lui qui fera foi à la réconciliation.',
-            '7. **Orthographe de la marque** : les documents écrivent « UNIVERSE ACADEMY », '
-            'l\'interface « Univers Academy ». Confirmer le nom à afficher.',
+            '7. **Orthographe de la marque** : la direction a posé « Universe Academy » dans les '
+            'réglages de l\'établissement ; écrans, reçus et lettres imprimées s\'y règlent.',
             '8. **Equipe Romard** : sans lien avec l\'école ; à écarter.',
             '9. **Registre des anciens et « FRANCAIS »** : 26 lignes du registre des anciens et '
             'l\'onglet FRANCAIS sont écartés faute d\'appariement certain avec le catalogue ; '

@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Présences — Univers Academy" %} — {{ record.session.course.title }}{% endblock %}
+{% block title %}{% translate "Présences" %} — {{ plateforme.nom }} — {{ record.session.course.title }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}

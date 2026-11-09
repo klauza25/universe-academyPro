@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
-{% load ui i18n %}
+{% load ui i18n core_tags %}
 
-{% block title %}{% translate "Encaisser les mensualités — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Encaisser les mensualités" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -14,11 +14,11 @@
     <div>
         <h1 class="ua-page-title">{% translate "Encaisser les mois d'un dossier" %}</h1>
         <p class="ua-page-sub">
-            {% translate "Cochez les mois réglés, ajustez si besoin, un paiement est créé par mois." %}
+        {% translate "Cochez un mois pour enregistrer le montant versé; un solde partiel pourra être complété ensuite." %}
         </p>
     </div>
     <div class="flex flex-wrap gap-2">
-        <a href="{% url 'core:dashboard:payment-create' %}" class="ua-btn ua-btn-ghost">
+        <a href="{% url 'core:dashboard:payment-create' %}?{% query_replace %}" class="ua-btn ua-btn-ghost">
             {% translate "Un seul paiement" %}
         </a>
         <a href="{% url 'core:dashboard:journal' %}" class="ua-btn ua-btn-ghost">
@@ -26,6 +26,8 @@
         </a>
     </div>
 </div>
+
+{% include "dashboard/_year_band.html" %}
 
 {% if form.non_field_errors %}
 <div class="ua-card ua-card-pad text-sm font-semibold text-rose-600 mb-4">
@@ -69,7 +71,7 @@
                     <tr>
                         <th class="w-10">{% translate "À encaisser" %}</th>
                         <th>{% translate "Motif" %}</th>
-                        <th>{% translate "Montant (FCFA)" %}</th>
+                        <th>{% blocktrans with dv=plateforme.devise trimmed %}Montant ({{ dv }}){% endblocktrans %}</th>
                         <th>{% translate "Ce que la caisse sait déjà" %}</th>
                     </tr>
                 </thead>
@@ -104,7 +106,9 @@
                     {% for ligne in lignes %}
                     <tr{% if ligne.paye %} class="opacity-60"{% endif %}>
                         <td>
-                            {% if ligne.paye %}
+                            {% if not ligne.eligible %}
+                            <span class="ua-muted">—</span>
+                            {% elif ligne.paye %}
                             <span class="ua-badge ua-badge-emerald">{% translate "Réglé" %}</span>
                             {% else %}
                             <input type="checkbox" name="mois" value="{{ ligne.numero }}">
@@ -114,8 +118,10 @@
                             {% blocktrans with m=ligne.libelle a=annee %}Mensualité de {{ m }} {{ a }}{% endblocktrans %}
                         </td>
                         <td>
-                            {% if ligne.paye %}
-                            <span class="ua-muted">{{ ligne.paye.amount }}</span>
+                            {% if not ligne.eligible %}
+                            <span class="ua-muted">—</span>
+                            {% elif ligne.paye %}
+                            <span class="ua-muted">{{ ligne.attendu }}</span>
                             {% else %}
                             <input type="number" name="montant_{{ ligne.numero }}"
                                    value="{{ ligne.montant }}" min="1" step="1000"
@@ -123,14 +129,19 @@
                             {% endif %}
                         </td>
                         <td>
-                            {% if ligne.paye %}
+                            {% if ligne.verse %}
                             <span class="ua-cell-sub">
-                                {% blocktrans with d=ligne.paye.paid_at|date:"d/m/Y" r=ligne.paye.reference %}Encaissé le {{ d }} ({{ r }}){% endblocktrans %}
+                                {% blocktrans with v=ligne.verse a=ligne.attendu d=ligne.dernier.paid_at|date:"d/m/Y" r=ligne.dernier.reference %}Versé : {{ v }} / {{ a }} · dernier versement le {{ d }} ({{ r }}){% endblocktrans %}
                             </span>
+                            {% if ligne.partiel %}
+                            <span class="ua-badge ua-badge-amber">{% translate "Partiel" %}</span>
+                            {% endif %}
+                            {% elif not ligne.eligible %}
+                            <span class="ua-muted text-xs">{% translate "Hors période d'inscription" %}</span>
                             {% else %}
                                 {% if ligne.montant != mensualite %}
                                 <span class="ua-cell-sub">
-                                    {% blocktrans with m=mensualite %}Suggestion du dossier : {{ m }} FCFA.{% endblocktrans %}
+                                    {% blocktrans with dv=plateforme.devise m=mensualite %}Suggestion du dossier : {{ m }} {{ dv }}.{% endblocktrans %}
                                 </span>
                                 {% else %}
                                 <span class="ua-muted text-xs">{% translate "Mois libre" %}</span>
@@ -143,11 +154,11 @@
             </table>
         </div>
         <p class="text-xs ua-muted mt-3">
-            {% blocktrans %}Les montants proposés viennent du dossier : net dû réparti sur la durée de la formation. Un mois déjà encaissé ne se recoche pas.{% endblocktrans %}
+            {% blocktrans %}Le montant proposé est le reste de l'échéance du mois. La mensualité dépend du tarif figé à l'inscription et de la remise accordée.{% endblocktrans %}
         </p>
         {% else %}
         <p class="ua-empty mt-5">
-            {% translate "Choisissez un étudiant puis son dossier : la grille des douze mois s'affiche ici." %}
+            {% translate "Choisissez un étudiant puis son dossier : les mois de sa période d'inscription s'affichent ici." %}
         </p>
         {% endif %}
 
@@ -265,7 +276,7 @@
             var box = row.querySelector('input[type="number"]');
             if (box && !box.disabled) { sum += parseInt(box.value, 10) || 0; }
         });
-        readout.textContent = sumLabel + ' ' + sum.toLocaleString('fr-FR') + ' FCFA.';
+        readout.textContent = sumLabel + ' ' + sum.toLocaleString('fr-FR') + ' {{ plateforme.devise }}.';
     }
     document.addEventListener('input', recount);
     document.addEventListener('change', recount);

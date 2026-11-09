@@ -227,3 +227,49 @@ class ClocheRappelTest(BusinessTestBase):
 
         self.assertContains(page, 'Draft cash entries to post')
         self.assertContains(page, 'To process')
+
+    def test_le_sondage_detecte_les_demandes_accessibles_en_temps_reel(self):
+        client = self.client_for(self.assistant)
+        page = client.get(self.route, follow=True)
+        self.assertContains(page, 'data-poll-url')
+        url = reverse('core:dashboard:notifications-poll')
+        avant = client.get(url).json()['event_cursor']
+
+        AccessRequest.objects.create(
+            user=self.etudiant, requested_role=RoleKey.ETUDIANT,
+        )
+
+        reponse = client.get(url)
+        self.assertEqual(reponse.status_code, 200)
+        self.assertNotEqual(reponse.json()['event_cursor'], avant)
+        self.assertEqual(reponse.json()['total'], 1)
+
+    def test_une_demande_declenche_le_sondage_sur_tous_les_dashboards(self):
+        client = self.client_for(self.assistant)
+        url = reverse('core:dashboard:notifications-poll')
+        avant = client.get(url).json()['event_cursor']
+
+        AccessRequest.objects.create(
+            user=self.etudiant, requested_role=RoleKey.FORMATEUR,
+        )
+
+        etat = client.get(url).json()
+        self.assertNotEqual(etat['event_cursor'], avant)
+        self.assertEqual(etat['total'], 0)
+
+    def test_une_notification_declenche_le_sondage_sur_tous_les_dashboards(self):
+        client = self.client_for(self.assistant)
+        url = reverse('core:dashboard:notifications-poll')
+        avant = client.get(url).json()['event_cursor']
+
+        self.notification(self.etudiant)
+
+        etat = client.get(url).json()
+        self.assertNotEqual(etat['event_cursor'], avant)
+        self.assertEqual(etat['total'], 0)
+
+    def test_le_sondage_est_reserve_aux_comptes_actifs(self):
+        reponse = self.client.get(
+            reverse('core:dashboard:notifications-poll'),
+        )
+        self.assertEqual(reponse.status_code, 302)

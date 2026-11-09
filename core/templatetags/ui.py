@@ -86,6 +86,18 @@ def icon(name, css="ua-icon"):
     )
 
 
+@register.inclusion_tag('dashboard/_compteurs.html')
+def compteurs():
+    """La bande de chiffres commune à tous les tableaux de bord.
+
+    Elle est appelée depuis chaque page d'accueil de rôle : le calcul reste
+    ainsi cantonné aux tableaux de bord, jamais aux pages publiques.
+    """
+    from core.utils import platform_counts
+
+    return platform_counts()
+
+
 @register.inclusion_tag('dashboard/_cloche.html', takes_context=True)
 def cloche(context):
     """La pastille persistante de la barre : le travail en attente, pas le temps.
@@ -94,5 +106,12 @@ def cloche(context):
     servir de rappel. Ici le compteur reste allumé tant qu'une file n'est pas
     vidée par celui qui doit la traiter.
     """
+    from core.taches import marqueur_evenements
+
     taches, notifications, total = tableau_des_files(context['user'])
-    return {'taches': taches, 'notifications': notifications, 'total': total}
+    return {
+        'taches': taches,
+        'notifications': notifications,
+        'total': total,
+        'event_cursor': marqueur_evenements(context['user']),
+    }

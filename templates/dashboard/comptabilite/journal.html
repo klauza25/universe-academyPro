@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui core_tags i18n %}
 
-{% block title %}{% translate "Journal comptable — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Journal comptable" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -23,8 +23,8 @@
 {% translate "Opérations affichées" as lbl_operations %}
 {% translate "lignes" as hint_lignes %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-5">
-    {% include "dashboard/_stat.html" with label=lbl_entrees_filtre value=totals.incoming|default:0 icon="trending-up" tone="green" hint="FCFA" %}
-    {% include "dashboard/_stat.html" with label=lbl_sorties_filtre value=totals.outgoing|default:0 icon="wallet" tone="rose" hint="FCFA" %}
+    {% include "dashboard/_stat.html" with label=lbl_entrees_filtre value=totals.incoming|default:0 icon="trending-up" tone="green" hint=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_sorties_filtre value=totals.outgoing|default:0 icon="wallet" tone="rose" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_operations value=page.paginator.count icon="file-text" tone="indigo" hint=hint_lignes %}
 </div>
 
@@ -84,8 +84,8 @@
                     <td>{{ tx.category.name|default:"—" }}</td>
                     <td>{{ tx.label }}</td>
                     <td>{{ tx.counterparty|default:"—" }}</td>
-                    <td class="font-semibold" style="color:#15803d;">{% if tx.tx_type == 'IN' %}{{ tx.amount }} FCFA{% else %}—{% endif %}</td>
-                    <td class="font-semibold" style="color:#be123c;">{% if tx.tx_type == 'OUT' %}{{ tx.amount }} FCFA{% else %}—{% endif %}</td>
+                    <td class="font-semibold" style="color:#15803d;">{% if tx.tx_type == 'IN' %}{{ tx.amount }} {{ plateforme.devise }}{% else %}—{% endif %}</td>
+                    <td class="font-semibold" style="color:#be123c;">{% if tx.tx_type == 'OUT' %}{{ tx.amount }} {{ plateforme.devise }}{% else %}—{% endif %}</td>
                     <td>{{ tx.account.name }}{% if tx.destination_account %} → {{ tx.destination_account.name }}{% endif %}</td>
                     <td>{{ tx.created_by.display_label|default:"—" }}</td>
                     <td>

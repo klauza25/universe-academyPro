@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Caisses et comptes — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Caisses et comptes" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -42,8 +42,8 @@
                         <td class="ua-cell-title">{{ row.account.name }}</td>
                         <td>{{ row.account.get_kind_display }}</td>
                         <td>{{ row.account.currency }}</td>
-                        <td>{{ row.account.opening_balance }} FCFA</td>
-                        <td><strong>{{ row.balance }} FCFA</strong></td>
+                        <td>{{ row.account.opening_balance }} {{ plateforme.devise }}</td>
+                        <td><strong>{{ row.balance }} {{ plateforme.devise }}</strong></td>
                         <td>
                             {% if row.disponible <= 0 %}
                             <span class="ua-badge ua-badge-rose">{% translate "Solde épuisé" %}</span>

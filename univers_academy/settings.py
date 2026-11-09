@@ -1,5 +1,3 @@
-import base64
-import binascii
 import os
 from pathlib import Path
 import dj_database_url
@@ -10,7 +8,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv('SECRET_KEY', 'insecure-dev-key')
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1')
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost').split(',')
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -49,7 +47,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'core.context_processors.user_profile_context',
-                'core.context_processors.clerk_context',
+                'core.context_processors.plateforme_context',
             ],
         },
     },
@@ -115,52 +113,6 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost', 'http://127.0.0.1', 'http://localhos
 CSRF_COOKIE_HTTPONLY = False
 SESSION_COOKIE_HTTPONLY = True
 
-# ---------------------------------------------------------------------------
-# Clerk authentication (Google + email/password)
-# ---------------------------------------------------------------------------
-CLERK_PUBLISHABLE_KEY = os.getenv('CLERK_PUBLISHABLE_KEY', '').strip()
-CLERK_SECRET_KEY = os.getenv('CLERK_SECRET_KEY', '').strip()
-
-
-def _clerk_frontend_api_from_key(publishable_key):
-    """Extract the Frontend API host encoded in a Clerk publishable key."""
-    try:
-        encoded = publishable_key.split('_', 2)[2]
-        padded = encoded + '=' * (-len(encoded) % 4)
-        return base64.b64decode(padded).decode('utf-8').rstrip('$')
-    except (IndexError, ValueError, binascii.Error, UnicodeDecodeError):
-        return ''
-
-
-CLERK_FRONTEND_API = (
-    os.getenv('CLERK_FRONTEND_API', '').strip()
-    or _clerk_frontend_api_from_key(CLERK_PUBLISHABLE_KEY)
-)
-CLERK_JS_VERSION = os.getenv('CLERK_JS_VERSION', '6')
-CLERK_JS_URL = (
-    f'https://{CLERK_FRONTEND_API}/npm/@clerk/clerk-js@{CLERK_JS_VERSION}'
-    '/dist/clerk.browser.js'
-    if CLERK_FRONTEND_API else ''
-)
-# Since Clerk JS v6 the prebuilt UI lives in a separate bundle. Without it,
-# clerk.mountSignIn() raises "Clerk was not loaded with Ui components".
-CLERK_UI_VERSION = os.getenv('CLERK_UI_VERSION', '1')
-CLERK_UI_URL = (
-    f'https://{CLERK_FRONTEND_API}/npm/@clerk/ui@{CLERK_UI_VERSION}'
-    '/dist/ui.browser.js'
-    if CLERK_FRONTEND_API else ''
-)
-CLERK_AUTHORIZED_PARTIES = [
-    origin.strip()
-    for origin in os.getenv(
-        'CLERK_AUTHORIZED_PARTIES',
-        'http://localhost:8000,http://127.0.0.1:8000',
-    ).split(',')
-    if origin.strip()
-]
-CLERK_ENABLED = bool(
-    CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY and CLERK_FRONTEND_API
-)
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True

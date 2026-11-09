@@ -10,19 +10,16 @@ marque et le rapprochement se fait par dossier, montant et mois solde.
 """
 from __future__ import annotations
 
-import datetime as dt
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
-from django.utils import timezone
 
 from core import feuille_import
 from core.models import (CashAccount, CashTransaction, Payment, TransactionCategory,
                          User)
 
 DEFAULT_CLASSEUR = 'feuille_source.xlsx'
-MIDI = dt.time(12, 0)
 
 
 class Command(BaseCommand):
@@ -75,6 +72,7 @@ class Command(BaseCommand):
                 'caisse réellement débitée (--caisse) ou enregistrez d’abord la '
                 'recette qui alimente ce portefeuille.')
         ecrits = {'paiements': 0, 'caisse': 0, 'montant': 0, 'sorties': 0, 'periodes': 0}
+        self._futures = 0
         with transaction.atomic():
             for dossier, ligne, periode in plan.paiements:
                 self._paiement(dossier, ligne, periode, agent, caisse,
@@ -91,10 +89,19 @@ class Command(BaseCommand):
             f'{ecrits["caisse"]} entrée(s) et {ecrits["sorties"]} sortie(s) de caisse, '
             f'{ecrits["periodes"]} mois complété(s) — '
             f'{self._fcfa(ecrits["montant"])}.'))
+        if self._futures:
+            self.stdout.write(self.style.WARNING(
+                f'{self._futures} ligne(s) pointée(s) sur un mois à venir : '
+                'écriture(s) ramenée(s) au jour de l’import. Le mois réglé '
+                'reste celui du classeur, une caisse ne se date pas dans '
+                'l’avenir.'))
 
     def _instant(self, ligne):
-        jour = (ligne.date.date() if ligne.date else timezone.localdate())
-        return timezone.make_aware(dt.datetime.combine(jour, MIDI))
+        """L'écriture porte le jour de la ligne, jamais une date future."""
+        instant = feuille_import.instant_de(ligne)
+        if ligne.date and instant.date() != ligne.date.date():
+            self._futures += 1
+        return instant
 
     def _paiement(self, dossier, ligne, periode, agent, caisse, categorie, ecrits) -> None:
         instants = self._instant(ligne)

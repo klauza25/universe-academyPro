@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Reception — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Reception" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/accueil/_nav.html" %}{% endblock %}
 
@@ -23,6 +23,7 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Visites aujourd'hui" as lbl_visites %}
 {% translate "Personnes présentes" as lbl_personnes %}
 {% translate "Prospects à suivre" as lbl_prospects %}

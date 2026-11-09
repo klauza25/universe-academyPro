@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Mon profil" %} — Univers Academy{% endblock %}
+{% block title %}{% translate "Mon profil" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}
 <a href="{% url 'core:dashboard:dashboard-router' %}" class="ua-nav-link">

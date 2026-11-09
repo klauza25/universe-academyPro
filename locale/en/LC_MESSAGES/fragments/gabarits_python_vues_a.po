@@ -12,12 +12,6 @@ msgstr "Your account is disabled or suspended."
 msgid "Identifiant ou mot de passe incorrect."
 msgstr "Incorrect username or password."
 
-msgid "Connexion Clerk impossible : jeton manquant."
-msgstr "Clerk sign-in failed: missing token."
-
-msgid "Connexion Clerk impossible. Veuillez reessayer."
-msgstr "Clerk sign-in failed. Please try again."
-
 msgid "Votre compte est desactive. Contactez l'administration."
 msgstr "Your account is disabled. Contact the administration."
 

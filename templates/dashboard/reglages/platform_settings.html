@@ -1,0 +1,55 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load ui i18n %}
+
+{% block title %}{% translate "Paramètres généraux" %} — {{ plateforme.nom }}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="ua-page-head">
+    <div>
+        <h1 class="ua-page-title">{% translate "Paramètres généraux" %}</h1>
+        <p class="ua-page-sub">{% translate "Le nom, les coordonnées et les deux gardes de l'établissement. Ce que vous écrivez ici signe tous les écrans et tous les documents." %}</p>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <section class="ua-card ua-card-pad xl:col-span-2">
+        <h2 class="ua-section-title mb-4">{% translate "Régler l'établissement" %}</h2>
+        <form method="post" class="ua-form">
+            {% csrf_token %}
+            {% include "dashboard/_form.html" with form=form %}
+            <button type="submit" class="ua-btn ua-btn-primary mt-3">{% icon "check-circle" %} {% translate "Enregistrer" %}</button>
+        </form>
+        <p class="text-xs ua-muted mt-3">{% translate "Le libellé de devise change ce qui s'écrit à côté des montants. Il ne convertit rien : les paiements déjà enregistrés restent dans la devise où ils sont entrés." %}</p>
+    </section>
+
+    <section class="ua-card ua-card-pad">
+        <h2 class="ua-section-title mb-4">{% translate "Ce que couvrent ces réglages" %}</h2>
+        <dl class="space-y-3 text-sm">
+            <div><dt class="text-xs ua-muted">{% translate "Nom de l'établissement" %}</dt><dd>{% translate "Titres des écrans, barre latérale, accueil publique, reçus, lettres imprimées et messages envoyés." %}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "Coordonnées" %}</dt><dd>{% translate "Pied de page des portails et en-têtes des documents officiels." %}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "RCCM, NIU, CNSS" %}</dt><dd>{% translate "Feuille de suivi, cahier de texte et reçu." %}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "Seuil d'alerte" %}</dt><dd>{% translate "Sortie de caisse qui consomme au moins cette part du solde disponible réclame une confirmation." %}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "Valeur actuelle" %}</dt><dd>{{ plateforme.nom }} · {{ plateforme.telephone }} · {{ plateforme.email }}</dd></div>
+        </dl>
+    </section>
+</div>
+
+<section class="ua-card ua-card-pad mt-5">
+    <h2 class="ua-section-title mb-4">{% translate "Aperçu de l'en-tête imprimé" %}</h2>
+    <div class="rounded-xl border border-slate-200 p-4 text-sm dark:border-slate-700">
+        <p class="font-semibold">{{ plateforme.nom }}</p>
+        {% if plateforme.signature %}<p class="ua-muted text-xs">{{ plateforme.signature }}</p>{% endif %}
+        {% for ligne in plateforme.bloc_legal %}<p class="ua-muted text-xs">{{ ligne }}</p>{% endfor %}
+        {% for ligne in plateforme.contacts %}<p class="ua-muted text-xs">{{ ligne }}</p>{% endfor %}
+        <p class="ua-muted text-xs mt-2">100 000 {{ plateforme.devise }}</p>
+    </div>
+    <p class="text-xs ua-muted mt-3">{% translate "Le reçu reprend désormais ce bloc : les trois documents imprimés portent la même signature." %}</p>
+</section>
+
+{% translate "Modifications des réglages enregistrées dans le journal d'audit." as audit_sous_titre_reglages %}
+{% translate "Aucun événement d'audit pour les réglages." as audit_vide_reglages %}
+{% include "dashboard/_audit_trail.html" with audit_entries=historique audit_subtitle=audit_sous_titre_reglages audit_empty=audit_vide_reglages %}
+{% endblock %}

@@ -185,6 +185,9 @@ msgstr "Ex: Mon-Fri 1pm-3pm"
 msgid "Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs formateurs."
 msgstr "Hold Ctrl (or Cmd) to select multiple trainers."
 
+msgid "Affectez au moins un formateur à ce groupe : sans lui, aucune séance ni ressource ne peut être publiée pour les inscrits."
+msgstr "Assign at least one trainer to this group: without one, no session or resource can be published for its enrolled students."
+
 msgid "La date de fin doit suivre la date de début."
 msgstr "The end date must be after the start date."
 

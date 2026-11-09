@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Mes fiches de cours — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Mes fiches de cours" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/etudiant/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}

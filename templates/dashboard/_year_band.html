@@ -1,0 +1,17 @@
+{% load i18n %}
+{% if drapeau %}
+<p class="ua-page-sub mb-4 text-sm">{{ drapeau }}</p>
+{% endif %}
+<form method="get" class="ua-card ua-card-pad mb-5 flex max-w-3xl flex-wrap items-end gap-3">
+    {% for cle, valeurs in request.GET.items %}
+        {% if cle != 'annee_academique' %}
+            {% for valeur in valeurs %}
+            <input type="hidden" name="{{ cle }}" value="{{ valeur }}">
+            {% endfor %}
+        {% endif %}
+    {% endfor %}
+    {% include "dashboard/_year_select.html" %}
+    <noscript>
+        <button type="submit" class="ua-btn ua-btn-ghost ua-btn-sm">{% translate "Changer d'année" %}</button>
+    </noscript>
+</form>

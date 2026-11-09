@@ -1,9 +1,19 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Demandes d'accès — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Demandes d'accès" %} — {{ plateforme.nom }}{% endblock %}
 
-{% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
+{% block sidebar_nav %}
+    {% if 'SECRETAIRE' in user_roles %}
+        {% include "dashboard/secretaire/_nav.html" %}
+    {% elif 'ASSISTANT_ADMIN' in user_roles %}
+        {% include "dashboard/comptabilite/_nav.html" %}
+    {% elif 'RESP_PEDA' in user_roles %}
+        {% include "dashboard/pedagogie/_nav.html" %}
+    {% else %}
+        {% include "dashboard/admin/_nav.html" %}
+    {% endif %}
+{% endblock %}
 
 {% block hero %}{% endblock %}
 
@@ -54,9 +64,6 @@
                                     {{ ar.user.get_full_name|default:ar.user.email }}
                                 </p>
                                 {% if ar.user.phone %}<p class="ua-cell-sub">{{ ar.user.phone }}</p>{% endif %}
-                                {% if ar.user.clerk_user_id %}
-                                <p class="ua-cell-sub font-mono text-xs">Clerk : {{ ar.user.clerk_user_id }}</p>
-                                {% endif %}
                             </div>
                         </div>
                     </td>

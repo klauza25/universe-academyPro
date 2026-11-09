@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Responsable Pédagogique — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Responsable Pédagogique" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
 
@@ -15,6 +15,7 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Formations actives" as lbl_formations %}
 {% translate "Catalogue" as hint_catalogue %}
 {% translate "Séances documentées" as lbl_seances %}
@@ -100,7 +101,7 @@
                         <td class="ua-cell-title">{{ course.title }}</td>
                         <td><span class="ua-badge ua-badge-indigo">{{ course.domain }}</span></td>
                         <td class="ua-muted">{% blocktrans with d=course.duration_months %}{{ d }} mois{% endblocktrans %}</td>
-                        <td class="text-right font-semibold" style="color:#1e2044;">{{ course.fee_amount|floatformat:0 }} FCFA</td>
+                        <td class="text-right font-semibold" style="color:#1e2044;">{{ course.fee_amount|floatformat:0 }} {{ plateforme.devise }}</td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="4" class="ua-empty">{% translate "Aucune formation au catalogue" %}</td></tr>

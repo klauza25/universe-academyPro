@@ -3,15 +3,18 @@ from datetime import date
 
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Count, Q, Sum
+from django.db.models import Count, F, Q, Sum
 from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_POST
 
+from . import annee_academique
 from .decorators import business_write_required, role_required
 from .forms import (
-    CourseSessionForm, LessonForm, ModuleForm, ResourceFeedbackForm,
+    CourseForm, CourseSessionForm, LessonForm, ModuleForm, ResourceFeedbackForm,
     ResourceForm, SessionRecordForm, StudentSessionNoteForm, TextbookEntryForm,
 )
 from .models import (
@@ -66,8 +69,15 @@ def program_list(request):
     courses = Course.objects.filter(
         id__in=sessions.values_list('course_id', flat=True)
     ).prefetch_related('modules__lessons')  # i18n-exempt: lookup ORM, jamais affiché
+    can_manage_courses = (
+        not request.user.is_elevated
+        and request.user.has_any_role('RESP_PEDA', 'DIRECTION')
+    )
+    show_archived = (
+        can_manage_courses and request.GET.get('archives') == '1'
+    )
     if _is_manager(request.user):
-        courses = Course.objects.filter(active=True).prefetch_related(
+        courses = Course.objects.filter(active=not show_archived).prefetch_related(
             'modules__lessons'  # i18n-exempt: lookup ORM, jamais affiché
         )
     return render(request, 'dashboard/pedagogie/programs.html', {
@@ -75,12 +85,97 @@ def program_list(request):
         'can_manage': not request.user.is_elevated and request.user.has_any_role(
             'FORMATEUR', 'RESP_PEDA', 'DIRECTION'
         ),
+        'can_manage_courses': can_manage_courses,
+        'show_archived': show_archived,
     })
+
+
+@business_write_required('RESP_PEDA', 'DIRECTION')
+def course_create(request):
+    form = CourseForm(
+        request.POST if request.method == 'POST' else None)
+    if request.method == 'POST' and form.is_valid():
+        course = form.save()
+        log_audit(request, 'COURSE_CREATE', 'Course', str(course.id),
+                  after={'title': course.title, 'domain': course.domain})
+        messages.success(request, _("Formation créée."))
+        return redirect(
+            f'{reverse("core:dashboard:programs")}#formation-{course.id}')
+    return render(request, 'dashboard/pedagogie/course_form.html', {
+        'form': form,
+        'creating': True,
+    })
+
+
+@business_write_required('RESP_PEDA', 'DIRECTION')
+def course_edit(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    form = CourseForm(
+        request.POST if request.method == 'POST' else None,
+        instance=course,
+    )
+    if request.method == 'POST' and form.is_valid():
+        previous_title = course.title
+        course = form.save()
+        log_audit(
+            request, 'COURSE_EDIT', 'Course', str(course.id),
+            before={'title': previous_title},
+            after={'title': course.title, 'domain': course.domain},
+        )
+        messages.success(request, _("Formation mise à jour."))
+        return redirect(
+            f'{reverse("core:dashboard:programs")}'
+            f'{"?archives=1" if not course.active else ""}'
+            f'#formation-{course.id}')
+    return render(request, 'dashboard/pedagogie/course_form.html', {
+        'form': form,
+        'course': course,
+        'creating': False,
+    })
+
+
+@business_write_required('RESP_PEDA', 'DIRECTION')
+@require_POST
+def course_archive(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if course.active:
+        course.active = False
+        course.save(update_fields=['active'])
+        log_audit(
+            request, 'COURSE_ARCHIVE', 'Course', str(course.id),
+            before={'active': True},
+            after={'active': False, 'title': course.title},
+        )
+        messages.success(
+            request,
+            _("Formation retirée du catalogue. Les inscriptions et l'historique sont conservés."),
+        )
+    return redirect(
+        f'{reverse("core:dashboard:programs")}?archives=1'
+        f'#formation-{course.id}')
+
+
+@business_write_required('RESP_PEDA', 'DIRECTION')
+@require_POST
+def course_restore(request, course_id):
+    course = get_object_or_404(Course, id=course_id)
+    if not course.active:
+        course.active = True
+        course.save(update_fields=['active'])
+        log_audit(
+            request, 'COURSE_RESTORE', 'Course', str(course.id),
+            before={'active': False},
+            after={'active': True, 'title': course.title},
+        )
+        messages.success(request, _("Formation réactivée."))
+    return redirect(
+        f'{reverse("core:dashboard:programs")}#formation-{course.id}')
 
 
 @business_write_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def module_create(request):
-    form = ModuleForm()
+    course_id = (request.GET.get('course') or '').strip()
+    form = ModuleForm(initial={'course': course_id} if course_id else None)
     if request.method == 'POST':
         form = ModuleForm(request.POST)
         if form.is_valid():
@@ -89,9 +184,11 @@ def module_create(request):
                       after={'title': module.title,
                              'course': str(module.course_id)})
             messages.success(request, _("Module créé."))
-            return redirect('core:dashboard:programs')
+            return redirect(
+                f'{reverse("core:dashboard:programs")}'
+                f'#formation-{module.course_id}')
     return render(request, 'dashboard/pedagogie/module_form.html', {
-        'form': form, 'creating': True,
+        'form': form, 'creating': True, 'course_id': course_id,
     })
 
 
@@ -106,7 +203,9 @@ def module_edit(request, module_id):
             log_audit(request, 'MODULE_EDIT', 'Module', str(module.id),  # i18n-exempt: 'Module' = nom de classe technique (audit)
                       after={'title': module.title})
             messages.success(request, _("Module mis à jour."))
-            return redirect('core:dashboard:programs')
+            return redirect(
+                f'{reverse("core:dashboard:programs")}'
+                f'#formation-{module.course_id}')
     return render(request, 'dashboard/pedagogie/module_form.html', {
         'form': form, 'module': module, 'creating': False,
     })
@@ -126,7 +225,9 @@ def lesson_create(request):
                       after={'title': lesson.title,
                              'module': str(lesson.module_id)})
             messages.success(request, _("Leçon créée."))
-            return redirect('core:dashboard:programs')
+            return redirect(
+                f'{reverse("core:dashboard:programs")}'
+                f'#module-{lesson.module_id}')
     return render(request, 'dashboard/pedagogie/lesson_form.html', {
         'form': form, 'creating': True,
     })
@@ -143,7 +244,9 @@ def lesson_edit(request, lesson_id):
             log_audit(request, 'LESSON_EDIT', 'Lesson', str(lesson.id),
                       after={'title': lesson.title})
             messages.success(request, _("Leçon mise à jour."))
-            return redirect('core:dashboard:programs')
+            return redirect(
+                f'{reverse("core:dashboard:programs")}'
+                f'#module-{lesson.module_id}')
     return render(request, 'dashboard/pedagogie/lesson_form.html', {
         'form': form, 'lesson': lesson, 'creating': False,
     })
@@ -161,27 +264,36 @@ def course_session_list(request):
 
     status = request.GET.get('status') or ''
     query = (request.GET.get('q') or '').strip()
+    annee = annee_academique.depuis_la_requete(request)
+    sessions = annee_academique.fil_groupes(sessions, annee)
     if status:
         sessions = sessions.filter(status=status)
     if query:
         sessions = sessions.filter(
-            Q(course__title__icontains=query) | Q(schedule__icontains=query)
+            Q(name__icontains=query) |
+            Q(course__title__icontains=query) |
+            Q(schedule__icontains=query)
         )
 
     paginator = Paginator(sessions.distinct(), 20)
     page = paginator.get_page(request.GET.get('page', 1))
+    annees = annee_academique.toutes_les_annees()
     return render(request, 'dashboard/pedagogie/course_session_list.html', {
         'page': page,
         'query': query,
         'status_filter': status,
         'status_choices': CourseSession.Status.choices,
-        'can_manage': not request.user.is_elevated and request.user.has_any_role(
-            'RESP_PEDA', 'DIRECTION'
+        'annee_academique': annee,
+        'annees': annees,
+        'toutes': annee_academique.TOUTES,
+        'drapeau': (annee_academique.drapeau(annee) if annee or not annees else ''),
+        'can_manage': request.user.has_any_role(
+            'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION'
         ),
     })
 
 
-@business_write_required('RESP_PEDA', 'DIRECTION')
+@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION')
 def course_session_create(request):
     form = CourseSessionForm()
     if request.method == 'POST':
@@ -204,7 +316,7 @@ def course_session_create(request):
     })
 
 
-@business_write_required('RESP_PEDA', 'DIRECTION')
+@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION')
 def course_session_edit(request, session_id):
     session = get_object_or_404(
         CourseSession.objects.select_related('course'), id=session_id
@@ -613,7 +725,15 @@ def _resource_access(user, resource, student=False):
         )
         if resource.session_id:
             enrollments = enrollments.filter(session_id=resource.session_id)
-        return enrollments.exists()
+        active = enrollments.filter(status=Enrollment.Status.ACTIVE)
+        if active.exists():
+            return True
+        if not resource.published_at:
+            return False
+        return enrollments.filter(
+            ended_at__isnull=False,
+            ended_at__gte=resource.published_at.date(),
+        ).exists()
     return False
 
 
@@ -812,8 +932,25 @@ def student_resources(request):
         status=Resource.Status.PUBLISHED,
         course_id__in=courses,
     ).filter(
-        Q(session__isnull=True) | Q(session_id__in=session_ids)
-    ).select_related('course', 'module', 'lesson', 'session', 'author')
+        (
+            Q(session__enrollments__student=request.user,
+              session__enrollments__status=Enrollment.Status.ACTIVE) |
+            Q(session__enrollments__student=request.user,
+              session__enrollments__ended_at__isnull=False,
+              published_at__date__lte=F('session__enrollments__ended_at'))
+        ) & ~Q(session__isnull=True) |
+        (
+            Q(session__isnull=True) &
+            (
+                Q(course__sessions__enrollments__student=request.user,
+                  course__sessions__enrollments__status=Enrollment.Status.ACTIVE) |
+                Q(course__sessions__enrollments__student=request.user,
+                  course__sessions__enrollments__ended_at__isnull=False,
+                  published_at__date__lte=F(
+                      'course__sessions__enrollments__ended_at'))
+            )
+        )
+    ).distinct().select_related('course', 'module', 'lesson', 'session', 'author')
 
     course_id = request.GET.get('course') or ''
     kind = request.GET.get('kind') or ''

@@ -1,156 +1,187 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Paiement étudiant — Univers Academy" %}{% endblock %}
-
+{% block title %}{% translate "Inscription et paiements étudiants" %} — {{ plateforme.nom }}{% endblock %}
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
 
 {% block dashboard_content %}
 <div class="ua-page-head">
     <div>
-        <h1 class="ua-page-title">{% translate "Encaisser un paiement étudiant" %}</h1>
-        <p class="ua-page-sub">{% translate "Choisissez l'étudiant, puis son inscription : le paiement crée une opération de caisse et un reçu." %}</p>
+        <h1 class="ua-page-title">{% translate "Inscription et paiements des étudiants" %}</h1>
+        <p class="ua-page-sub">{% translate "Inscrivez l'étudiant une seule fois, puis suivez ses mensualités dans son dossier." %}</p>
     </div>
-    <a href="{% url 'core:dashboard:payment-months' %}" class="ua-btn ua-btn-ghost">{% translate "Les 12 mois" %}</a>
-    <a href="{% url 'core:dashboard:journal' %}" class="ua-btn ua-btn-ghost">{% translate "Journal comptable" %}</a>
+    <a href="{% url 'core:dashboard:student-list' %}" class="ua-btn ua-btn-light">{% icon "search" %} {% translate "Suivre les étudiants" %}</a>
 </div>
 
-<section class="ua-card ua-card-pad max-w-2xl">
-    <form method="post" class="ua-form">
-        {% csrf_token %}
-        {% include "dashboard/_form.html" with form=form %}
-        <p id="balance-hint" class="text-xs ua-muted" aria-live="polite"></p>
-        <div class="flex flex-wrap gap-3 mt-5">
-            <button type="submit" class="ua-btn ua-btn-primary">{% icon "credit-card" %} {% translate "Enregistrer le paiement" %}</button>
-            <a href="{% url 'core:dashboard:comptabilite-dashboard' %}" class="ua-btn ua-btn-ghost">{% translate "Annuler" %}</a>
-        </div>
-    </form>
-    <p class="text-xs ua-muted mt-4">
-        {% translate "Un paiement partiel ne solde pas le dossier : le reste à payer est recalculé après chaque règlement." %}
-        {% translate "Seules les inscriptions validées sont encaissables." %}
-    </p>
-</section>
-
-{% if selected_student and pending_enrollments %}
-<section class="ua-card ua-card-pad max-w-2xl mt-5">
-    <h2 class="ua-section-title mb-3">{% translate "Inscriptions en attente de validation" %}</h2>
-    <p class="ua-muted text-sm mb-4">
-        {% blocktrans with n=selected_student.get_full_name|default:selected_student.email %}{{ n }} a une inscription en attente : elle deviendra encaissable dès que la direction l'aura validée.{% endblocktrans %}
-    </p>
-    {% for enrollment in pending_enrollments %}
-    <div class="ua-list-row">
-        <div>
-            <span class="ua-cell-title">{{ enrollment.session.course.title }}</span>
-            <span class="ua-cell-sub block">
-                {% blocktrans with d=enrollment.enrolled_at|date:"d/m/Y H:i" n=enrollment.net_amount s=enrollment.get_status_display %}Créée le {{ d }} · net {{ n }} FCFA · {{ s }}{% endblocktrans %}
-            </span>
-        </div>
-        <span class="ua-badge ua-badge-amber">{% translate "En attente" %}</span>
-        <a class="ua-btn ua-btn-ghost ua-btn-sm"
-           href="{% url 'core:dashboard:enrollment-detail' enrollment.id %}">{% translate "Ouvrir le dossier" %}</a>
-    </div>
-    {% endfor %}
-</section>
-{% endif %}
+{% include "dashboard/_year_band.html" %}
 
 {% if can_enroll %}
-<section class="ua-card ua-card-pad max-w-2xl mt-5" id="inscription">
-    <details {% if counter_form.errors or selected_student and not form.enrollment.field.queryset %}open{% endif %}>
-        <summary class="ua-section-title cursor-pointer">{% translate "Inscrire un étudiant" %}</summary>
-        <p class="text-sm ua-muted mt-3 mb-4">
-            {% blocktrans %}L'inscription créée ici reste <strong>en attente</strong> : la direction doit la valider avant que le premier encaissement soit possible. Le tarif est repris du catalogue si le champ est laissé vide.{% endblocktrans %}
-        </p>
-        <form method="post" class="ua-form">
-            {% csrf_token %}
-            <input type="hidden" name="form_kind" value="enroll">
-            {% include "dashboard/_form.html" with form=counter_form %}
-            <div class="flex flex-wrap gap-3 mt-5">
-                <button type="submit" class="ua-btn ua-btn-primary">{% icon "check-circle" %} {% translate "Créer l'inscription" %}</button>
+<section class="ua-card ua-card-pad max-w-3xl" id="inscription">
+    <h2 class="ua-section-title mb-4">{% translate "Inscrire un étudiant" %}</h2>
+    <form method="post" class="ua-form">
+        {% csrf_token %}
+        <input type="hidden" name="form_kind" value="enroll">
+        {{ counter_form.submission_key }}
+        {{ counter_form.non_field_errors }}
+
+        <div class="mb-4">
+            <label for="{{ counter_form.student.id_for_label }}">{{ counter_form.student.label }}</label>
+            <input id="student-search-enrollment" type="search" class="ua-input mb-2"
+                   placeholder="{% translate 'Nom, email ou identifiant…' %}"
+                   aria-label="{% translate 'Rechercher un étudiant' %}"
+                   aria-controls="{{ counter_form.student.id_for_label }}"
+                   autocomplete="off">
+            {{ counter_form.student }}
+            {{ counter_form.student.errors }}
+        </div>
+
+        <fieldset id="new-student-fields" class="ua-card ua-card-pad mb-5">
+            <legend class="ua-section-title">{% translate "Nouveau dossier étudiant" %}</legend>
+            <p class="ua-muted text-sm mb-3">{% translate "Renseignez ces informations seulement si le compte n'existe pas." %}</p>
+            {% for field in counter_form %}
+                {% if field.name == 'first_name' or field.name == 'last_name' or field.name == 'email' or field.name == 'phone' %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </fieldset>
+
+        {% for field in counter_form %}
+            {% if field.name == 'course' or field.name == 'session' or field.name == 'start_date' or field.name == 'monthly_tariff_amount' %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:#e11d48;">*</span>{% endif %}</label>
+                {{ field }}
+                {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+                {{ field.errors }}
             </div>
-        </form>
-    </details>
+            {% endif %}
+        {% endfor %}
+
+        <details class="ua-card ua-card-pad mb-5" {% if counter_form.errors %}open{% endif %}>
+            <summary class="ua-section-title cursor-pointer">{% translate "Enregistrer un premier paiement (facultatif)" %}</summary>
+            <p class="ua-muted text-sm mt-2 mb-4">{% translate "Choisissez les frais d'inscription ou une mensualité. Vous pourrez aussi enregistrer ce paiement plus tard." %}</p>
+            {% for field in counter_form %}
+                {% if field.name == 'first_payment_amount' or field.name == 'first_payment_motif' or field.name == 'first_payment_month' or field.name == 'first_payment_year' or field.name == 'first_payment_method' or field.name == 'first_payment_account' or field.name == 'first_payment_paid_at' %}
+                <div class="mb-4">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}{% if field.field.required %} <span style="color:#e11d48;">*</span>{% endif %}</label>
+                    {{ field }}
+                    {{ field.errors }}
+                </div>
+                {% endif %}
+            {% endfor %}
+        </details>
+
+        <button type="submit" class="ua-btn ua-btn-primary">{% icon "check-circle" %} {% translate "Inscrire l'étudiant" %}</button>
+    </form>
+</section>
+
+{% else %}
+<section class="ua-card ua-card-pad max-w-3xl">
+    <p class="ua-empty">{% translate "Votre poste ne dispose pas du droit d'inscription. Vous pouvez rechercher un étudiant et consulter son dossier." %}</p>
+    <a href="{% url 'core:dashboard:student-list' %}" class="ua-btn ua-btn-primary mt-4">{% translate "Suivre les étudiants" %}</a>
 </section>
 {% endif %}
 
-{% if students_without_enrollment %}
-<section class="ua-card ua-card-pad max-w-2xl mt-5">
-    <h2 class="ua-section-title mb-3">{% translate "Comptes étudiants sans inscription" %}</h2>
-    <p class="ua-empty mb-4">
-        {% translate "Un encaissement suppose une inscription validée : ces comptes actifs n'ont encore aucune inscription au dossier." %}
-    </p>
-    <div class="ua-table-wrap">
-        <table class="ua-table">
-            <thead>
-                <tr>
-                    <th>{% translate "Étudiant" %}</th>
-                    <th>{% translate "Code" %}</th>
-                    <th>{% translate "Action" %}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for student in students_without_enrollment %}
-                <tr>
-                    <td class="ua-cell-title">{{ student.get_full_name|default:student.email }}</td>
-                    <td class="ua-muted">{{ student.internal_code|default:"—" }}</td>
-                    <td>
-                        {% if can_enroll %}
-                        <a class="ua-btn ua-btn-ghost ua-btn-sm"
-                           href="?student={{ student.id }}#inscription">{% translate "Inscrire" %}</a>
-                        {% else %}
-                        <span class="ua-muted text-xs">{% translate "À inscrire par le secrétariat" %}</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</section>
-{% endif %}
+<details class="ua-card ua-card-pad max-w-3xl mt-5" {% if form.errors or selected_student %}open{% endif %}>
+    <summary class="ua-section-title cursor-pointer">{% translate "Encaisser sur un dossier existant" %}</summary>
+    <form method="post" class="ua-form mt-4">
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="ua-card ua-card-pad text-sm font-semibold text-rose-600 mb-4">
+            {{ form.non_field_errors }}
+        </div>
+        {% endif %}
+        {% for field in form %}
+        <div class="mb-4">
+            <label for="{{ field.id_for_label }}">
+                {{ field.label }}{% if field.field.required %} <span style="color:#e11d48;">*</span>{% endif %}
+            </label>
+            {% if field.name == 'student' %}
+            <input id="student-search-payment" type="search" class="ua-input mb-2"
+                   placeholder="{% translate 'Nom, email ou identifiant…' %}"
+                   aria-label="{% translate 'Rechercher un étudiant' %}"
+                   aria-controls="{{ field.id_for_label }}"
+                   autocomplete="off">
+            {% endif %}
+            {{ field }}
+            {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
+            {{ field.errors }}
+        </div>
+        {% endfor %}
+        <button type="submit" class="ua-btn ua-btn-primary">{% icon "credit-card" %} {% translate "Enregistrer le paiement" %}</button>
+    </form>
+</details>
 
 <script>
 (function () {
-    var hintReste = "{% translate 'Reste à payer sur ce dossier :' %}";
-    var hintSolde = "{% translate 'Dossier soldé : aucun montant ne reste à encaisser.' %}";
-    var student = document.getElementById('id_student');
-    if (student) {
-        student.addEventListener('change', function () {
-            var url = new URL(window.location.href);
-            if (student.value) {
-                url.searchParams.set('student', student.value);
-            } else {
-                url.searchParams.delete('student');
+    function bindStudentSearch(searchId, selectId) {
+        var search = document.getElementById(searchId);
+        var select = document.getElementById(selectId);
+        if (!search || !select) { return; }
+
+        function normalize(value) {
+            return value.toLocaleLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        }
+
+        search.addEventListener('input', function () {
+            var query = normalize(search.value.trim());
+            var selected = select.options[select.selectedIndex];
+            if (selected && selected.value && !normalize(selected.text).includes(query)) {
+                select.value = '';
             }
-            url.searchParams.delete('enrollment');
-            window.location.assign(url.toString());
+            Array.prototype.forEach.call(select.options, function (option) {
+                option.hidden = !!option.value && !normalize(option.text).includes(query);
+            });
         });
     }
 
-    var enrollment = document.getElementById('id_enrollment');
-    var amount = document.getElementById('id_amount');
-    var hint = document.getElementById('balance-hint');
-    if (!enrollment) { return; }
+    bindStudentSearch('student-search-enrollment', 'id_inscription-student');
+    bindStudentSearch('student-search-payment', 'id_student');
 
-    function sync() {
-        var option = enrollment.options[enrollment.selectedIndex];
-        var raw = option ? option.getAttribute('data-balance') : null;
-        if (raw === null || raw === '') {
-            if (hint) { hint.textContent = ''; }
-            if (amount) { amount.removeAttribute('max'); }
-            return;
+    var student = document.getElementById('id_inscription-student');
+    var details = document.getElementById('new-student-fields');
+    if (!student || !details) { return; }
+    function syncStudentFields() {
+        var creating = !student.value;
+        details.hidden = !creating;
+        details.querySelectorAll('input').forEach(function (input) {
+            input.required = creating && ['first_name', 'last_name', 'email'].indexOf(input.name.split('-').pop()) !== -1;
+        });
+    }
+    student.addEventListener('change', syncStudentFields);
+    syncStudentFields();
+
+    var course = document.getElementById('id_inscription-course');
+    var session = document.getElementById('id_inscription-session');
+    if (course && session) {
+        function syncSessions() {
+            session.disabled = !course.value;
+            Array.prototype.forEach.call(session.options, function (option) {
+                if (!option.value) { return; }
+                option.hidden = option.getAttribute('data-course-id') !== course.value;
+                if (option.selected && option.hidden) { session.value = ''; }
+            });
         }
-        var balance = parseInt(raw, 10) || 0;
-        if (amount) {
-            if (balance > 0) { amount.max = balance; } else { amount.removeAttribute('max'); }
-        }
-        if (hint) {
-            hint.textContent = balance > 0 ? hintReste + ' ' + balance.toLocaleString('fr-FR') + ' FCFA.' : hintSolde;
-        }
+        course.addEventListener('change', syncSessions);
+        syncSessions();
     }
 
-    enrollment.addEventListener('change', sync);
-    sync();
+    var motif = document.getElementById('id_inscription-first_payment_motif');
+    var month = document.getElementById('id_inscription-first_payment_month');
+    var year = document.getElementById('id_inscription-first_payment_year');
+    function syncPeriodFields() {
+        var monthly = motif && motif.value === 'MONTHLY';
+        if (month) { month.required = !!monthly; }
+        if (year) { year.required = !!monthly; }
+    }
+    if (motif) {
+        motif.addEventListener('change', syncPeriodFields);
+        syncPeriodFields();
+    }
 })();
 </script>
 {% endblock %}

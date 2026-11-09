@@ -7,18 +7,22 @@ agents (intitulés d'inscription, caisses, catégories, motifs de visite, libell
 de rôles stockés en base) reste en français : il est retiré du texte analysé.
 """
 
+import datetime as dt
 import re
 
 from django.contrib.auth import get_user_model
-from django.test import Client
+from django.template.loader import get_template
+from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
 from core.models import (
-    CashAccount, CashTransaction, Course, CourseSession, Lesson, Module,
-    Payment, Role, RoleKey, ROLES_DISSOUS, TransactionCategory, VisitReason,
+    AcademicYear, CashAccount, CashTransaction, Course, CourseSession, Lesson,
+    Module, Payment, PlatformSetting, Role, RoleKey, ROLES_DISSOUS,
+    TransactionCategory, VisitReason,
 )
 from core.tests.base import BusinessTestBase
+from core import i18n_tools
 
 User = get_user_model()
 
@@ -41,7 +45,7 @@ MOTS_FRANCAIS = (
 # Cette liste ne couvre que le jeu d'essai ; le reste est dérivé de la base.
 DONNEES = (
     'Développement Web', 'Module HTML', 'Les bases du HTML', 'Cours de test',
-    'Caisse principale', 'Lun-Ven 08h-10h', 'Nouveau Guichet', 'Univers Academy',
+    'Caisse principale', 'Lun-Ven 08h-10h', 'Nouveau Guichet',
 )
 
 
@@ -86,6 +90,13 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
             chaines.update(
                 valeur for valeur in
                 modele.objects.values_list(champ, flat=True) if valeur)
+        # Le nom et la signature de l'établissement sont des réglages de la
+        # direction, pas de la chrome : ils déménagent, la garde doit suivre.
+        reglages = PlatformSetting.objects.first()
+        if reglages is not None:
+            chaines.update(valeur for valeur in
+                           (reglages.nom, reglages.signature, reglages.adresse)
+                           if valeur)
         for user in User.objects.all():
             chaines.update(valeur for valeur in
                            (user.first_name, user.last_name) if valeur)
@@ -149,6 +160,9 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
             (self.assistant, 'core:dashboard:payment-months'),
             (self.peda, 'core:dashboard:programs'),
             (self.peda, 'core:dashboard:course-sessions'),
+            (self.peda, 'core:dashboard:resp-peda-dashboard'),
+            (self.formateur, 'core:dashboard:formateur-dashboard'),
+            (self.etudiant, 'core:dashboard:etudiant-dashboard'),
             (self.peda, 'core:dashboard:resources'),
             (self.peda, 'core:dashboard:attendance-history'),
             (self.peda, 'core:dashboard:access-requests'),
@@ -172,6 +186,37 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
             self.assertEqual(page.status_code, 200, route)
             self._fuites(page, route)
 
+    def test_le_calendrier_se_peint_en_anglais(self):
+        annee = AcademicYear.objects.create(
+            label='2026-2027', start_date=self.today - dt.timedelta(days=200),
+            end_date=self.today + dt.timedelta(days=100), is_current=True)
+        client = self.client_en_anglais(self.direction)
+        liste = client.get(reverse('core:dashboard:academic-years'), follow=True)
+        self.assertEqual(liste.status_code, 200)
+        self._fuites(liste, 'années académiques')
+        self.assertContains(liste, 'Academic years')
+        reglage = client.get(
+            reverse('core:dashboard:academic-year-update', args=[annee.pk]),
+            follow=True)
+        self.assertEqual(reglage.status_code, 200)
+        self._fuites(reglage, "réglage d'une année")
+        self.assertContains(reglage, 'Current year')
+        etudiants = self.client_en_anglais(self.secretaire).get(
+            reverse('core:dashboard:student-list'), follow=True)
+        self._fuites(etudiants, 'sélecteur d année des étudiants')
+        self.assertContains(etudiants, 'All years')
+        self.assertContains(etudiants, 'Academic year 2026-2027')
+
+    def test_les_parametres_generaux_se_peignent_en_anglais(self):
+        client = self.client_en_anglais(self.direction)
+        page = client.get(reverse('core:dashboard:platform-settings'),
+                          follow=True)
+        self.assertEqual(page.status_code, 200)
+        self._fuites(page, 'paramètres généraux')
+        self.assertContains(page, 'General settings')
+        self.assertContains(page, 'Set up the institution')
+        self.assertContains(page, 'What these settings cover')
+
     def test_la_grille_des_mois_et_le_recu_se_peignent_en_anglais(self):
         client = self.client_en_anglais(self.assistant)
         grille = client.get(reverse('core:dashboard:payment-months'),
@@ -191,3 +236,32 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
         self._fuites(recu, 'reçu de paiement')
         self.assertContains(recu, 'Settled month')
         self.assertContains(recu, f'January {annee}')
+
+
+class CompilationGabaritsTest(TestCase):
+    """Les gabarits sont vérifiés avant de rendre : un écran muet ne se voit pas.
+
+    Deux pièges mesurés ici. Une écriture de tag cassée lève une erreur à la
+    compilation. Une variable à points dans un `{% blocktrans %}` ne lève rien :
+    Django rend la place vide, et le titre de la fiche de cours perdait ainsi le
+    nom de l'établissement sans jamais se plaindre.
+    """
+
+    def test_chaque_gabarit_du_projet_se_compile(self):
+        racine = i18n_tools.BASE_DIR / 'templates'
+        casses = []
+        for chemin in i18n_tools.gabarits():
+            relatif = chemin.relative_to(racine).as_posix()
+            try:
+                get_template(relatif)
+            except Exception as erreur:
+                casses.append(f'{relatif} : {type(erreur).__name__} — {erreur}')
+        self.assertEqual(casses, [])
+
+    def test_aucun_blocktrans_ne_garde_une_variable_a_points(self):
+        suspects = []
+        for chemin in i18n_tools.gabarits():
+            msgids, _ = i18n_tools.extraire(chemin.read_text(encoding='utf-8'))
+            suspects += [f'{chemin.name} : {m[:70]}' for m in msgids
+                         if '{{' in m or '{%' in m]
+        self.assertEqual(suspects, [])

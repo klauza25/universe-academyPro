@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}{% translate "Candidater à une bourse — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Candidater à une bourse" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-slate-50">
@@ -9,11 +9,11 @@
         <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
             <a href="{% url 'core:home' %}" class="flex items-center gap-3">
                 <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full ring-1 ring-slate-200">
-                    <img src="{% static 'img/logo-univers.jpg' %}" alt="Univers Academy" class="h-10 w-10 object-cover">
+                    <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}" class="h-10 w-10 object-cover">
                 </div>
                 <div class="leading-tight">
-                    <p class="text-sm font-semibold text-slate-900">Univers Academy</p>
-                    <p class="text-xs text-slate-500">{% translate "Centre de Formation en Langues" %}</p>
+                    <p class="text-sm font-semibold text-slate-900">{{ plateforme.nom }}</p>
+                    <p class="text-xs text-slate-500">{{ plateforme.signature }}</p>
                 </div>
             </a>
             <a href="{% url 'core:home' %}" class="text-sm text-slate-500 transition hover:text-slate-900">{% translate "Retour à l'accueil" %}</a>

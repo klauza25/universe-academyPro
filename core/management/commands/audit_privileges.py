@@ -41,11 +41,6 @@ class Command(BaseCommand):
                 reasons.append(
                     "Compte en attente de rôle demandé mais déjà porteur d'un rôle"
                 )
-            if user.clerk_user_id and RoleKey.SUPER_ADMIN in roles:
-                reasons.append(
-                    "SUPER_ADMIN lié à Clerk : vérifier que l'attribution était "
-                    "volontaire (jamais automatique)"
-                )
 
             if reasons:
                 findings.append((user, sorted(roles), reasons))
@@ -90,7 +85,7 @@ class Command(BaseCommand):
         for user, roles, reasons in findings:
             self.stdout.write(
                 f"  - {user.email} | statut={user.account_status} | "
-                f"rôles={roles or 'aucun'} | clerk={'oui' if user.clerk_user_id else 'non'}"
+                f"rôles={roles or 'aucun'}"
             )
             for reason in reasons:
                 self.stdout.write(f"      * {reason}")

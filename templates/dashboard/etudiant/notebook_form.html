@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% blocktrans with d=record.date|date:"d/m/Y" %}Fiche de cours du {{ d }} — Univers Academy{% endblocktrans %}{% endblock %}
+{% block title %}{% blocktrans with d=record.date|date:"d/m/Y" n=plateforme.nom %}Fiche de cours du {{ d }} — {{ n }}{% endblocktrans %}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/etudiant/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}

@@ -13,8 +13,8 @@ from django.utils import timezone
 from core import caisse
 from core.forms import CashTransactionForm
 from core.models import (
-    CashAccount, CashClosure, CashTransaction, Enrollment, Expense, Payment,
-    RoleKey, TransactionCategory,
+    AccountStatus, CashAccount, CashClosure, CashTransaction, CourseSession,
+    Enrollment, Expense, Payment, RoleKey, TransactionCategory, User,
 )
 from core.views_comptabilite import account_balance
 
@@ -78,6 +78,7 @@ class AccountingTestBase(BusinessTestBase):
             'paid_at': self.local_datetime(),
             'motif': Payment.Motif.OTHER,
             'note': '',
+            'submission_key': 'test-payment-submission',
         }
         payload.update(overrides)
         return payload
@@ -90,6 +91,7 @@ class AccountingTestBase(BusinessTestBase):
             'method': Payment.Method.CASH,
             'account': self.cash.pk,
             'note': '',
+            'submission_key': 'test-month-submission',
         }
         payload.update(overrides)
         return payload
@@ -902,6 +904,34 @@ class StudentPaymentTests(AccountingTestBase):
         self.assertEqual(enrollment.payment_state, 'PARTIEL')
         self.assert_audited('PAYMENT_CREATE', payment.pk)
 
+    def test_annuler_l_ecriture_annule_aussi_le_paiement(self):
+        self.client.post(
+            reverse('core:dashboard:payment-create'),
+            self.payment_payload(),
+        )
+        payment = Payment.objects.get()
+        url = reverse(
+            'core:dashboard:transaction-detail',
+            args=[payment.transaction_id],
+        )
+
+        response = self.client.post(url, {
+            'action': 'cancel',
+            'reason': 'Paiement saisi deux fois',
+        })
+
+        self.assertRedirects(response, url, fetch_redirect_response=False)
+        payment.refresh_from_db()
+        payment.transaction.refresh_from_db()
+        self.assertEqual(payment.status, Payment.Status.CANCELLED)
+        self.assertEqual(
+            payment.transaction.status, CashTransaction.Status.CANCELLED,
+        )
+        enrollment = Enrollment.objects.get(pk=self.enrollment.pk)
+        self.assertEqual(enrollment.total_paid, 0)
+        self.assertEqual(enrollment.balance_due, enrollment.total_due)
+        self.assert_audited('PAYMENT_CANCEL', payment.pk)
+
     def test_une_date_posterieure_a_ce_jour_est_refusee(self):
         """Rien n'entre en caisse avant le jour où le règlement est saisi."""
         dans_trois_jours = (timezone.localtime()
@@ -924,7 +954,8 @@ class StudentPaymentTests(AccountingTestBase):
         self.client.post(
             reverse('core:dashboard:payment-create'),
             self.payment_payload(
-                amount='60000', paid_at=self.local_datetime(minutes=-5)),
+                amount='60000', paid_at=self.local_datetime(minutes=-5),
+                submission_key='second-full-payment'),
         )
         enrollment = Enrollment.objects.get(pk=self.enrollment.pk)
         self.assertEqual(enrollment.total_paid, 90000)
@@ -952,8 +983,10 @@ class StudentPaymentTests(AccountingTestBase):
 
     def test_second_identical_amount_after_delay_is_allowed(self):
         first = self.payment_payload(
-            amount='10000', paid_at=self.local_datetime(minutes=-10))
-        second = self.payment_payload(amount='10000')
+            amount='10000', paid_at=self.local_datetime(minutes=-10),
+            submission_key='first-identical-payment')
+        second = self.payment_payload(
+            amount='10000', submission_key='second-identical-payment')
         self.client.post(reverse('core:dashboard:payment-create'), first)
         self.client.post(reverse('core:dashboard:payment-create'), second)
         self.assertEqual(Payment.objects.count(), 2)
@@ -1138,28 +1171,32 @@ class StudentWithoutEnrollmentNoticeTests(BusinessTestBase):
         page = self.client_for(self.assistant).get(
             reverse('core:dashboard:payment-create'))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'Comptes étudiants sans inscription')
+        self.assertContains(page, 'Suivre les étudiants')
         self.assertContains(page, 'Zorro Nsimbe')
-        self.assertContains(page, 'Inscrire')
+        self.assertContains(page, "Inscrire l'étudiant")
+        self.assertContains(page, 'id="student-search-enrollment"')
+        self.assertContains(page, 'id="student-search-payment"')
 
     def test_a_direction_member_can_enroll_from_that_screen(self):
         student = self.make_silent_student('silent2@test.local')
         page = self.client_for(self.direction).get(
-            reverse('core:dashboard:payment-create'))
-        self.assertContains(page, 'Inscrire')
-        self.assertContains(page, f'?student={student.id}')
+            reverse('core:dashboard:payment-create'),
+            {'student': student.id},
+        )
+        self.assertContains(page, "Inscrire l'étudiant")
+        self.assertEqual(
+            page.context['counter_form'].initial['student'], str(student.id))
 
     def test_the_comptable_can_also_enroll_from_that_screen(self):
         student = self.make_silent_student('silent3@test.local')
         page = self.client_for(self.assistant).get(
             reverse('core:dashboard:payment-create'))
-        self.assertContains(page, f'?student={student.id}#inscription')
         self.assertContains(page, 'Inscrire un étudiant')
+        self.assertContains(page, student.get_full_name())
 
     def test_enrolled_student_is_not_listed(self):
         page = self.client_for(self.assistant).get(
             reverse('core:dashboard:payment-create'))
-        self.assertNotContains(page, 'Comptes étudiants sans inscription')
         self.assertContains(page, self.etudiant.get_full_name())
 
 
@@ -1174,12 +1211,11 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
     def counter_payload(self, student, **overrides):
         payload = {
             'inscription-student': student.pk,
+            'inscription-course': self.session.course.pk,
             'inscription-session': self.session.pk,
             'inscription-start_date': self.local_date(),
-            'inscription-tariff_amount': '',
-            'inscription-discount_amount': '0',
-            'inscription-payment_plan': '',
-            'inscription-notes': '',
+            'inscription-monthly_tariff_amount': '',
+            'inscription-submission_key': f'registration-{student.pk}',
         }
         payload.update(overrides)
         return payload
@@ -1191,14 +1227,25 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         student.save(update_fields=['first_name', 'last_name'])
         return student
 
-    def test_student_field_lists_every_active_student(self):
+    def make_pending_enrollment(self, student):
+        return Enrollment.objects.create(
+            student=student,
+            session=self.session,
+            status=Enrollment.Status.PENDING,
+            start_date=self.today,
+            tariff_amount=self.course.fee_amount,
+            net_amount=self.course.fee_amount,
+            registered_by=self.assistant,
+        )
+
+    def test_student_field_lists_existing_student_accounts(self):
         other = self.make_student('autre.actif@test.local')
         page = self.client.get(reverse('core:dashboard:payment-create'))
         self.assertEqual(page.status_code, 200)
-        queryset = page.context['form'].fields['student'].queryset
+        queryset = page.context['counter_form'].fields['student'].queryset
         self.assertIn(self.etudiant, queryset)
         self.assertIn(other, queryset)
-        self.assertContains(page, 'Choisir un étudiant')
+        self.assertContains(page, 'Compte étudiant existant')
         self.assertContains(page, self.etudiant.get_full_name())
         self.assertContains(page, 'Nouveau Guichet')
 
@@ -1243,75 +1290,103 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         self.assertContains(page, 'Choisir un dossier')
         self.assertContains(page, 'Aucune inscription pour cet étudiant')
 
-    def test_pending_enrollment_explains_the_validation_wait(self):
+    def test_inscription_directe_est_active_et_encaissable(self):
         student = self.make_student('en.attente@test.local')
         self.client.post(
             reverse('core:dashboard:payment-create'),
             {'form_kind': 'enroll', **self.counter_payload(student)},
         )
-        page = self.client.get(
-            reverse('core:dashboard:payment-create'),
-            {'student': student.pk},
-        )
-        self.assertContains(page, 'il attend une validation')
+        enrollment = Enrollment.objects.get(student=student)
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
 
-    def test_counter_enrollment_is_created_pending_without_payment(self):
+    def test_counter_enrollment_is_created_without_required_payment(self):
         student = self.make_student()
         response = self.client.post(
             reverse('core:dashboard:payment-create'),
             {'form_kind': 'enroll', **self.counter_payload(student)},
         )
+        self.assertEqual(response.status_code, 302)
         enrollment = Enrollment.objects.get(student=student)
         self.assertRedirects(
             response,
-            f"{reverse('core:dashboard:payment-create')}"
-            f"?student={student.pk}",
+            reverse('core:dashboard:enrollment-detail', args=[enrollment.pk]),
             fetch_redirect_response=False,
         )
-        self.assertEqual(enrollment.status, Enrollment.Status.PENDING)
-        self.assertEqual(enrollment.net_amount, self.course.fee_amount)
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
+        self.assertEqual(enrollment.total_due, enrollment.net_amount)
         self.assertEqual(enrollment.registered_by, self.assistant)
         self.assertEqual(Payment.objects.count(), 0)
         self.assert_audited('ENROLLMENT_CREATE', enrollment.pk)
 
-    def test_counter_enrollment_keeps_the_net_amount_from_tariff(self):
+    def test_seule_la_direction_peut_modifier_le_tarif_mensuel(self):
         student = self.make_student()
-        self.client.post(
+        response = self.client_for(self.direction).post(
             reverse('core:dashboard:payment-create'),
             {'form_kind': 'enroll', **self.counter_payload(
                 student,
-                **{'inscription-tariff_amount': '120000',
-                   'inscription-discount_amount': '20000'})},
+                **{'inscription-monthly_tariff_amount': '40000'})},
         )
         enrollment = Enrollment.objects.get(student=student)
-        self.assertEqual(enrollment.net_amount, 100000)
+        self.assertEqual(enrollment.monthly_tariff_amount, 40000)
 
-    def test_a_pending_enrollment_cannot_be_paid(self):
+    def test_premier_paiement_est_facultatif_et_enregistre_avec_l_inscription(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
         response = self.client.post(
             reverse('core:dashboard:payment-create'),
-            self.payment_payload(
-                student=student.pk, enrollment=enrollment.pk, amount='10000'),
+            {'form_kind': 'enroll', **self.counter_payload(
+                student,
+                **{
+                    'inscription-first_payment_amount': '10000',
+                    'inscription-first_payment_motif': Payment.Motif.MONTHLY,
+                    'inscription-first_payment_month': str(self.today.month),
+                    'inscription-first_payment_year': str(self.today.year),
+                    'inscription-first_payment_method': Payment.Method.CASH,
+                    'inscription-first_payment_account': self.cash.pk,
+                    'inscription-first_payment_paid_at': self.local_datetime(),
+                },
+            )},
         )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(Payment.objects.count(), 0)
-        self.assertEqual(
-            Enrollment.objects.get(pk=enrollment.pk).status,
-            Enrollment.Status.PENDING,
+        payment = Payment.objects.get(enrollment__student=student)
+        self.assertRedirects(
+            response,
+            reverse('core:dashboard:payment-receipt', args=[payment.pk]),
+            fetch_redirect_response=False,
         )
+        self.assertEqual(payment.amount, 10000)
+        self.assertEqual(payment.motif, Payment.Motif.MONTHLY)
+        self.assertEqual(payment.period_month, self.today.month)
+        self.assertIsNotNone(payment.transaction)
+        self.assertEqual(Enrollment.objects.get(
+            student=student).status, Enrollment.Status.ACTIVE)
+
+    def test_nouveau_dossier_est_cree_sans_compte_actif_ou_mot_de_passe(self):
+        response = self.client.post(
+            reverse('core:dashboard:payment-create'),
+            {'form_kind': 'enroll',
+             'inscription-first_name': 'Nouveau',
+             'inscription-last_name': 'Dossier',
+             'inscription-email': 'nouveau.dossier@test.local',
+             'inscription-phone': '',
+             'inscription-course': self.course.pk,
+             'inscription-session': self.session.pk,
+             'inscription-start_date': self.local_date(),
+             'inscription-monthly_tariff_amount': '',
+             'inscription-submission_key': 'registration-new-dossier'},
+        )
+        student = User.objects.get(email='nouveau.dossier@test.local')
+        enrollment = Enrollment.objects.get(student=student)
+        self.assertRedirects(
+            response,
+            reverse('core:dashboard:enrollment-detail', args=[enrollment.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(student.account_status, AccountStatus.PENDING_APPROVAL)
+        self.assertFalse(student.has_usable_password())
+        self.assertEqual(enrollment.status, Enrollment.Status.ACTIVE)
 
     def test_direction_validates_the_counter_enrollment(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
 
         refused = self.client_for(self.formateur).post(reverse(
             'core:dashboard:enrollment-validate', args=[enrollment.pk]))
@@ -1332,11 +1407,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_super_admin_can_validate_while_admin_stays_read_only(self):
         student = self.make_student('relais.direction@test.local')
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
         url = reverse('core:dashboard:enrollment-validate', args=[enrollment.pk])
 
         self.assertEqual(
@@ -1353,11 +1424,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_comptable_valide_depuis_sa_caisse(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
         url = reverse('core:dashboard:enrollment-validate', args=[enrollment.pk])
 
         page = self.client.get(reverse('core:dashboard:comptabilite-dashboard'))
@@ -1376,11 +1443,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_responsable_pedagogique_valide_depuis_son_tableau_de_bord(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
         url = reverse('core:dashboard:enrollment-validate', args=[enrollment.pk])
         peta = self.client_for(self.peda)
 
@@ -1404,10 +1467,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_panel_de_validation_present_sur_les_tableaux_habilites(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
+        self.make_pending_enrollment(student)
         for user, route in (
             (self.super_admin, 'core:dashboard:super-admin-dashboard'),
             (self.direction, 'core:dashboard:direction-dashboard'),
@@ -1420,11 +1480,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_validated_enrollment_becomes_payable(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
         self.client_for(self.direction).post(reverse(
             'core:dashboard:enrollment-validate', args=[enrollment.pk]))
 
@@ -1477,24 +1533,15 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
 
     def test_pending_enrollment_warning_is_displayed(self):
         student = self.make_student()
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
+        enrollment = self.make_pending_enrollment(student)
         page = self.client.get(
-            reverse('core:dashboard:payment-create'),
-            {'student': student.pk},
+            reverse('core:dashboard:enrollment-detail', args=[enrollment.pk]),
         )
-        self.assertContains(page, 'Inscriptions en attente de validation')
-        self.assertContains(page, 'en attente de validation')
+        self.assertContains(page, 'Inscription en attente de validation')
 
     def test_direction_dashboard_lists_pending_enrollments(self):
         student = self.make_student('tableau.direction@test.local')
-        self.client.post(
-            reverse('core:dashboard:payment-create'),
-            {'form_kind': 'enroll', **self.counter_payload(student)},
-        )
-        enrollment = Enrollment.objects.get(student=student)
+        enrollment = self.make_pending_enrollment(student)
         page = self.client_for(self.direction).get(
             reverse('core:dashboard:direction-dashboard'))
         self.assertEqual(page.status_code, 200)
@@ -1515,6 +1562,11 @@ class GrilleDesMoisTests(AccountingTestBase):
         super().setUp()
         self.url = reverse('core:dashboard:payment-months')
         self.annee = self.today.year
+        self.session.starts_at = dt.date(self.annee, 1, 1)
+        self.session.ends_at = dt.date(self.annee + 1, 12, 31)
+        self.session.save(update_fields=['starts_at', 'ends_at'])
+        self.enrollment.start_date = dt.date(self.annee, 1, 1)
+        self.enrollment.save(update_fields=['start_date'])
 
     def test_la_grille_propose_la_mensualite_pratiquee_par_le_dossier(self):
         page = self.client.get(self.url, {'enrollment': self.enrollment.pk})
@@ -1536,6 +1588,117 @@ class GrilleDesMoisTests(AccountingTestBase):
             self.assertEqual(paiement.paid_at.date(), self.today)
         self.assertEqual(self.enrollment.balance_due, 90000 - 55000)
 
+    def test_plusieurs_versements_partiels_soldent_un_meme_mois(self):
+        mois = self.today.month
+        annee = self.today.year
+        for index, montant in enumerate(('10000', '20000')):
+            response = self.client.post(
+                reverse('core:dashboard:payment-create'),
+                self.payment_payload(
+                    amount=montant,
+                    motif=Payment.Motif.MONTHLY,
+                    period_month=str(mois),
+                    period_year=str(annee),
+                    submission_key=f'partial-month-{index}',
+                ),
+            )
+            self.assertEqual(response.status_code, 302)
+
+        reglements = Payment.objects.filter(
+            enrollment=self.enrollment,
+            period_year=annee,
+            period_month=mois,
+            status=Payment.Status.COMPLETED,
+        )
+        self.assertEqual(reglements.count(), 2)
+        self.assertEqual(sum(p.amount for p in reglements), 30000)
+
+        refused = self.client.post(
+            reverse('core:dashboard:payment-create'),
+            self.payment_payload(
+                amount='1',
+                motif=Payment.Motif.MONTHLY,
+                period_month=str(mois),
+                period_year=str(annee),
+            ),
+        )
+        self.assertEqual(refused.status_code, 200)
+        self.assertEqual(reglements.count(), 2)
+
+    def test_la_grille_affiche_le_reste_d_une_mensualite_partielle(self):
+        mois = self.today.month
+        Payment.objects.create(
+            enrollment=self.enrollment,
+            amount=10000,
+            method=Payment.Method.CASH,
+            motif=Payment.Motif.MONTHLY,
+            period_year=self.today.year,
+            period_month=mois,
+            status=Payment.Status.COMPLETED,
+            recorded_by=self.assistant,
+        )
+
+        page = self.client.get(self.url, {
+            'enrollment': self.enrollment.pk,
+            'annee': self.today.year,
+        })
+        ligne = next(
+            row for row in page.context['lignes'] if row['numero'] == mois
+        )
+        self.assertTrue(ligne['partiel'])
+        self.assertEqual(ligne['verse'], 10000)
+        self.assertEqual(ligne['montant'], 20000)
+
+    def test_tarif_mensuel_de_l_inscription_ne_change_pas_avec_le_catalogue(self):
+        self.course.monthly_fee_amount = 20000
+        self.course.save(update_fields=['monthly_fee_amount'])
+        student = self.make_user(RoleKey.ETUDIANT, 'tariff-snapshot@test.local')
+        session = CourseSession.objects.create(
+            course=self.course,
+            starts_at=dt.date(self.annee, 1, 1),
+            ends_at=dt.date(self.annee, 2, 28),
+            status=CourseSession.Status.ACTIVE,
+        )
+        enrollment = Enrollment.objects.create(
+            student=student,
+            session=session,
+            status=Enrollment.Status.ACTIVE,
+            start_date=dt.date(self.annee, 1, 1),
+            monthly_tariff_amount=20000,
+            tariff_amount=40000,
+            net_amount=40000,
+        )
+        self.course.monthly_fee_amount = 25000
+        self.course.save(update_fields=['monthly_fee_amount'])
+
+        self.assertEqual(
+            enrollment.monthly_amount_due(self.annee, 1), 20000
+        )
+        self.assertEqual(enrollment.total_due, 40000)
+
+    def test_les_mois_hors_periode_d_inscription_ne_sont_pas_dues(self):
+        student = self.make_user(RoleKey.ETUDIANT, 'period-boundary@test.local')
+        session = CourseSession.objects.create(
+            course=self.course,
+            starts_at=dt.date(self.annee, 1, 1),
+            ends_at=dt.date(self.annee, 4, 30),
+            status=CourseSession.Status.ACTIVE,
+        )
+        enrollment = Enrollment.objects.create(
+            student=student,
+            session=session,
+            status=Enrollment.Status.ACTIVE,
+            start_date=dt.date(self.annee, 3, 15),
+            monthly_tariff_amount=20000,
+            tariff_amount=40000,
+            net_amount=40000,
+        )
+
+        self.assertEqual(enrollment.monthly_amount_due(self.annee, 2), 0)
+        self.assertEqual(enrollment.monthly_amount_due(self.annee, 3), 20000)
+        self.assertEqual(enrollment.monthly_amount_due(self.annee, 4), 20000)
+        self.assertEqual(enrollment.monthly_amount_due(self.annee, 5), 0)
+
     def test_un_mois_d_avance_se_date_du_jour_present(self):
         """Régler un mois à venir est une avance, pas un argent déjà entré.
 
@@ -1555,7 +1718,7 @@ class GrilleDesMoisTests(AccountingTestBase):
         avant = Payment.objects.count()
         page = self.client.post(self.url, self.mois_payload(mois=['5'], montant_5='30000'))
         self.assertEqual(page.status_code, 200)
-        self.assertContains(page, 'déjà réglé')
+        self.assertContains(page, 'déjà soldé')
         self.assertEqual(Payment.objects.count(), avant)
 
     def test_le_mois_regle_une_annee_ne_blocque_pas_l_annee_suivante(self):
@@ -1574,7 +1737,9 @@ class GrilleDesMoisTests(AccountingTestBase):
 
     def test_la_grille_ne_peut_pas_encaisser_plus_que_le_reste_du(self):
         page = self.client.post(self.url, self.mois_payload(
-            mois=['1', '2'], montant_1='50000', montant_2='50000'))
+            mois=['1', '2', '3', '4'],
+            montant_1='30000', montant_2='30000',
+            montant_3='30000', montant_4='30000'))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'dépasse le reste à payer')
         self.assertEqual(Payment.objects.count(), 0)
@@ -1607,17 +1772,23 @@ class GrilleDesMoisTests(AccountingTestBase):
             mois=['9'], montant_9='30000'))
         self.assertEqual(Payment.objects.filter(period_month=9).count(), 1)
 
-    def test_la_base_refuse_deux_reglements_du_meme_mois(self):
+    def test_la_base_accepte_plusieurs_reglements_partiels_du_meme_mois(self):
         Payment.objects.create(
-            enrollment=self.enrollment, amount=30000, method=Payment.Method.CASH,
+            enrollment=self.enrollment, amount=10000, method=Payment.Method.CASH,
             motif=Payment.Motif.MONTHLY, period_year=self.annee, period_month=11,
             status=Payment.Status.COMPLETED, recorded_by=self.assistant)
-        with self.assertRaises(IntegrityError):
-            Payment.objects.create(
-                enrollment=self.enrollment, amount=30000,
-                method=Payment.Method.CASH, motif=Payment.Motif.MONTHLY,
-                period_year=self.annee, period_month=11,
-                status=Payment.Status.COMPLETED, recorded_by=self.assistant)
+        Payment.objects.create(
+            enrollment=self.enrollment, amount=20000,
+            method=Payment.Method.CASH, motif=Payment.Motif.MONTHLY,
+            period_year=self.annee, period_month=11,
+            status=Payment.Status.COMPLETED, recorded_by=self.assistant)
+        self.assertEqual(
+            sum(Payment.objects.filter(
+                enrollment=self.enrollment, period_year=self.annee,
+                period_month=11,
+            ).values_list('amount', flat=True)),
+            30000,
+        )
 
     def test_la_reprise_structure_le_mois_deja_encaisse(self):
         """La reprise de l'historique lit le mois là où l'import l'avait écrit."""

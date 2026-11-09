@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Formateur — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Formateur" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
 
@@ -20,6 +20,7 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Mes sessions" as lbl_mes_sessions %}
 {% translate "Étudiants suivis" as lbl_etudiants_suivis %}
 {% translate "Heures réalisées" as lbl_heures_realisees %}

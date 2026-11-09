@@ -1,12 +1,11 @@
-import logging
-
-from django.conf import settings
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.http import HttpResponseForbidden, FileResponse, Http404
+from django.http import HttpResponseForbidden, FileResponse, Http404, JsonResponse
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_GET
 from django.db.models import (
     Q, Sum, Count, F, Case, When, IntegerField, OuterRef, Subquery,
 )
@@ -14,7 +13,6 @@ from django.db.models.functions import Coalesce
 from django.core.paginator import Paginator
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
-from django.views.decorators.http import require_POST
 
 from .models import (
     User, Role, UserRole, AccessRequest, AccountStatus,
@@ -27,6 +25,7 @@ from .models import (
     Visit, Prospect, ProspectFollowUp, Contact,
     Module, Lesson, SessionRecord, Resource, StudentDocument,
     CashAccount, CashTransaction, CashClosure, TransactionCategory,
+    MOIS,
 )
 from .forms import (
     LoginForm, RegisterForm, UserCreateForm, UserEditForm,
@@ -36,16 +35,16 @@ from .forms import (
 )
 from .decorators import (
     active_account_required, business_write_required, permission_required,
-    role_required, roles_attribuables, super_admin_required,
+    ACCESS_REQUEST_REVIEW_ROLES, role_required, roles_attribuables,
+    super_admin_required,
 )
 from .utils import (
     enrollments_waiting_validation, log_audit, outstanding_receivables,
+    students_count,
 )
+from .taches import marqueur_evenements, tableau_des_files
 from .views_profile import changer_avatar
 from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
-from .clerk import ClerkError, sync_clerk_user, verify_clerk_token
-
-logger = logging.getLogger(__name__)
 
 
 def home(request):
@@ -91,69 +90,25 @@ def login_view(request):
     return render(request, 'public/login.html', {'form': form})
 
 
-@require_POST
-def clerk_session(request):
-    """Exchange a verified Clerk session token for a Django session.
-
-    The browser posts the JWT returned by Clerk JS in a CSRF-protected form.
-    The token is verified server-side before any local account is touched.
-    """
-    if not settings.CLERK_ENABLED:
-        return redirect('core:login')
-
-    token = (request.POST.get('token') or '').strip()
-    if not token:
-        messages.error(request, _("Connexion Clerk impossible : jeton manquant."))
-        return redirect('/login/?clerk_error=1')
-
-    try:
-        payload = verify_clerk_token(token)
-        user, created = sync_clerk_user(payload)
-    except ClerkError as exc:
-        messages.error(request, str(exc))
-        return redirect('/login/?clerk_error=1')
-    except Exception:
-        logger.exception("Clerk authentication failed")
-        messages.error(request, _("Connexion Clerk impossible. Veuillez reessayer."))
-        return redirect('/login/?clerk_error=1')
-
-    if not user.is_active:
-        messages.error(request, _("Votre compte est desactive. Contactez l'administration."))
-        return redirect('/login/?clerk_error=1')
-
-    login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-    log_audit(
-        request,
-        'REGISTER_CLERK' if created else 'LOGIN_CLERK',
-        'User',
-        str(user.id),
-        after={'email': user.email, 'clerk_user_id': user.clerk_user_id},
-    )
-
-    if user.account_status == AccountStatus.PENDING_APPROVAL:
-        if user.needs_access_request:
-            return redirect('core:complete-access-request')
-        return redirect('core:pending-approval')
-
-    if user.account_status != AccountStatus.ACTIVE:
-        logout(request)
-        messages.error(request, _("Votre compte est desactive ou suspendu."))
-        return redirect('/login/?clerk_error=1')
-
-    return redirect('core:dashboard:dashboard-router')
-
-
 def logout_view(request):
     if request.method != 'POST':
         return redirect('core:home')
     if request.user.is_authenticated:
         log_audit(request, 'LOGOUT', 'User', str(request.user.id))
     logout(request)
-    if settings.CLERK_ENABLED:
-        # The Clerk browser session must be closed too, otherwise the login
-        # page would silently sign the user straight back in.
-        return redirect('/login/?clerk_signed_out=1')
     return redirect('core:home')
+
+
+@require_GET
+@never_cache
+@active_account_required
+def notifications_poll(request):
+    """État léger de la cloche pour les nouveaux événements du tableau de bord."""
+    _, _, total = tableau_des_files(request.user)
+    return JsonResponse({
+        'event_cursor': marqueur_evenements(request.user),
+        'total': total,
+    })
 
 
 def register_view(request):
@@ -202,7 +157,7 @@ def pending_approval(request):
 
 @login_required
 def complete_access_request(request):
-    """Complète la demande d'accès d'un compte en attente (notamment Clerk).
+    """Complète la demande d'accès d'un compte en attente.
 
     Aucun rôle n'est attribué ici : le choix reste une demande soumise à la
     décision du super administrateur.
@@ -362,13 +317,10 @@ def super_admin_dashboard(request):
     cash_rows = accounts_with_balance()
 
     context = {
-        'total_users': User.objects.count(),
         'pending_requests': AccessRequest.objects.filter(
             status=AccessRequest.Status.PENDING
         ).count(),
-        'active_students': User.objects.filter(
-            roles__key='ETUDIANT', account_status=AccountStatus.ACTIVE
-        ).count(),
+        'active_students': students_count(only_active=True),
         'scholarship_pending': ScholarshipApplication.objects.filter(
             status=ScholarshipApplication.Status.SUBMITTED
         ).count(),
@@ -827,13 +779,20 @@ def permission_matrix(request):
     })
 
 
-@role_required('SUPER_ADMIN', 'RESP_PEDA')
+@role_required(*ACCESS_REQUEST_REVIEW_ROLES)
 def access_requests_list(request):
     status_filter = request.GET.get('statut', 'all')
     if status_filter not in {'all', 'PENDING', 'APPROVED', 'REJECTED'}:
         status_filter = 'all'
 
     requests_qs = AccessRequest.objects.select_related('user', 'reviewed_by')
+    if (
+        not request.user.is_elevated
+        and not request.user.has_role('RESP_PEDA')
+    ):
+        requests_qs = requests_qs.filter(
+            requested_role__in=roles_attribuables(request.user)
+        )
     if status_filter != 'all':
         requests_qs = requests_qs.filter(status=status_filter)
     requests_qs = requests_qs.annotate(
@@ -844,9 +803,7 @@ def access_requests_list(request):
         )
     ).order_by('pending_first', '-created_at')
 
-    # Le responsable pédagogique voit toutes les demandes mais ne peut statuer
-    # que sur les rôles de son périmètre : la liste des rôles proposés suit la
-    # même règle, pour qu'aucun choix hors périmètre n'apparaisse dans le menu.
+    # La liste et le menu de décision suivent le périmètre de chaque rôle.
     attribuables = roles_attribuables(request.user)
 
     return render(request, 'dashboard/super_admin/access_requests.html', {
@@ -864,7 +821,7 @@ def access_requests_list(request):
     })
 
 
-@role_required('SUPER_ADMIN', 'RESP_PEDA')
+@role_required(*ACCESS_REQUEST_REVIEW_ROLES)
 def access_request_review(request, request_id):
     ar = get_object_or_404(
         AccessRequest.objects.select_related('user'), id=request_id
@@ -1152,9 +1109,7 @@ def admin_dashboard(request):
     cash_rows = accounts_with_balance()
 
     context = {
-        'active_students': User.objects.filter(
-            roles__key='ETUDIANT', account_status=AccountStatus.ACTIVE
-        ).count(),
+        'active_students': students_count(only_active=True),
         'pending_requests': AccessRequest.objects.filter(
             status=AccessRequest.Status.PENDING
         ).count(),
@@ -1227,9 +1182,7 @@ def direction_dashboard(request):
         'total_revenue': transactions.filter(
             tx_type=CashTransaction.Type.IN
         ).aggregate(total=Sum('amount'))['total'] or 0,
-        'total_students': User.objects.filter(
-            roles__key='ETUDIANT', account_status=AccountStatus.ACTIVE
-        ).count(),
+        'active_students': students_count(only_active=True),
         'active_sessions': CourseSession.objects.filter(
             status=CourseSession.Status.ACTIVE
         ).count(),
@@ -1287,13 +1240,6 @@ def secretaire_dashboard(request):
             'student', 'session__course'
         ).order_by('-enrolled_at')[:10],
         'total_enrollments': Enrollment.objects.count(),
-        'total_students': User.objects.filter(
-            roles__key='ETUDIANT'
-        ).distinct().count(),
-        'active_students': User.objects.filter(
-            roles__key='ETUDIANT',
-            account_status=AccountStatus.ACTIVE,
-        ).distinct().count(),
         'documents_count': StudentDocument.objects.count(),
         'converted_prospects': Prospect.objects.filter(
             converted_student__isnull=False
@@ -1455,6 +1401,7 @@ def formateur_dashboard(request):
         'today_records': today_records,
         'upcoming_records': upcoming_records,
         'recent_records': recent_records,
+        'minutes_planned': minutes_planned,
         'minutes_actual': minutes_actual,
         'minutes_remaining': minutes_remaining,
         'recent_absences': recent_absences,
@@ -1515,19 +1462,63 @@ def etudiant_dashboard(request):
     attendances = Attendance.objects.filter(
         enrollment__student=request.user
     ).order_by('-date')[:20]
-
     course_ids = [e.session.course_id for e in enrollments]
     session_ids = [e.session_id for e in enrollments]
     resources = Resource.objects.filter(
         status=Resource.Status.PUBLISHED,
         course_id__in=course_ids,
     ).filter(
-        Q(session__isnull=True) | Q(session_id__in=session_ids)
-    ).select_related('course', 'module', 'author').order_by(
+        (
+            Q(session__enrollments__student=request.user,
+              session__enrollments__status=Enrollment.Status.ACTIVE) |
+            Q(session__enrollments__student=request.user,
+              session__enrollments__ended_at__isnull=False,
+              published_at__date__lte=F('session__enrollments__ended_at'))
+        ) & ~Q(session__isnull=True) |
+        (
+            Q(session__isnull=True) &
+            (
+                Q(course__sessions__enrollments__student=request.user,
+                  course__sessions__enrollments__status=Enrollment.Status.ACTIVE) |
+                Q(course__sessions__enrollments__student=request.user,
+                  course__sessions__enrollments__ended_at__isnull=False,
+                  published_at__date__lte=F(
+                      'course__sessions__enrollments__ended_at'))
+            )
+        )
+    ).distinct().select_related('course', 'module', 'author').order_by(
         '-published_at'
     )[:10]
 
-    total_due = sum(e.net_amount for e in enrollments)
+    paiements_mensuels = Payment.objects.filter(
+        enrollment__in=enrollments,
+        status=Payment.Status.COMPLETED,
+        motif=Payment.Motif.MONTHLY,
+    ).values(
+        'enrollment_id', 'period_year', 'period_month',
+    ).annotate(total=Sum('amount'))
+    paye_par_mois = {
+        (ligne['enrollment_id'], ligne['period_year'], ligne['period_month']):
+            ligne['total']
+        for ligne in paiements_mensuels
+    }
+    situation_mensuelle = []
+    for enrollment in enrollments:
+        for year, month in enrollment.billing_periods():
+            due = enrollment.monthly_amount_due(year, month)
+            if due <= 0:
+                continue
+            paid = paye_par_mois.get((enrollment.pk, year, month), 0)
+            situation_mensuelle.append({
+                'course': enrollment.session.course.title,
+                'year': year,
+                'month': dict(MOIS)[month],
+                'due': due,
+                'paid': paid,
+                'remaining': max(due - paid, 0),
+            })
+
+    total_due = sum(e.total_due for e in enrollments)
     total_paid = sum(
         p.amount for p in payments if p.status == Payment.Status.COMPLETED
     )
@@ -1553,6 +1544,7 @@ def etudiant_dashboard(request):
             date__gte=today,
             status=SessionRecord.Status.PLANNED,
         ).select_related('session__course').order_by('date')[:8],
+        'monthly_situation': situation_mensuelle,
     })
 
 

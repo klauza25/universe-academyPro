@@ -14,7 +14,9 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from . import programme_import as programme
+from . import annee_academique as calendrier
 from . import caisse
+from . import parametres
 from .decorators import (
     cash_write_required, payment_write_required, role_required,
 )
@@ -244,6 +246,12 @@ def transaction_edit(request, tx_id):
     ne doit pas passer sous le plancher.
     """
     tx = get_object_or_404(CashTransaction, id=tx_id)
+    if Payment.objects.filter(transaction=tx).exists():
+        messages.error(
+            request,
+            _("Le montant d'un paiement étudiant ne peut pas être modifié sans réconcilier son reçu. Annulez-le avec un motif puis saisissez le montant corrigé."),
+        )
+        return redirect('core:dashboard:transaction-detail', tx_id=tx.pk)
     if tx.status == CashTransaction.Status.CANCELLED:
         messages.info(
             request, _("Une écriture annulée ne se corrige pas : son historique est clos."))
@@ -562,7 +570,8 @@ def closure_create(request):
                            'difference': closure.difference},
                 )
                 messages.success(
-                    request, _("Clôture enregistrée. Écart : %(ecart)s FCFA.") % {'ecart': closure.difference},
+                    request, _("Clôture enregistrée. Écart : %(ecart)s %(dv)s.") % {
+                        'ecart': closure.difference, 'dv': parametres.devise()},
                 )
                 return redirect('core:dashboard:closures')
     return render(request, 'dashboard/comptabilite/closure_form.html', {
@@ -587,40 +596,95 @@ def _student_from_id(value):
         return None
 
 
+def _filtre_de_url(request, **valeurs):
+    """L'queryString de l'écran, avec quelques valeurs changées.
+
+    Un écran de caisse garde ses filtres d'une action à l'autre : après une
+    inscription créée ou une grille encaissée, l'année académique choisie et
+    l'année des mois doivent rester là où le poste de caisse les a mises.
+    Une valeur à ``None`` retire le paramètre.
+    """
+    query = request.GET.copy()
+    for cle, valeur in valeurs.items():
+        if valeur is None:
+            query.pop(cle, None)
+        else:
+            query[cle] = str(valeur)
+    return f"?{query.urlencode()}" if query else ""  # i18n-exempt: paramètres d'URL
+
+
 def _encaisser(request, *, enrollment, amount, method, account, paid_at, note,
-               motif, period_year=None, period_month=None):
+               motif, period_year=None, period_month=None,
+               submission_key=None):
     """Encaisse un paiement étudiant et pose l'écriture de caisse en vis-à-vis.
 
     Les deux écrans — un paiement, la grille des douze mois — passent par ici :
     une écriture, une caisse, une trace d'audit par règlement, jamais deux chemins
     qui pourraient diverger sur le même argent.
     """
-    with db_transaction.atomic():
-        payment = Payment.objects.create(
-            enrollment=enrollment, amount=amount, method=method,
-            paid_at=paid_at, recorded_by=request.user, note=note,
-            status=Payment.Status.COMPLETED, motif=motif,
-            period_year=period_year, period_month=period_month,
-        )
-        category, _unused = TransactionCategory.objects.get_or_create(
-            name='Paiements des étudiants',  # i18n-exempt: nom stocké en base, clé de get_or_create
-            direction=TransactionCategory.Direction.IN,
-        )
-        cash = caisse.poster(
-            caisse=account, montant=amount, sens=CashTransaction.Type.IN,
-            libelle=_("Paiement étudiant %(reference)s") % {'reference': payment.reference},
-            categorie=category,
-            description=(
-                f"{enrollment.student.display_label} — "
-                f"{enrollment.session.course.title}"
-            ),
-            methode=method, survenu=paid_at,
-            contrepartie=enrollment.student.display_label,
-            statut=CashTransaction.Status.VALIDATED, note=note,
-            agent=request.user, requete=request,
-        )
-        payment.transaction = cash
-        payment.save(update_fields=['transaction'])
+    try:
+        with db_transaction.atomic():
+            enrollment = Enrollment.objects.select_for_update().select_related(
+                'student', 'session__course'
+            ).get(pk=enrollment.pk)
+            if amount > enrollment.balance_due:
+                raise ValidationError(
+                    _("Le montant dépasse le reste à payer actualisé du dossier (%(montant)s %(dv)s).") % {
+                        'montant': enrollment.balance_due,
+                        'dv': parametres.devise()},
+                )
+            if motif == Payment.Motif.MONTHLY:
+                expected = enrollment.monthly_amount_due(
+                    period_year, period_month,
+                )
+                paid = Payment.objects.filter(
+                    enrollment=enrollment,
+                    period_year=period_year,
+                    period_month=period_month,
+                    status=Payment.Status.COMPLETED,
+                ).aggregate(total=Sum('amount'))['total'] or 0
+                if not expected or amount > max(expected - paid, 0):
+                    raise ValidationError(
+                        _("Le montant dépasse le reste actualisé de cette mensualité."),
+                    )
+            if submission_key and Payment.objects.filter(
+                    submission_key=submission_key).exists():
+                raise ValidationError(
+                    _("Cette soumission a déjà été enregistrée."),
+                )
+            payment = Payment.objects.create(
+                enrollment=enrollment, amount=amount, method=method,
+                paid_at=paid_at, recorded_by=request.user, note=note,
+                status=Payment.Status.COMPLETED, motif=motif,
+                period_year=period_year, period_month=period_month,
+                submission_key=submission_key,
+            )
+            category, _unused = TransactionCategory.objects.get_or_create(
+                name='Paiements des étudiants',  # i18n-exempt: nom stocké en base, clé de get_or_create
+                direction=TransactionCategory.Direction.IN,
+            )
+            cash = caisse.poster(
+                caisse=account, montant=amount, sens=CashTransaction.Type.IN,
+                libelle=_("Paiement étudiant %(reference)s") % {'reference': payment.reference},
+                categorie=category,
+                description=(
+                    f"{enrollment.student.display_label} — "
+                    f"{enrollment.session.course.title}"
+                ),
+                methode=method, survenu=paid_at,
+                contrepartie=enrollment.student.display_label,
+                statut=CashTransaction.Status.VALIDATED, note=note,
+                agent=request.user, requete=request,
+            )
+            payment.transaction = cash
+            payment.save(update_fields=['transaction'])
+    except IntegrityError as error:
+        if submission_key and Payment.objects.filter(
+                submission_key=submission_key).exists():
+            raise ValidationError(
+                _("Cette soumission a déjà été enregistrée."),
+            ) from error
+        raise
 
     log_audit(
         request, 'PAYMENT_CREATE', 'Payment', str(payment.id),  # i18n-exempt: 'Payment' = nom de classe technique (audit)
@@ -639,6 +703,9 @@ def student_payment_create(request):
         else request.GET.get('student')
     ) or ''
     enrollment_param = request.GET.get('enrollment') or ''
+    # Le guichet encaisse l'année en cours ; le filtre suit l'écran, y compris
+    # après un refus de saisie, pour ne pas faire revenir toute la liste.
+    annee = calendrier.depuis_la_requete(request)
 
     initial = {'paid_at': timezone.localtime().strftime('%Y-%m-%dT%H:%M')}
     if enrollment_param:
@@ -653,24 +720,82 @@ def student_payment_create(request):
     if student_param:
         initial['student'] = student_param
 
-    form = StudentPaymentForm(initial=initial)
+    form = StudentPaymentForm(initial=initial, annee_academique=annee)
+    counter_initial = {'student': student_param} if student_param else {}
+    course_param = request.GET.get('course') or ''
+    if course_param:
+        counter_initial['course'] = course_param
     counter_form = CounterEnrollmentForm(
-        prefix='inscription',
-        initial={'student': student_param} if student_param else None,
+        prefix='inscription', initial=counter_initial,
+        can_override_tariff=request.user.has_role('DIRECTION'),
     )
 
     if request.method == 'POST' and request.POST.get('form_kind') == 'enroll':
         counter_form = CounterEnrollmentForm(
-            request.POST, prefix='inscription')
+            request.POST, prefix='inscription',
+            can_override_tariff=request.user.has_role('DIRECTION'),
+        )
         if counter_form.is_valid():
             try:
-                enrollment = counter_form.save(request.user)
+                with db_transaction.atomic():
+                    creates_student = (
+                        counter_form.cleaned_data.get('student') is None
+                    )
+                    enrollment = counter_form.save(request.user)
+                    amount = counter_form.cleaned_data.get(
+                        'first_payment_amount')
+                    payment = None
+                    if amount:
+                        motif = counter_form.cleaned_data[
+                            'first_payment_motif']
+                        period_year = (
+                            counter_form.cleaned_data.get(
+                                'first_payment_year')
+                            if motif == Payment.Motif.MONTHLY else None
+                        )
+                        period_month = (
+                            counter_form.cleaned_data.get(
+                                'first_payment_month')
+                            if motif == Payment.Motif.MONTHLY else None
+                        )
+                        payment = _encaisser(
+                            request,
+                            enrollment=enrollment,
+                            amount=amount,
+                            method=counter_form.cleaned_data[
+                                'first_payment_method'],
+                            account=counter_form.cleaned_data[
+                                'first_payment_account'],
+                            paid_at=counter_form.cleaned_data[
+                                'first_payment_paid_at'],
+                            note='',
+                            motif=motif,
+                            period_year=period_year,
+                            period_month=period_month,
+                            submission_key=(
+                                counter_form.cleaned_data['submission_key']
+                                + ':first'
+                            ),
+                        )
             except IntegrityError:
                 counter_form.add_error(
                     'session',
-                    _("Cet étudiant est déjà inscrit à cette formation."),
+                    _("Ce dossier existe déjà pour ce groupe."),
                 )
+            except ValidationError as error:
+                counter_form.add_error(None, error)
             else:
+                if creates_student:
+                    log_audit(
+                        request, 'STUDENT_CREATE', 'User',
+                        str(enrollment.student_id),
+                        after={
+                            'email': enrollment.student.email,
+                            'code': enrollment.student.internal_code,
+                            'enrollment': str(enrollment.id),
+                            'source': 'guichet',
+                        },
+                    )
                 log_audit(
                     request, 'ENROLLMENT_CREATE', 'Enrollment',
                     str(enrollment.id),
@@ -678,37 +803,32 @@ def student_payment_create(request):
                            'session': str(enrollment.session_id),
                            'net': enrollment.net_amount,
                            'status': enrollment.status,
+                           'monthly_tariff': enrollment.monthly_tariff_amount,
                            'source': 'guichet'},
                 )
                 messages.success(
-                    request, _("Inscription créée. Elle doit être validée par la direction avant tout encaissement."),
+                    request,
+                    _("Inscription créée.")
+                    if payment is None else
+                    _("Inscription et paiement enregistrés."),
                 )
+                if payment is not None:
+                    return redirect(
+                        'core:dashboard:payment-receipt',
+                        payment_id=payment.id,
+                    )
                 return redirect(
-                    reverse('core:dashboard:payment-create')
-                    + f"?student={enrollment.student_id}"
+                    'core:dashboard:enrollment-detail',
+                    enrollment_id=enrollment.id,
                 )
     elif request.method == 'POST':
-        form = StudentPaymentForm(request.POST)
+        form = StudentPaymentForm(request.POST, annee_academique=annee)
         if form.is_valid():
             enrollment = form.cleaned_data['enrollment']
             amount = form.cleaned_data['amount']
             paid_at = form.cleaned_data['paid_at']
 
-            # Anti double-soumission : même dossier, même montant, même minute.
-            duplicate = Payment.objects.filter(
-                enrollment=enrollment,
-                amount=amount,
-                recorded_by=request.user,
-                paid_at__gte=paid_at - timedelta(minutes=2),
-                paid_at__lte=paid_at + timedelta(minutes=2),
-                status=Payment.Status.COMPLETED,
-            ).exists()
-            if duplicate:
-                form.add_error(
-                    None,
-                    _("Un paiement identique vient d'être enregistré. Vérifiez le journal avant de réessayer."),
-                )
-            else:
+            try:
                 payment = _encaisser(
                     request, enrollment=enrollment, amount=amount,
                     method=form.cleaned_data['method'],
@@ -717,10 +837,16 @@ def student_payment_create(request):
                     motif=form.cleaned_data['motif'],
                     period_year=form.cleaned_data['period_year'],
                     period_month=form.cleaned_data['period_month'],
+                    submission_key=form.cleaned_data['submission_key'],
                 )
-
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
                 messages.success(
-                    request, _("Paiement %(reference)s enregistré. Reste à payer : %(reste)s FCFA.") % {'reference': payment.reference, 'reste': enrollment.balance_due},
+                    request, _("Paiement %(reference)s enregistré. Reste à payer : %(reste)s %(dv)s.") % {
+                        'reference': payment.reference,
+                        'reste': enrollment.balance_due,
+                        'dv': parametres.devise()},
                 )
                 return redirect('core:dashboard:payment-receipt',
                                 payment_id=payment.id)
@@ -737,19 +863,30 @@ def student_payment_create(request):
             .select_related('session__course')
             .order_by('-enrolled_at')
         )
+    sans_inscription = User.objects.filter(
+        roles__key=RoleKey.ETUDIANT,
+        account_status=AccountStatus.ACTIVE,
+    ).exclude(id__in=enrolled_ids).order_by('last_name', 'first_name')
+    if annee is not None:
+        # Un compte sans inscription n'est d'aucune année : le filtre le laisse
+        # dehors, il rejoindra la liste sous « Toutes les années ».
+        sans_inscription = sans_inscription.none()
+    annees = calendrier.toutes_les_annees()
     return render(request, 'dashboard/comptabilite/payment_form.html', {
         'form': form,
         'counter_form': counter_form,
         'selected_student': selected_student,
         'pending_enrollments': pending_enrollments,
-        'students_without_enrollment': User.objects.filter(
-            roles__key=RoleKey.ETUDIANT,
-            account_status=AccountStatus.ACTIVE,
-        ).exclude(id__in=enrolled_ids).order_by('last_name', 'first_name'),
+        'students_without_enrollment': sans_inscription,
+        'annee_academique': annee,
+        'annees': annees,
+        'toutes': calendrier.TOUTES,
+        'drapeau': (calendrier.drapeau(annee) if annee or not annees else ''),
         'can_enroll': (
             not request.user.is_elevated
             and request.user.has_any_role(*COUNTER_ENROLL_ROLES)
         ),
+        'can_override_tariff': request.user.has_role('DIRECTION'),
     })
 
 
@@ -760,23 +897,33 @@ def _grille_des_mois(enrollment, annee):
     formation, donc la remise consentie est respectée. Un mois réglé en 2026 ne
     masque pas celui de 2027 — la grille est par année.
     """
-    regles = {
-        paiement.period_month: paiement
-        for paiement in enrollment.payments.filter(
-            period_month__isnull=False, period_year=annee,
-        ).exclude(
-            status__in=[Payment.Status.CANCELLED, Payment.Status.REFUNDED],
-        )
-    }
-    suggestion = mensualite_attendue(enrollment)
+    paiements = {}
+    for paiement in enrollment.payments.filter(
+        motif=Payment.Motif.MONTHLY,
+        period_month__isnull=False,
+        period_year=annee,
+        status=Payment.Status.COMPLETED,
+    ).order_by('-paid_at'):
+        ligne = paiements.setdefault(paiement.period_month, {
+            'montant': 0, 'dernier': paiement,
+        })
+        ligne['montant'] += paiement.amount
     lignes = []
     for numero, libelle in MOIS:
-        regle = regles.get(numero)
+        attendu = enrollment.monthly_amount_due(annee, numero)
+        paiements_mois = paiements.get(numero, {})
+        verse = paiements_mois.get('montant', 0)
+        reste = max(attendu - verse, 0)
         lignes.append({
             'numero': numero,
             'libelle': libelle,
-            'montant': (regle.amount if regle else suggestion),
-            'paye': regle,
+            'montant': reste,
+            'attendu': attendu,
+            'verse': verse,
+            'eligible': attendu > 0,
+            'paye': attendu > 0 and reste == 0,
+            'partiel': verse > 0 and reste > 0,
+            'dernier': paiements_mois.get('dernier'),
         })
     frais = (
         enrollment.payments.filter(motif=Payment.Motif.ENROLLMENT)
@@ -808,6 +955,10 @@ def student_payment_months(request):
     dossier_param = request.GET.get('enrollment') or ''
     brut_annee = request.GET.get('annee') or ''
     annee = int(brut_annee) if brut_annee.isdigit() else timezone.localdate().year
+    # Deux calendriers se côtoient sur cet écran : l'année des douze mois réglés
+    # et l'année académique posée par la direction, qui décide quels dossiers et
+    # quels étudiants sont proposés.
+    annee_academique = calendrier.depuis_la_requete(request)
 
     initial = {'student': etudiant_param} if etudiant_param else {}
     dossier = None
@@ -815,34 +966,43 @@ def student_payment_months(request):
     frais = None
 
     if request.method == 'POST':
-        form = PaymentMonthsForm(request.POST)
+        form = PaymentMonthsForm(request.POST, annee_academique=annee_academique)
         if form.is_valid():
             dossier = form.cleaned_data['enrollment']
             annee = form.cleaned_data['annee']
             now = timezone.localtime()
             regles = []
-            for ligne in form.lignes:
-                # La recette se date au jour présent, jamais au premier jour du
-                # mois réglé : cocher « janvier 2027 » en novembre signifie que
-                # l'élève paie d'avance, pas que l'argent est entré en 2027. La
-                # période réglée porte le mois couvert, paid_at porte la recette.
-                regles.append(_encaisser(
-                    request, enrollment=dossier, amount=ligne['montant'],
-                    method=form.cleaned_data['method'],
-                    account=form.cleaned_data['account'], paid_at=now,
-                    note=form.cleaned_data['note'], motif=ligne['motif'],
-                    period_year=ligne['annee'], period_month=ligne['mois'],
-                ))
-            total = sum(regle.amount for regle in regles)
-            messages.success(
-                request,
-                _("%(nb)s paiement(s) enregistré(s) · %(total)s FCFA encaissés · reste %(reste)s FCFA.") % {
-                    'nb': len(regles), 'total': total, 'reste': dossier.balance_due},
-            )
-            return redirect(
-                reverse('core:dashboard:payment-months')
-                + f"?student={dossier.student_id}&enrollment={dossier.id}&annee={annee}"  # i18n-exempt: paramètres d'URL
-            )
+            try:
+                with db_transaction.atomic():
+                    for ligne in form.lignes:
+                        # The receipt is dated now; the selected month is the period covered.
+                        regles.append(_encaisser(
+                            request, enrollment=dossier, amount=ligne['montant'],
+                            method=form.cleaned_data['method'],
+                            account=form.cleaned_data['account'], paid_at=now,
+                            note=form.cleaned_data['note'], motif=ligne['motif'],
+                            period_year=ligne['annee'], period_month=ligne['mois'],
+                            submission_key=(
+                                f"{form.cleaned_data['submission_key']}:"
+                                f"{ligne['annee'] or 'frais'}:"
+                                f"{ligne['mois'] or 'unique'}"
+                            ),
+                        ))
+            except ValidationError as error:
+                form.add_error(None, error)
+            else:
+                total = sum(regle.amount for regle in regles)
+                messages.success(
+                    request,
+                    _("%(nb)s paiement(s) enregistré(s) · %(total)s %(dv)s encaissés · reste %(reste)s %(dv)s.") % {
+                        'nb': len(regles), 'total': total,
+                        'reste': dossier.balance_due, 'dv': parametres.devise()},
+                )
+                return redirect(
+                    reverse('core:dashboard:payment-months')
+                    + _filtre_de_url(request, student=dossier.student_id,
+                                     enrollment=dossier.id, annee=annee)
+                )
         dossier = form.cleaned_data.get('enrollment')
         annee = form.cleaned_data.get('annee') or annee
     else:
@@ -856,7 +1016,8 @@ def student_payment_months(request):
                     'annee': annee,
                     'account': CashAccount.objects.filter(active=True).first(),
                 }
-        form = PaymentMonthsForm(initial=initial)
+        form = PaymentMonthsForm(initial=initial,
+                                 annee_academique=annee_academique)
 
     if dossier:
         lignes, frais = _grille_des_mois(dossier, annee)
@@ -869,6 +1030,15 @@ def student_payment_months(request):
         status=Enrollment.Status.CANCELLED,
     ).values_list('student_id', flat=True)
     selected_student = _student_from_id(etudiant_param)
+    sans_inscription = User.objects.filter(
+        roles__key=RoleKey.ETUDIANT,
+        account_status=AccountStatus.ACTIVE,
+    ).exclude(id__in=enrolled_ids).order_by('last_name', 'first_name')
+    if annee_academique is not None:
+        # Un compte sans inscription n'est d'aucune année : le filtre le laisse
+        # dehors, il rejoindra la liste sous « Toutes les années ».
+        sans_inscription = sans_inscription.none()
+    annees = calendrier.toutes_les_annees()
     return render(request, 'dashboard/comptabilite/payment_months.html', {
         'form': form,
         'lignes': lignes,
@@ -876,12 +1046,14 @@ def student_payment_months(request):
         'frais_montant': frais_montant,
         'dossier': dossier,
         'annee': annee,
+        'annee_academique': annee_academique,
+        'annees': annees,
+        'toutes': calendrier.TOUTES,
+        'drapeau': (calendrier.drapeau(annee_academique)
+                    if annee_academique or not annees else ''),
         'selected_student': selected_student,
         'mensualite': mensualite_attendue(dossier) if dossier else 0,
-        'students_without_enrollment': User.objects.filter(
-            roles__key=RoleKey.ETUDIANT,
-            account_status=AccountStatus.ACTIVE,
-        ).exclude(id__in=enrolled_ids).order_by('last_name', 'first_name'),
+        'students_without_enrollment': sans_inscription,
     })
 
 

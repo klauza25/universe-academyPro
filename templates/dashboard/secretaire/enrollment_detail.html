@@ -17,10 +17,12 @@
 {% translate "Remise" as lbl_remise %}
 {% translate "Net dû" as lbl_net %}
 {% translate "Solde restant" as lbl_solde %}
+{% translate "Tarif mensuel" as lbl_tarif_mensuel %}
+{% translate "Total payé" as lbl_total_paye %}
 <div class="ua-page-head">
     <div>
         <h1 class="ua-page-title">{{ enrollment.session.course.title }}</h1>
-        <p class="ua-page-sub">{{ enrollment.student.get_full_name|default:enrollment.student.email }} · {{ enrollment.session.starts_at|date:"d/m/Y" }}</p>
+        <p class="ua-page-sub">{{ enrollment.student.get_full_name|default:enrollment.student.email }} · {{ enrollment.session.display_name }} · {{ enrollment.session.starts_at|date:"d/m/Y" }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
         <a href="{% url 'core:dashboard:student-detail' enrollment.student.id %}" class="ua-btn ua-btn-light">{% icon "graduation" %} {{ act_fiche }}</a>
@@ -53,11 +55,68 @@
 {% endif %}
 
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-    {% include "dashboard/_stat.html" with label=lbl_tarif value=enrollment.tariff_amount icon="wallet" tone="indigo" hint="FCFA" %}
-    {% include "dashboard/_stat.html" with label=lbl_remise value=enrollment.discount_amount icon="trending-up" tone="amber" hint="FCFA" %}
-    {% include "dashboard/_stat.html" with label=lbl_net value=enrollment.net_amount icon="credit-card" tone="sky" hint="FCFA" %}
-    {% include "dashboard/_stat.html" with label=lbl_solde value=enrollment.balance_due icon="chart" tone="rose" hint="FCFA" %}
+    {% include "dashboard/_stat.html" with label=lbl_tarif_mensuel value=enrollment.monthly_tariff_amount icon="wallet" tone="indigo" hint=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_net value=enrollment.total_due icon="credit-card" tone="sky" hint=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_total_paye value=enrollment.total_paid icon="check-circle" tone="green" hint=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_solde value=enrollment.balance_due icon="chart" tone="rose" hint=plateforme.devise %}
 </div>
+
+<section class="ua-card ua-card-pad mb-5" id="monthly-payment">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h2 class="ua-section-title">{% translate "Suivi des mensualités" %}</h2>
+            <p class="ua-muted text-sm">{{ enrollment.session.course.title }} · {{ enrollment.monthly_tariff_amount }} {{ plateforme.devise }} / {% translate "mois" %}</p>
+        </div>
+        <form method="get" class="flex items-center gap-2">
+            <label for="monthly-year" class="text-sm">{% translate "Année" %}</label>
+            <input id="monthly-year" class="ua-input w-28" type="number" name="year" value="{{ selected_year }}">
+            <button class="ua-btn ua-btn-ghost ua-btn-sm" type="submit">{% translate "Afficher" %}</button>
+        </form>
+    </div>
+
+    <div class="ua-table-wrap">
+        <table class="ua-table">
+            <thead>
+                <tr>
+                    <th>{% translate "Mois" %}</th>
+                    <th>{% translate "Montant attendu" %}</th>
+                    <th>{% translate "Montant payé" %}</th>
+                    <th>{% translate "État" %}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in monthly_rows %}
+                <tr>
+                    <td>{{ row.label|capfirst }} {{ selected_year }}</td>
+                    <td>{{ row.expected|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>{{ row.paid|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>
+                        {% if row.state == 'paid' %}<span class="ua-badge ua-badge-green">{% translate "Payé" %}</span>
+                        {% elif row.state == 'partial' %}<span class="ua-badge ua-badge-amber">{% translate "Partiel" %}</span>
+                        {% elif row.state == 'unpaid' %}<span class="ua-badge ua-badge-rose">{% translate "Impayé" %}</span>
+                        {% else %}<span class="ua-muted">{% translate "Non concerné" %}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if can_record_payment and row.remaining and enrollment.status == 'ACTIVE' or can_record_payment and row.remaining and enrollment.status == 'COMPLETED' %}
+                        <a class="ua-btn ua-btn-ghost ua-btn-sm" href="?year={{ selected_year }}&month={{ row.number }}#monthly-payment">{% translate "Encaisser" %}</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if can_record_payment and enrollment.status == 'ACTIVE' or can_record_payment and enrollment.status == 'COMPLETED' %}
+    <form method="post" class="ua-form mt-5">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="monthly-payment">
+        {% include "dashboard/_form.html" with form=payment_form %}
+        <button type="submit" class="ua-btn ua-btn-primary">{% icon "credit-card" %} {% translate "Enregistrer le paiement" %}</button>
+    </form>
+    {% endif %}
+</section>
 
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-5">
     <section class="ua-card ua-card-pad">
@@ -74,18 +133,11 @@
     </section>
 
     <section class="ua-card ua-card-pad">
-        <div class="flex items-center justify-between mb-4">
-            <h2 class="ua-section-title">{% translate "Paiements" %}</h2>
-            {% if can_record_payment %}
-            {% if enrollment.status == 'ACTIVE' or enrollment.status == 'COMPLETED' %}
-            <a href="{% url 'core:dashboard:payment-create' %}?enrollment={{ enrollment.id }}" class="ua-btn ua-btn-primary ua-btn-sm">{% icon "credit-card" %} {% translate "Encaisser" %}</a>
-            {% endif %}
-            {% endif %}
-        </div>
+        <h2 class="ua-section-title mb-4">{% translate "Historique des paiements" %}</h2>
         {% for payment in payments %}
         <div class="ua-list-row">
             <div>
-                <span class="ua-cell-title">{{ payment.reference }} · {{ payment.amount }} FCFA</span>
+                <span class="ua-cell-title">{{ payment.reference }} · {{ payment.amount }} {{ plateforme.devise }}</span>
                 <span class="ua-cell-sub block">{{ payment.get_method_display }} · {{ payment.paid_at|date:"d/m/Y H:i" }}</span>
                 {% if payment.period_month %}
                 <span class="ua-cell-sub block">{{ payment.get_motif_display }} · {{ payment.period_label }} {{ payment.period_year }}</span>
@@ -94,7 +146,7 @@
             <a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:payment-receipt' payment.id %}">{% translate "Reçu" %}</a>
         </div>
         {% empty %}
-        <p class="ua-empty">{% translate "Aucun paiement. Les règlements sont enregistrés par la comptabilité." %}</p>
+        <p class="ua-empty">{% translate "Aucun paiement enregistré." %}</p>
         {% endfor %}
     </section>
 </div>

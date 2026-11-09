@@ -10,5 +10,5 @@
     </div>
     <p class="ua-stat-label">{{ label }}</p>
     <p class="ua-stat-value">{{ value }}</p>
-    {% if hint %}<p class="ua-stat-hint">{{ hint }}</p>{% endif %}
+    {% if unite or hint %}<p class="ua-stat-hint">{% if unite %}{{ unite }} — {% endif %}{{ hint }}</p>{% endif %}
 </div>

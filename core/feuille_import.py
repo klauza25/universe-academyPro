@@ -19,12 +19,17 @@ import unicodedata
 from collections import defaultdict
 from dataclasses import dataclass, field
 
+from django.utils import timezone
+
 from core.models import (CashTransaction, Course, Enrollment, Payment,
                          TransactionCategory, User)
 
 MARQUE_FEUILLE = "d'après le journal de caisse"
 ONGLET = 'Enregistrement_Opérations'
 PREMIERE_LIGNE = 5
+# Le classeur ne porte que des jours : l'écriture est posée à midi, heure des
+# contrôles de caisse, pour rester lisible dans le journal.
+MIDI = dt.time(12, 0)
 
 # Libellés de scolarité : le motif de paiement étudiant visé.
 SCOLARITE = {'frais mensuel': Payment.Motif.MONTHLY, 'inscription': Payment.Motif.ENROLLMENT}
@@ -70,6 +75,22 @@ def normatif(valeur: object) -> str:
     texte = unicodedata.normalize('NFKD', str(valeur or ''))
     texte = ''.join(c for c in texte if not unicodedata.combining(c))
     return re.sub(r'[^a-z0-9]+', ' ', texte.lower()).strip()
+
+
+def instant_de(ligne: 'Ligne', aujourd_hui: dt.date | None = None) -> dt.datetime:
+    """L'instant d'écriture d'une ligne : son jour, jamais dans le futur.
+
+    Le classeur pré-remplit les mois à venir : une mensualité d'avril 2027
+    pointée en novembre 2026. L'argent ne peut pas entrer en caisse avant
+    d'être reçu, donc l'écriture est ramenée au jour de l'import. Le mois
+    couvert n'est pas perdu : il reste porté par ``period_year`` et
+    ``period_month``, seuls champs qui décrivent la période réglée.
+    """
+    aujourd_hui = aujourd_hui or timezone.localdate()
+    jour = (ligne.date.date() if ligne.date else aujourd_hui)
+    if jour > aujourd_hui:
+        jour = aujourd_hui
+    return timezone.make_aware(dt.datetime.combine(jour, MIDI))
 
 
 @dataclass

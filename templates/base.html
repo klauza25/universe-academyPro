@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="{% block meta_description %}{% trans "Univers Academy — plateforme de gestion académique" %}{% endblock %}">
-    <title>{% block title %}Univers Academy{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ plateforme.nom }} — {% translate "plateforme de gestion académique" %}{% endblock %}">
+    <title>{% block title %}{{ plateforme.nom }}{% endblock %}</title>
+    <meta name="devise" content="{{ plateforme.devise }}">
 
     <!-- Thème résolu avant la peinture : sans ce bloc, la page s'affiche claire
          puis bascule, ce qui fait clignoter tout le tableau de bord. -->

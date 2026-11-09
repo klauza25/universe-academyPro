@@ -69,16 +69,13 @@ def user_profile_context(request):
     return ctx
 
 
-def clerk_context(request):
-    from django.conf import settings
+def plateforme_context(request):
+    """Le nom, les coordonnées et la devise signés par la direction.
 
-    if not getattr(settings, 'CLERK_ENABLED', False):
-        return {'clerk_enabled': False}
+    Les gabarits écrivent `{{ plateforme.nom }}` au lieu de recopier le nom de
+    l'établissement : la ligne de réglages est la seule source, sinon deux
+    documents officiels peuvent se contredire.
+    """
+    from . import parametres
 
-    return {
-        'clerk_enabled': True,
-        'clerk_publishable_key': settings.CLERK_PUBLISHABLE_KEY,
-        'clerk_frontend_api': settings.CLERK_FRONTEND_API,
-        'clerk_js_url': settings.CLERK_JS_URL,
-        'clerk_ui_url': settings.CLERK_UI_URL,
-    }
+    return {'plateforme': parametres.ligne()}

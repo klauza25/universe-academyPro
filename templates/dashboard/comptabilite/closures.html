@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Clôtures de caisse — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Clôtures de caisse" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -39,12 +39,12 @@
                 <tr>
                     <td class="ua-cell-title">{{ closure.date|date:"d/m/Y" }}</td>
                     <td>{{ closure.account.name }}</td>
-                    <td>{{ closure.opening_balance }} FCFA</td>
-                    <td>{{ closure.theoretical_balance }} FCFA</td>
-                    <td>{{ closure.counted_amount }} FCFA</td>
+                    <td>{{ closure.opening_balance }} {{ plateforme.devise }}</td>
+                    <td>{{ closure.theoretical_balance }} {{ plateforme.devise }}</td>
+                    <td>{{ closure.counted_amount }} {{ plateforme.devise }}</td>
                     <td>
-                        {% if closure.difference == 0 %}<span class="ua-badge ua-badge-green">0 FCFA</span>
-                        {% else %}<span class="ua-badge ua-badge-rose">{{ closure.difference }} FCFA</span>{% endif %}
+                        {% if closure.difference == 0 %}<span class="ua-badge ua-badge-green">0 {{ plateforme.devise }}</span>
+                        {% else %}<span class="ua-badge ua-badge-rose">{{ closure.difference }} {{ plateforme.devise }}</span>{% endif %}
                     </td>
                     <td>{{ closure.closed_by.display_label|default:"—" }}</td>
                     <td>{{ closure.note|default:"—"|truncatechars:60 }}</td>

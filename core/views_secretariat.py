@@ -2,22 +2,24 @@
 import mimetypes
 
 from django.contrib import messages
+from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Q, Sum
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponseForbidden
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from . import annee_academique
 from .decorators import business_write_required, enrollment_validation_required, role_required
 from .forms import (
-    AvatarForm, EnrollmentForm, NewEnrollmentForm, StudentDocumentForm,
-    StudentEditForm, StudentForm,
+    AvatarForm, EnrollmentForm, EnrollmentMonthlyPaymentForm,
+    NewEnrollmentForm, StudentDocumentForm, StudentEditForm, StudentForm,
 )
 from .models import (
     Course, CourseSession, Enrollment, Payment, Role, StudentDocument, User,
-    UserRole, AccountStatus, Prospect, RoleKey, AuditLog,
+    UserRole, AccountStatus, Prospect, RoleKey, AuditLog, MOIS,
 )
 from .utils import log_audit
 from .views_profile import changer_avatar
@@ -31,10 +33,16 @@ def _students_queryset():
 
 @role_required(*SECRETARIAT_ROLES, 'ASSISTANT_ADMIN')
 def student_list(request):
+    """Les dossiers, posés sur l'année académique en cours par défaut.
+
+    Sans année écrite par la direction, la liste garde toutes les années : le
+    filtre ne peut pas inventer de calendrier ni vider l'écran.
+    """
     students = _students_queryset().prefetch_related('roles')
     query = (request.GET.get('q') or '').strip()
     status = request.GET.get('status') or ''
     course_id = request.GET.get('course') or ''
+    annee = annee_academique.depuis_la_requete(request)
     if query:
         students = students.filter(
             Q(first_name__icontains=query) |
@@ -44,11 +52,14 @@ def student_list(request):
         )
     if status:
         students = students.filter(account_status=status)
-    if course_id:
-        students = students.filter(enrollments__session__course_id=course_id)
+    students = annee_academique.fil_etudiants(
+        students, annee,
+        extra=(Q(enrollments__session__course_id=course_id) if course_id else None),
+    )
 
     paginator = Paginator(students.order_by('last_name', 'first_name'), 20)
     page = paginator.get_page(request.GET.get('page', 1))
+    annees = annee_academique.toutes_les_annees()
     return render(request, 'dashboard/secretaire/students.html', {
         'page': page,
         'query': query,
@@ -56,6 +67,10 @@ def student_list(request):
         'course_filter': course_id,
         'status_choices': AccountStatus.choices,
         'courses': Course.objects.filter(active=True),
+        'annee_academique': annee,
+        'annees': annees,
+        'toutes': annee_academique.TOUTES,
+        'drapeau': (annee_academique.drapeau(annee) if annee or not annees else ''),
     })
 
 
@@ -114,6 +129,9 @@ def student_create(request):
                     session=enroll_form.cleaned_data['session'],
                     status=enroll_form.cleaned_data['status'],
                     start_date=enroll_form.cleaned_data['start_date'],
+                    monthly_tariff_amount=enroll_form.cleaned_data[
+                        'monthly_tariff_amount'
+                    ],
                     tariff_amount=enroll_form.cleaned_data['tariff_amount'],
                     discount_amount=enroll_form.cleaned_data['discount_amount'] or 0,
                     net_amount=enroll_form.net_amount,
@@ -173,10 +191,41 @@ def student_detail(request, student_id):
         enrollment__student=student
     ).select_related('enrollment__session__course').order_by('-date')[:30]
 
-    total_due = enrollments.aggregate(total=Sum('net_amount'))['total'] or 0
+    total_due = sum(enrollment.total_due for enrollment in enrollments)
     total_paid = payments.filter(
         status=Payment.Status.COMPLETED
     ).aggregate(total=Sum('amount'))['total'] or 0
+    monthly_year = timezone.localdate().year
+    monthly_totals = Payment.objects.filter(
+        enrollment__in=enrollments,
+        status=Payment.Status.COMPLETED,
+        motif=Payment.Motif.MONTHLY,
+        period_year=monthly_year,
+    ).values('enrollment_id', 'period_month').annotate(total=Sum('amount'))
+    paid_by_month = {
+        (row['enrollment_id'], row['period_month']): row['total']
+        for row in monthly_totals
+    }
+    monthly_tracking = []
+    for enrollment in enrollments:
+        for month_number, month_label in MOIS:
+            expected = enrollment.monthly_amount_due(
+                monthly_year, month_number)
+            paid = paid_by_month.get((enrollment.pk, month_number), 0)
+            remaining = max(expected - paid, 0)
+            monthly_tracking.append({
+                'enrollment': enrollment,
+                'number': month_number,
+                'label': month_label,
+                'expected': expected,
+                'paid': paid,
+                'remaining': remaining,
+                'state': (
+                    'paid' if expected and remaining == 0 else
+                    'partial' if paid else
+                    'unpaid' if expected else 'not_due'
+                ),
+            })
 
     return render(request, 'dashboard/secretaire/student_detail.html', {
         'student': student,
@@ -187,6 +236,12 @@ def student_detail(request, student_id):
         'total_due': total_due,
         'total_paid': total_paid,
         'balance': sum(e.balance_due for e in enrollments),
+        'monthly_tracking': monthly_tracking,
+        'monthly_year': monthly_year,
+        'can_record_payment': (
+            request.user.is_elevated
+            or request.user.has_perm_key('finance.write')
+        ),
         'doc_form': StudentDocumentForm(),
         'avatar_form': AvatarForm(),
         'can_manage_documents': (
@@ -348,12 +403,96 @@ def enrollment_detail(request, enrollment_id):
         Enrollment.objects.select_related('student', 'session__course'),
         id=enrollment_id,
     )
+    year_value = request.GET.get('year', '')
+    year = int(year_value) if year_value.isdigit() else timezone.localdate().year
+    payment_form = EnrollmentMonthlyPaymentForm(
+        enrollment=enrollment,
+        initial={
+            'year': year,
+            'month': request.GET.get('month') or '',
+        },
+    )
+    if request.method == 'POST' and request.POST.get('action') == 'monthly-payment':
+        if not (request.user.is_elevated or request.user.has_perm_key('finance.write')):
+            return HttpResponseForbidden(
+                _("L'encaissement demande le droit de saisir des paiements.")
+            )
+        if enrollment.status not in (
+                Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED):
+            messages.error(request, _("Cette inscription ne peut pas recevoir de paiement."))
+        else:
+            payment_form = EnrollmentMonthlyPaymentForm(
+                request.POST, enrollment=enrollment)
+            if payment_form.is_valid():
+                from .views_comptabilite import _encaisser
+
+                try:
+                    payment = _encaisser(
+                        request,
+                        enrollment=enrollment,
+                        amount=payment_form.cleaned_data['amount'],
+                        method=payment_form.cleaned_data['method'],
+                        account=payment_form.cleaned_data['account'],
+                        paid_at=payment_form.cleaned_data['paid_at'],
+                        note='',
+                        motif=Payment.Motif.MONTHLY,
+                        period_year=payment_form.cleaned_data['year'],
+                        period_month=payment_form.cleaned_data['month'],
+                        submission_key=payment_form.cleaned_data['submission_key'],
+                    )
+                except ValidationError as error:
+                    payment_form.add_error(None, error)
+                else:
+                    messages.success(request, _("Paiement enregistré."))
+                    return redirect(
+                        'core:dashboard:payment-receipt',
+                        payment_id=payment.id,
+                    )
+
     payments = enrollment.payments.select_related(
         'recorded_by', 'transaction'
     ).order_by('-paid_at')
+    paid_by_month = {}
+    for payment in payments:
+        if (payment.status == Payment.Status.COMPLETED
+                and payment.motif == Payment.Motif.MONTHLY
+                and payment.period_year == year
+                and payment.period_month):
+            paid_by_month[payment.period_month] = (
+                paid_by_month.get(payment.period_month, 0) + payment.amount
+            )
+    monthly_rows = []
+    for month_number, month_label in MOIS:
+        expected = enrollment.monthly_amount_due(year, month_number)
+        paid = paid_by_month.get(month_number, 0)
+        remaining = max(expected - paid, 0)
+        monthly_rows.append({
+            'number': month_number,
+            'label': month_label,
+            'expected': expected,
+            'paid': paid,
+            'remaining': remaining,
+            'state': (
+                'paid' if expected and remaining == 0 else
+                'partial' if paid else
+                'unpaid' if expected else 'not_due'
+            ),
+        })
+    if request.method == 'POST' and request.POST.get('action') == 'monthly-payment':
+        payment_form.initial.update({
+            'year': payment_form.data.get('year'),
+            'month': payment_form.data.get('month'),
+        })
     return render(request, 'dashboard/secretaire/enrollment_detail.html', {
         'enrollment': enrollment,
         'payments': payments,
+        'monthly_rows': monthly_rows,
+        'selected_year': year,
+        'payment_form': payment_form,
+        'can_record_payment': (
+            request.user.is_elevated
+            or request.user.has_perm_key('finance.write')
+        ),
         'documents': enrollment.documents.all(),
         'audit_entries': AuditLog.objects.filter(
             entity_type='Enrollment', entity_id=str(enrollment.id),

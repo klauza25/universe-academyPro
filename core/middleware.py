@@ -12,7 +12,6 @@ PUBLIC_PATHS = [
     '/bourses/suivi/',
     '/pending-approval/',
     '/access-denied/',
-    '/clerk/',
 ]
 
 

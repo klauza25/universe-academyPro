@@ -1,0 +1,275 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Report-Msgid-Bugs-To: \n"
+"Language: en\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "%(dv)s de recettes"
+msgstr "%(dv)s of income"
+
+msgid "%(dv)s de solde des caisses"
+msgstr "%(dv)s across cash accounts"
+
+msgid ""
+"%(nb)s paiement(s) enregistré(s) · %(total)s %(dv)s encaissés · reste "
+"%(reste)s %(dv)s."
+msgstr ""
+"%(nb)s payment(s) recorded · %(total)s %(dv)s collected · %(reste)s %(dv)s "
+"remaining."
+
+msgid "%(r)s %(dv)s de recettes pour %(d)s %(dv)s de dépenses enregistrées."
+msgstr "%(r)s %(dv)s of income against %(d)s %(dv)s of recorded expenses."
+
+msgid ""
+"%(t)s étudiant(s) actif(s), %(s)s session(s) en cours et %(r)s %(dv)s de "
+"recettes encaissées."
+msgstr ""
+"%(t)s active student(s), %(s)s ongoing class group(s) and %(r)s %(dv)s of "
+"income collected."
+
+msgid "Aperçu de l'en-tête imprimé"
+msgstr "Printed header preview"
+
+msgid "Aucun événement d'audit pour les réglages."
+msgstr "No audit events for the settings."
+
+msgid "Candidater à une bourse"
+msgstr "Apply for a scholarship"
+
+msgid "Ce que couvrent ces réglages"
+msgstr "What these settings cover"
+
+msgid ""
+"Cette sortie consomme %(pourcent)s %% du solde disponible de « %(caisse)s » "
+"(%(disponible)s %(devise)s), seuil %(seuil)s %%."
+msgstr ""
+"This outgoing entry uses %(pourcent)s %% of the available balance of "
+"\"%(caisse)s\" (%(disponible)s %(devise)s), threshold %(seuil)s %%."
+
+msgid "Clôture enregistrée. Écart : %(ecart)s %(dv)s."
+msgstr "Closing recorded. Difference: %(ecart)s %(dv)s."
+
+msgid "Compte et coordonnées"
+msgstr "Account and contact details"
+
+msgid "Confirmation de votre nouvelle adresse — %(nom)s"
+msgstr "Confirmation of your new address — %(nom)s"
+
+msgid "Connexion"
+msgstr "Sign in"
+
+msgid "Connexion avec votre e-mail ou votre code interne %(nom)s."
+msgstr "Sign in with your e-mail or your %(nom)s internal code."
+
+msgid "Coordonnées"
+msgstr "Contact details"
+
+msgid "Créer/Modifier utilisateur"
+msgstr "Create/Edit user"
+
+msgid "Créée le %(d)s · net %(n)s %(dv)s · %(s)s"
+msgstr "Created on %(d)s · net %(n)s %(dv)s · %(s)s"
+
+msgid "Demande d'accès"
+msgstr "Access request"
+
+msgid "Détail utilisateur"
+msgstr "User details"
+
+msgid "E-mail de contact"
+msgstr "Contact e-mail"
+
+msgid "Encaisser les mensualités"
+msgstr "Collect the monthly payments"
+
+msgid "Encaissés ce mois"
+msgstr "Collected this month"
+
+msgid "Feuille de suivi, cahier de texte et reçu."
+msgstr "Tracking sheet, class register and receipt."
+
+msgid "Fiche de cours du %(d)s — %(n)s"
+msgstr "Class sheet for %(d)s — %(n)s"
+
+msgid "Frais de formation prévus"
+msgstr "Expected program fees"
+
+msgid "Frais de formation prévus (%(dv)s)"
+msgstr "Expected program fees (%(dv)s)"
+
+msgid "Gestion des utilisateurs"
+msgstr "User management"
+
+msgid "La boîte affichée sur les documents et dans les messages envoyés."
+msgstr "The mailbox shown on documents and in the messages sent."
+
+msgid "La ligne sous le nom, sur les portails et les en-têtes."
+msgstr "The line under the name, on the portals and the headers."
+
+msgid ""
+"Le libellé de devise change ce qui s'écrit à côté des montants. Il ne "
+"convertit rien : les paiements déjà enregistrés restent dans la devise où "
+"ils sont entrés."
+msgstr ""
+"The currency label changes what is written next to amounts. It converts "
+"nothing: payments already recorded stay in the currency they were entered "
+"in."
+
+msgid "Le montant dépasse le reste à payer (%(montant)s %(dv)s)."
+msgstr "The amount exceeds the balance due (%(montant)s %(dv)s)."
+
+msgid "Le mot qui signe les écrans, les reçus et les documents imprimés."
+msgstr ""
+"The word that signs the screens, the receipts and the printed documents."
+
+msgid ""
+"Le mot écrit à côté des montants. Les montants déjà enregistrés gardent la "
+"devise où ils sont entrés."
+msgstr ""
+"The word written next to amounts. Amounts already recorded keep the currency"
+" they were entered in."
+
+msgid "Le nom de l'établissement est obligatoire."
+msgstr "The institution name is required."
+
+msgid ""
+"Le nom, les coordonnées et les deux gardes de l'établissement. Ce que vous "
+"écrivez ici signe tous les écrans et tous les documents."
+msgstr ""
+"The name, the contact details and the two guards of the institution. What "
+"you write here signs every screen and every document."
+
+msgid ""
+"Le reçu reprend désormais ce bloc : les trois documents imprimés portent la "
+"même signature."
+msgstr ""
+"The receipt now reuses this block: the three printed documents carry the "
+"same signature."
+
+msgid "Le total dépasse le reste à payer (%(montant)s %(dv)s)."
+msgstr "The total exceeds the remaining balance (%(montant)s %(dv)s)."
+
+msgid "Les réglages de l'établissement tiennent sur une seule ligne."
+msgstr "The institution settings fit on a single row."
+
+msgid "Libellé de devise"
+msgstr "Currency label"
+
+msgid "Modifications des réglages enregistrées dans le journal d'audit."
+msgstr "Settings changes recorded in the audit log."
+
+msgid "Montant (%(dv)s)"
+msgstr "Amount (%(dv)s)"
+
+msgid "Montant exprimé dans la devise de l'établissement"
+msgstr "Amount expressed in the institution currency"
+
+msgid "Montant net dû"
+msgstr "Net amount due"
+
+msgid "Nom de l'établissement"
+msgstr "Institution name"
+
+msgid "Paiement %(reference)s enregistré. Reste à payer : %(reste)s %(dv)s."
+msgstr "Payment %(reference)s recorded. Balance due: %(reste)s %(dv)s."
+
+msgid "Paramètres généraux"
+msgstr "General settings"
+
+msgid "Pied de page des portails et en-têtes des documents officiels."
+msgstr "Footer of the portals and header of the official documents."
+
+msgid "RCCM, NIU, CNSS"
+msgstr "RCCM, NIU, CNSS"
+
+msgid "Reception"
+msgstr "Reception"
+
+msgid "Remise (%(dv)s)"
+msgstr "Discount (%(dv)s)"
+
+msgid "Remise autorisée"
+msgstr "Approved discount"
+
+msgid "Responsable Pédagogique"
+msgstr "Academic manager"
+
+msgid "Reste à payer sur le dossier : %(b)s %(dv)s"
+msgstr "Balance due on this record: %(b)s %(dv)s"
+
+msgid "Réglages de l'établissement enregistrés."
+msgstr "Institution settings saved."
+
+msgid "Régler l'établissement"
+msgstr "Set up the institution"
+
+msgid "Selon filtres"
+msgstr "Depending on filters"
+
+msgid "Seuil d'alerte"
+msgstr "Alert threshold"
+
+msgid "Seuil d'alerte de caisse (%)"
+msgstr "Cash alert threshold (%)"
+
+msgid "Signature"
+msgstr "Signature"
+
+msgid ""
+"Sortie de caisse qui consomme au moins cette part du solde disponible "
+"réclame une confirmation."
+msgstr ""
+"An outgoing entry using at least this share of the available balance "
+"requires a confirmation."
+
+msgid "Suggestion du dossier : %(m)s %(dv)s."
+msgstr "File suggestion: %(m)s %(dv)s."
+
+msgid "Super Admin"
+msgstr "Super Admin"
+
+msgid "Tarif appliqué"
+msgstr "Applied fee"
+
+msgid "Tarif appliqué (%(dv)s)"
+msgstr "Applied fee (%(dv)s)"
+
+msgid "Tarif catalogue appliqué"
+msgstr "Catalogue fee applied"
+
+msgid ""
+"Titres des écrans, barre latérale, accueil publique, reçus, lettres "
+"imprimées et messages envoyés."
+msgstr ""
+"Screen titles, sidebar, public home page, receipts, printed letters and sent"
+" messages."
+
+msgid ""
+"Une sortie qui consomme au moins cette part du solde disponible demande une "
+"confirmation."
+msgstr ""
+"An outgoing entry that uses at least this share of the available balance "
+"requires a confirmation."
+
+msgid "Valeur actuelle"
+msgstr "Current value"
+
+msgid "Validés"
+msgstr "Validated"
+
+msgid "Versés ce mois"
+msgstr "Paid out this month"
+
+msgid "Vous avez demandé à utiliser cette adresse pour votre compte %(nom)s."
+msgstr "You asked to use this address for your %(nom)s account."
+
+msgid "plateforme de gestion académique"
+msgstr "academic management platform"
+
+msgid "reste %(amount)s %(dv)s"
+msgstr "balance due %(amount)s %(dv)s"

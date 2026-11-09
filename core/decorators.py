@@ -85,12 +85,14 @@ def cash_write_required(*role_keys):
 
 
 ENROLLMENT_VALIDATION_ROLES = ('DIRECTION', 'SUPER_ADMIN', 'ASSISTANT_ADMIN', 'RESP_PEDA')
+ACCESS_REQUEST_REVIEW_ROLES = (
+    'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION',
+    'ASSISTANT_ADMIN', 'SECRETAIRE',
+)
 
-# Rôles qu'un responsable pédagogique a le droit d'attribuer en approuvant une
-# demande d'accès : son équipe (formateurs) et les étudiants. L'assistant
-# administratif porte la caisse, le secrétariat et le poste de resp. pédagogie
-# lui-même restent décidés par un super administrateur — sinon un resp. peda
-# fabriquerait ses pairs et les comptes financiers de l'établissement.
+# Rôles que le responsable pédagogique peut attribuer : son équipe et les
+# étudiants. La direction, l'assistant administratif et le secrétariat peuvent
+# approuver uniquement les demandes d'accès étudiant.
 RESP_PEDA_ROLES_ATTRIBUABLES = ('FORMATEUR', 'ETUDIANT')
 
 
@@ -100,6 +102,8 @@ def roles_attribuables(user):
         return set(REQUESTABLE_ROLES)
     if user.has_role('RESP_PEDA'):
         return set(RESP_PEDA_ROLES_ATTRIBUABLES)
+    if user.has_any_role('DIRECTION', 'ASSISTANT_ADMIN', 'SECRETAIRE'):
+        return {'ETUDIANT'}
     return set()
 
 

@@ -30,6 +30,10 @@ _tests_out.txt
 *.p12
 *.pfx
 
+# Identifiants Google : le JSON du compte de service ne doit jamais entrer.
+service-account*.json
+*credentials*.json
+
 # Classeurs de l'administration : noms, téléphones et emails réels des apprenants.
 # Les commandes analyser_donnees / importer_formations les lisent sur ce poste,
 # ils n'ont jamais rien à faire sur le dépôt distant.

@@ -6,23 +6,40 @@ Les compteurs sont repris des tableaux de bord — le module n’invente aucune
 règle métier nouvelle, sinon la cloche annoncerait du travail impossible à faire.
 """
 
+import hashlib
+
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-from .decorators import ENROLLMENT_VALIDATION_ROLES, roles_attribuables
+from .decorators import (
+    ACCESS_REQUEST_REVIEW_ROLES, ENROLLMENT_VALIDATION_ROLES,
+    roles_attribuables,
+)
 from .models import (
     AccessRequest, CashTransaction, Enrollment, Notification,
     ROLE_DASHBOARD_ROUTES, ScholarshipApplication, SessionRecord,
 )
 
 # Public de chaque écran de traitement, tel que son propre décorateur l'admet.
-ECRAN_ACCES_ROLES = ('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA')
+ECRAN_ACCES_ROLES = ACCESS_REQUEST_REVIEW_ROLES
 ECRAN_BOURSE_ROLES = ('SUPER_ADMIN', 'ADMIN')
 ECRAN_JOURNAL_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION', 'SUPER_ADMIN')
-ECRAN_SEANCES_ROLES = ('RESP_PEDA',)
+ECRAN_SEANCES_ROLES = ('FORMATEUR',)
 
 MAXI_NOTIFICATIONS = 5
+
+
+def marqueur_evenements(user):
+    """Marqueur opaque pour signaler tout nouvel événement dans les espaces."""
+    derniere_notification = Notification.objects.filter(
+        user__isnull=False,
+    ).order_by('-created_at', '-pk').values_list('pk', flat=True).first()
+    derniere_demande = AccessRequest.objects.filter(
+        user__isnull=False,
+    ).order_by('-created_at', '-pk').values_list('pk', flat=True).first()
+    source = f'{derniere_notification or ""}:{derniere_demande or ""}'
+    return hashlib.sha256(source.encode()).hexdigest()
 
 
 def tableau_des_files(user):
@@ -77,7 +94,8 @@ def tableau_des_files(user):
             SessionRecord.objects.filter(
                 status=SessionRecord.Status.PLANNED,
                 date__gte=timezone.localdate(),
-            ).count(),
+                session__formateurs=user,
+            ).distinct().count(),
             reverse('core:dashboard:session-records'),
         )
 

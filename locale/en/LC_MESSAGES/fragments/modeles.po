@@ -54,9 +54,6 @@ msgstr "An email address is required"
 msgid "Code interne ex: UA-ETU-0001"
 msgstr "Internal code, e.g. UA-ETU-0001"
 
-msgid "Identifiant utilisateur Clerk (user_...) lié à ce compte"
-msgstr "Clerk user ID (user_...) linked to this account"
-
 msgid "Nom affiché dans l'interface (facultatif)"
 msgstr "Name shown in the interface (optional)"
 

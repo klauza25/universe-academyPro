@@ -1,0 +1,132 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+msgid "Inscription et paiements étudiants"
+msgstr "Student enrollment and payments"
+
+msgid "Inscription et paiements des étudiants"
+msgstr "Student enrollment and payments"
+
+msgid "Inscrivez l'étudiant une seule fois, puis suivez ses mensualités dans son dossier."
+msgstr "Enroll each student once, then track monthly payments in their record."
+
+msgid "Suivre les étudiants"
+msgstr "Track students"
+
+msgid "Rechercher un étudiant"
+msgstr "Search for a student"
+
+msgid "— Choisir un mois —"
+msgstr "— Choose a month —"
+
+msgid "— Créer un nouveau dossier —"
+msgstr "— Create a new record —"
+
+msgid "Inscrire un étudiant"
+msgstr "Enroll a student"
+
+msgid "Nouveau dossier étudiant"
+msgstr "New student record"
+
+msgid "Renseignez ces informations seulement si le compte n'existe pas."
+msgstr "Enter this information only if the account does not exist."
+
+msgid "Enregistrer un premier paiement (facultatif)"
+msgstr "Record an initial payment (optional)"
+
+msgid "Choisissez les frais d'inscription ou une mensualité. Vous pourrez aussi enregistrer ce paiement plus tard."
+msgstr "Choose an enrollment fee or a monthly payment. You can also record this payment later."
+
+msgid "Inscrire l'étudiant"
+msgstr "Enroll student"
+
+msgid "Votre poste ne dispose pas du droit d'inscription. Vous pouvez rechercher un étudiant et consulter son dossier."
+msgstr "Your account cannot enroll students. You can search for a student and view their record."
+
+msgid "Encaisser sur un dossier existant"
+msgstr "Record a payment for an existing student"
+
+msgid "Suivi des mensualités"
+msgstr "Monthly payment tracking"
+
+msgid "Montant attendu"
+msgstr "Amount due"
+
+msgid "Montant payé"
+msgstr "Amount paid"
+
+msgid "Montant reçu"
+msgstr "Amount received"
+
+msgid "Non concerné"
+msgstr "Not applicable"
+
+msgid "Encaisser"
+msgstr "Record payment"
+
+msgid "Mensualités"
+msgstr "Monthly payments"
+
+msgid "Situation pour"
+msgstr "Status for"
+
+msgid "Attendu"
+msgstr "Due"
+
+msgid "Dossier"
+msgstr "Record"
+
+msgid "Tarif mensuel"
+msgstr "Monthly tuition"
+
+msgid "Total payé"
+msgstr "Total paid"
+
+msgid "Choisissez un compte existant ou renseignez les informations du nouvel étudiant."
+msgstr "Choose an existing account or enter the new student's information."
+
+msgid "Obligatoire pour créer un dossier étudiant."
+msgstr "Required to create a student record."
+
+msgid "Choisissez un groupe de cette formation."
+msgstr "Choose a group for this course."
+
+msgid "Le groupe ne comporte aucun mois de formation à partir de cette date."
+msgstr "There are no course months in this group from this date onward."
+
+msgid "Cet étudiant est déjà inscrit à ce groupe."
+msgstr "This student is already enrolled in this group."
+
+msgid "Obligatoire avec un premier paiement."
+msgstr "Required when recording an initial payment."
+
+msgid "Le paiement ne peut pas être daté dans le futur."
+msgstr "The payment date cannot be in the future."
+
+msgid "Indiquez le mois et l'année de la mensualité."
+msgstr "Enter the month and year for the monthly payment."
+
+msgid "Ce mois est antérieur à l'inscription ou hors période du groupe."
+msgstr "This month is before enrollment or outside the group's term."
+
+msgid "Le montant dépasse la mensualité attendue (%(amount)s)."
+msgstr "The amount exceeds the expected monthly payment (%(amount)s)."
+
+msgid "Cette mensualité est déjà réglée."
+msgstr "This monthly payment has already been paid."
+
+msgid "Le montant dépasse le reste de la mensualité (%(amount)s)."
+msgstr "The amount exceeds the remaining monthly balance (%(amount)s)."
+
+msgid "L'encaissement demande le droit de saisir des paiements."
+msgstr "Recording a payment requires permission to enter payments."
+
+msgid "Cette inscription ne peut pas recevoir de paiement."
+msgstr "Payments cannot be recorded for this enrollment."
+
+msgid "Paiement enregistré."
+msgstr "Payment recorded."

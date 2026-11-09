@@ -1,5 +1,7 @@
 {% load i18n ui %}
-<details class="ua-cloche" id="ua-cloche">
+<details class="ua-cloche" id="ua-cloche"
+         data-poll-url="{% url 'core:dashboard:notifications-poll' %}"
+         data-event-cursor="{{ event_cursor }}">
     <summary class="ua-icon-btn ua-cloche-btn"
              title="{% translate 'Tâches en attente' %}"
              aria-label="{% translate 'Voir les tâches en attente' %}">

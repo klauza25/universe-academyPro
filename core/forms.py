@@ -1,14 +1,21 @@
+from uuid import uuid4
+
 from django import forms
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import FileExtensionValidator
-from django.db.models import Q
+from django.db.models import Max, Q, Sum
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from . import caisse
+from . import parametres
+from . import groupes
+from . import annee_academique as calendrier
 from .models import (
     User, ScholarshipApplication, ScholarshipDocument,
-    Destination, Course, CourseSession, Enrollment,
+    Destination, Course, CourseSession, Enrollment, AcademicYear,
+    PlatformSetting,
     Payment, Attendance, AccessEvent, AccountStatus, RoleKey,
+    Role, UserRole,
     REQUESTABLE_ROLE_CHOICES, MOIS, ROLES_DISSOUS,
     Contact, Visit, VisitReason, Prospect, ProspectFollowUp,
     Module, Lesson, SessionRecord, Resource, ResourceFeedback, StudentDocument,
@@ -34,6 +41,7 @@ def enrollable_sessions():
     """Groupes ouverts à l'inscription (planifiés ou en cours)."""
     return CourseSession.objects.filter(
         status__in=[CourseSession.Status.PLANNED, CourseSession.Status.ACTIVE],
+        course__active=True,
     ).select_related('course').order_by('course__title', 'starts_at')
 
 
@@ -48,7 +56,7 @@ class LoginForm(forms.Form):
     password = forms.CharField(
         label=_("Mot de passe"),
         widget=forms.PasswordInput(attrs={
-            'class': INPUT_CLASS,
+            'class': f'{INPUT_CLASS} pr-20',
             'placeholder': '••••••••'
         })
     )
@@ -299,7 +307,7 @@ class AvatarForm(forms.Form):
 
 
 class AccessRequestCompletionForm(forms.ModelForm):
-    """Complète le profil et le rôle demandé d'un compte en attente (Clerk)."""
+    """Complète le profil et le rôle demandé d'un compte en attente."""
 
     requested_role = forms.ChoiceField(
         label=_("Rôle demandé"),
@@ -338,7 +346,7 @@ class EmailChangeForm(forms.Form):
     def __init__(self, *args, user=None, **kwargs):
         self.user = user
         super().__init__(*args, **kwargs)
-        # Un compte sorti d'un classeur ou lié à Clerk n'a pas de mot de passe
+        # Un compte sorti d'un classeur n'a pas forcément de mot de passe
         # local : le réclamer boucherait l'écran pour ces personnes là. La
         # confirmation par lien envoyé à la nouvelle adresse reste la preuve.
         self.fields['password'].required = bool(
@@ -362,10 +370,9 @@ class PasswordChangeForm(forms.Form):
     """Changement du mot de passe par la personne elle-même.
 
     Le mot de passe actuel n'est exigé que lorsque le compte en possède un :
-    une fiche ouverte depuis les classeurs, ou un compte arrivé par Clerk,
-    arrive sans mot de passe local. Demander ce qui n'existe pas rendrait
-    un écran inutilisable pour ces comptes, qui ont justement besoin d'en
-    poser un.
+    une fiche ouverte depuis les classeurs arrive sans mot de passe local.
+    Demander ce qui n'existe pas rendrait un écran inutilisable pour ces
+    comptes, qui ont justement besoin d'en poser un.
     """
 
     current_password = forms.CharField(
@@ -718,9 +725,11 @@ class EnrollmentForm(forms.ModelForm):
             roles__key=RoleKey.ETUDIANT
         ).distinct()
         self.fields['start_date'].input_formats = ['%Y-%m-%d']
-        self.fields['session'].queryset = CourseSession.objects.select_related(
-            'course'
-        )
+        sessions = CourseSession.objects.filter(course__active=True)
+        if self.instance.pk:
+            sessions = sessions | CourseSession.objects.filter(
+                pk=self.instance.session_id)
+        self.fields['session'].queryset = sessions.select_related('course')
 
     def clean(self):
         cleaned = super().clean()
@@ -732,12 +741,15 @@ class EnrollmentForm(forms.ModelForm):
         return cleaned
 
     def save(self, commit=True):
+        is_new = self.instance._state.adding
         enrollment = super().save(commit=False)
-        if not enrollment.tariff_amount:
-            enrollment.tariff_amount = enrollment.session.course.fee_amount
         enrollment.net_amount = max(
             (enrollment.tariff_amount or 0) - (enrollment.discount_amount or 0), 0
         )
+        if is_new:
+            enrollment.monthly_tariff_amount = (
+                enrollment.session.course.monthly_fee_amount
+            )
         if commit:
             enrollment.save()
         return enrollment
@@ -764,12 +776,12 @@ class NewEnrollmentForm(forms.Form):
                                format='%Y-%m-%d'),
     )
     tariff_amount = forms.IntegerField(
-        label=_("Frais de formation prévus (FCFA)"),
+        label=_("Frais de formation prévus"),
         required=False, min_value=0,
         widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
     )
     discount_amount = forms.IntegerField(
-        label=_("Remise (FCFA)"),
+        label=_("Remise"),
         required=False, min_value=0, initial=0,
         widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
     )
@@ -789,19 +801,31 @@ class NewEnrollmentForm(forms.Form):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['session'].queryset = CourseSession.objects.select_related(
-            'course'
-        ).order_by('-starts_at')
+        self.fields['session'].queryset = enrollable_sessions().order_by(
+            '-starts_at')
         self.fields['start_date'].input_formats = ['%Y-%m-%d']
+        unite = {'dv': parametres.devise()}
+        self.fields['tariff_amount'].label = (
+            _("Frais de formation prévus (%(dv)s)") % unite)
+        self.fields['discount_amount'].label = _("Remise (%(dv)s)") % unite
 
     def clean(self):
         cleaned = super().clean()
         session = cleaned.get('session')
         tariff = cleaned.get('tariff_amount')
         discount = cleaned.get('discount_amount') or 0
+        start_date = cleaned.get('start_date')
+        monthly_tariff = None
+        if session:
+            monthly_tariff = session.course.monthly_fee_amount
         if tariff in (None, '') and session:
-            tariff = session.course.fee_amount
+            if monthly_tariff is None:
+                tariff = session.course.fee_amount
+            else:
+                periods = session.billing_periods(starts_at=start_date)
+                tariff = monthly_tariff * len(periods)
         cleaned['tariff_amount'] = tariff or 0
+        cleaned['monthly_tariff_amount'] = monthly_tariff
         if discount > cleaned['tariff_amount']:
             self.add_error('discount_amount',
                            _("La remise ne peut pas dépasser le tarif."))
@@ -832,7 +856,53 @@ class StudentDocumentForm(forms.ModelForm):
 # ===========================================================================
 
 
+class CourseForm(forms.ModelForm):
+    duration_months = forms.IntegerField(
+        label=_("Durée en mois"),
+        min_value=1,
+        widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 1}),
+    )
+
+    class Meta:
+        model = Course
+        fields = [
+            'title', 'domain', 'description', 'duration_months',
+            'fee_amount', 'monthly_fee_amount', 'certificate_eligible',
+        ]
+        labels = {
+            'title': _("Nom de la formation"),
+            'domain': _("Domaine"),
+            'description': _("Description"),
+            'duration_months': _("Durée en mois"),
+            'fee_amount': _("Frais de formation"),
+            'monthly_fee_amount': _("Tarif mensuel de référence"),
+            'certificate_eligible': _("Certificat disponible"),
+        }
+        help_texts = {
+            'monthly_fee_amount': _(
+                "Le tarif des inscriptions existantes ne sera pas modifié."
+            ),
+        }
+        widgets = {
+            'title': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'domain': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'description': forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 3}),
+            'fee_amount': forms.NumberInput(
+                attrs={'class': INPUT_CLASS, 'min': 0}),
+            'monthly_fee_amount': forms.NumberInput(
+                attrs={'class': INPUT_CLASS, 'min': 0}),
+            'certificate_eligible': forms.CheckboxInput(),
+        }
+
+
 class ModuleForm(forms.ModelForm):
+    """Module d'une formation.
+
+    L'ordre et les heures sont facultatifs : le responsable pédagogique qui
+    crée un module à la suite n'a pas à les calculer. L'ordre prend alors la
+    place suivante dans la formation, les heures valent zéro.
+    """
+
     class Meta:
         model = Module
         fields = ['course', 'title', 'description', 'order', 'planned_hours']
@@ -844,8 +914,30 @@ class ModuleForm(forms.ModelForm):
             'planned_hours': forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nom in ('description', 'order', 'planned_hours'):
+            self.fields[nom].required = False
+
+    def clean(self):
+        donnees = super().clean()
+        nouveau = self.instance._state.adding
+        if donnees.get('order') is None:
+            if nouveau:
+                course = donnees.get('course')
+                dernier = (course.modules.aggregate(Max('order'))['order__max']
+                           if course else None)
+                donnees['order'] = (dernier or 0) + 1
+            else:
+                donnees['order'] = self.instance.order
+        if donnees.get('planned_hours') is None:
+            donnees['planned_hours'] = 0 if nouveau else self.instance.planned_hours
+        return donnees
+
 
 class LessonForm(forms.ModelForm):
+    """Leçon d'un module : même tolérance que le module pour l'ordre et les heures."""
+
     class Meta:
         model = Lesson
         fields = ['module', 'title', 'objectives', 'order', 'planned_hours']
@@ -857,6 +949,26 @@ class LessonForm(forms.ModelForm):
             'planned_hours': forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        for nom in ('objectives', 'order', 'planned_hours'):
+            self.fields[nom].required = False
+
+    def clean(self):
+        donnees = super().clean()
+        nouveau = self.instance._state.adding
+        if donnees.get('order') is None:
+            if nouveau:
+                module = donnees.get('module')
+                dernier = (module.lessons.aggregate(Max('order'))['order__max']
+                           if module else None)
+                donnees['order'] = (dernier or 0) + 1
+            else:
+                donnees['order'] = self.instance.order
+        if donnees.get('planned_hours') is None:
+            donnees['planned_hours'] = 0 if nouveau else self.instance.planned_hours
+        return donnees
+
 
 class CourseSessionForm(forms.ModelForm):
     """Groupe de formation : période, capacité et formateurs affectés."""
@@ -864,10 +976,11 @@ class CourseSessionForm(forms.ModelForm):
     class Meta:
         model = CourseSession
         fields = [
-            'course', 'starts_at', 'ends_at', 'schedule', 'capacity',
+            'name', 'course', 'starts_at', 'ends_at', 'schedule', 'capacity',
             'status', 'formateurs',
         ]
         labels = {
+            'name': _("Nom du groupe"),
             'course': _("Formation"),
             'starts_at': _("Date de début"),
             'ends_at': _("Date de fin"),
@@ -877,6 +990,10 @@ class CourseSessionForm(forms.ModelForm):
             'formateurs': _("Formateurs"),
         }
         widgets = {
+            'name': forms.TextInput(attrs={
+                'class': INPUT_CLASS,
+                'placeholder': _("Ex. Groupe du soir"),
+            }),
             'course': forms.Select(attrs={'class': INPUT_CLASS}),
             'starts_at': forms.DateInput(
                 attrs={'class': INPUT_CLASS, 'type': 'date'}, format='%Y-%m-%d'),
@@ -891,6 +1008,8 @@ class CourseSessionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance._state.adding:
+            self.fields['name'].required = True
         for name in ('starts_at', 'ends_at'):
             self.fields[name].input_formats = ['%Y-%m-%d']
         self.fields['course'].queryset = Course.objects.filter(active=True)
@@ -908,6 +1027,7 @@ class CourseSessionForm(forms.ModelForm):
             self.add_error(
                 'ends_at', _("La date de fin doit suivre la date de début.")
             )
+        groupes.applique_la_regle(self)
         return cleaned
 
 
@@ -1617,7 +1737,7 @@ PAYABLE_ENROLLMENT_STATUSES = (
 
 
 def mois_deja_regle(enrollment, annee, numero):
-    """Le paiement qui a déjà réglé ce mois, ``None`` si le mois est libre."""
+    """Un paiement actif déjà ventilé sur ce mois, s'il y en a un."""
     if not (enrollment and annee and numero):
         return None
     return Payment.objects.filter(
@@ -1627,17 +1747,23 @@ def mois_deja_regle(enrollment, annee, numero):
     ).first()
 
 
-def mensualite_attendue(enrollment):
-    """La mensualité que la formation pratique : le net dû réparti sur sa durée.
+def montant_paye_pour_mois(enrollment, annee, numero):
+    if not (enrollment and annee and numero):
+        return 0
+    return Payment.objects.filter(
+        enrollment=enrollment,
+        period_year=int(annee),
+        period_month=int(numero),
+        status=Payment.Status.COMPLETED,
+    ).aggregate(total=Sum('amount'))['total'] or 0
 
-    Le catalogue ne stocke pas de tarif mensuel séparé, seulement un total et une
-    durée ; les classeurs énoncent le loyer exactement ainsi. La remise consentie
-    sur le dossier est donc respectée sans rien inventer.
-    """
-    cours = enrollment.session.course
-    du = enrollment.net_amount or cours.fee_amount
-    duree = max(cours.duration_months or 0, 1)
-    return max(round(du / duree), 1)
+
+def mensualite_attendue(enrollment):
+    """Montant d'une échéance mensuelle de l'inscription."""
+    periods = enrollment.billing_periods()
+    if periods:
+        return enrollment.monthly_amount_due(*periods[0])
+    return 0
 
 
 class EnrollmentSelect(forms.Select):
@@ -1664,11 +1790,27 @@ class EnrollmentChoiceField(forms.ModelChoiceField):
         elif obj.balance_due <= 0:
             state = _("soldé")
         else:
-            state = _("reste %(amount)s FCFA") % {'amount': obj.balance_due}
+            state = _("reste %(amount)s %(dv)s") % {
+                'amount': obj.balance_due, 'dv': parametres.devise()}
         return f"{obj.student.display_label} — {course} ({state})"
 
 
+class CourseSessionSelect(forms.Select):
+    def create_option(self, name, value, label, selected, index,
+                      subindex=None, attrs=None):
+        option = super().create_option(
+            name, value, label, selected, index, subindex=subindex, attrs=attrs
+        )
+        instance = getattr(value, 'instance', None)
+        if instance is not None:
+            option['attrs']['data-course-id'] = str(instance.course_id)
+        return option
+
+
 class StudentPaymentForm(forms.Form):
+    submission_key = forms.CharField(
+        max_length=100, widget=forms.HiddenInput,
+    )
     student = forms.ModelChoiceField(
         label=_("Étudiant"),
         queryset=User.objects.none(),
@@ -1729,19 +1871,23 @@ class StudentPaymentForm(forms.Form):
         widget=forms.NumberInput(attrs={'class': INPUT_CLASS}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, annee_academique=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['student'].queryset = (
+        if not self.is_bound:
+            self.initial.setdefault('submission_key', uuid4().hex)
+        self.fields['student'].queryset = calendrier.fil_etudiants(
             User.objects.filter(
                 roles__key=RoleKey.ETUDIANT,
                 account_status=AccountStatus.ACTIVE,
-            ).distinct().order_by('last_name', 'first_name')
+            ).distinct().order_by('last_name', 'first_name'),
+            annee_academique,
         )
         enrollments = (
             Enrollment.objects.select_related('student', 'session__course')
             .filter(status__in=PAYABLE_ENROLLMENT_STATUSES)
             .order_by('student__last_name', 'session__course__title')
         )
+        enrollments = calendrier.fil_inscriptions(enrollments, annee_academique)
         if self.is_bound:
             student_id = self.data.get('student') or ''
         else:
@@ -1754,6 +1900,8 @@ class StudentPaymentForm(forms.Form):
         if student_id and not enrollments.exists():
             dossiers = Enrollment.objects.filter(student_id=student_id)
             self.fields['enrollment'].help_text = (
+                _("Aucune inscription encaissable pour cet étudiant dans l'année académique choisie.")
+                if annee_academique and dossiers.exists() else
                 _("Aucune inscription pour cet étudiant : elle se crée au secrétariat avant tout encaissement.")
                 if not dossiers.exists() else
                 _("Ce dossier n'est pas encore encaissable : le secrétariat l'a créé, il attend une validation.")
@@ -1823,14 +1971,16 @@ class StudentPaymentForm(forms.Form):
                 else:
                     self.add_error(
                         'amount',
-                        _("Le montant dépasse le reste à payer (%(montant)s FCFA).") % {'montant': enrollment.balance_due},
+                        _("Le montant dépasse le reste à payer (%(montant)s %(dv)s).") % {
+                            'montant': enrollment.balance_due,
+                            'dv': parametres.devise()},
                     )
 
         cleaned.update(self._controle_periode(enrollment))
         return cleaned
 
     def _controle_periode(self, enrollment):
-        """Le mois réglé n'existe que pour une mensualité, et jamais deux fois."""
+        """Valide le mois couvert et autorise son règlement en plusieurs fois."""
         motif = self.cleaned_data.get('motif')
         if motif != Payment.Motif.MONTHLY:
             return {'period_month': None, 'period_year': None}
@@ -1843,13 +1993,28 @@ class StudentPaymentForm(forms.Form):
             return {'period_year': annee}
 
         numero = int(numero)
-        regle = mois_deja_regle(enrollment, annee, numero)
-        if regle:
+        attendu = enrollment.monthly_amount_due(annee, numero)
+        if not attendu:
             self.add_error(
                 'period_month',
-                _("Le mois de %(mois)s %(annee)s est déjà réglé (%(ref)s).") % {
-                    'mois': dict(MOIS)[numero], 'annee': annee,
-                    'ref': regle.reference},
+                _("Le dossier ne couvre pas le mois de %(mois)s %(annee)s.") % {
+                    'mois': dict(MOIS)[numero], 'annee': annee},
+            )
+            return {'period_month': numero, 'period_year': annee}
+        reste_mois = max(
+            attendu - montant_paye_pour_mois(enrollment, annee, numero), 0
+        )
+        if not reste_mois:
+            self.add_error(
+                'period_month',
+                _("La mensualité de %(mois)s %(annee)s est déjà soldée.") % {
+                    'mois': dict(MOIS)[numero], 'annee': annee},
+            )
+        elif (self.cleaned_data.get('amount') or 0) > reste_mois:
+            self.add_error(
+                'amount',
+                _("Le montant dépasse le reste de la mensualité (%(montant)s %(dv)s).") % {
+                    'montant': reste_mois, 'dv': parametres.devise()},
             )
         return {'period_month': numero, 'period_year': annee}
 
@@ -1863,6 +2028,9 @@ class PaymentMonthsForm(forms.Form):
     une grille qui dépasserait le reste à payer ne passent pas.
     """
 
+    submission_key = forms.CharField(
+        max_length=100, widget=forms.HiddenInput,
+    )
     annee = forms.IntegerField(
         label=_("Année réglée"), min_value=2000, max_value=2100,
         initial=timezone.localdate().year,
@@ -1891,20 +2059,24 @@ class PaymentMonthsForm(forms.Form):
         widget=forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 2}),
     )
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, annee_academique=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if not self.is_bound:
+            self.initial.setdefault('submission_key', uuid4().hex)
         self.lignes = []
-        self.fields['student'].queryset = (
+        self.fields['student'].queryset = calendrier.fil_etudiants(
             User.objects.filter(
                 roles__key=RoleKey.ETUDIANT,
                 account_status=AccountStatus.ACTIVE,
-            ).distinct().order_by('last_name', 'first_name')
+            ).distinct().order_by('last_name', 'first_name'),
+            annee_academique,
         )
         dossiers = (
             Enrollment.objects.select_related('student', 'session__course')
             .filter(status__in=PAYABLE_ENROLLMENT_STATUSES)
             .order_by('student__last_name', 'session__course__title')
         )
+        dossiers = calendrier.fil_inscriptions(dossiers, annee_academique)
         etudiant = (self.data.get('student') if self.is_bound
                     else (self.initial or {}).get('student'))
         if etudiant:
@@ -1928,12 +2100,30 @@ class PaymentMonthsForm(forms.Form):
                     _("%(mois)s : indiquez le montant encaissé.") % {'mois': libelle},
                 )
                 continue
-            regle = mois_deja_regle(dossier, annee, numero)
-            if regle:
+            attendu = dossier.monthly_amount_due(annee, numero) if dossier else 0
+            if not attendu:
                 self.add_error(
                     None,
-                    _("%(mois)s %(annee)s est déjà réglé (%(ref)s).") % {
-                        'mois': libelle, 'annee': annee, 'ref': regle.reference},
+                    _("%(mois)s %(annee)s n'est pas compris dans la période d'inscription.") % {
+                        'mois': libelle, 'annee': annee},
+                )
+                continue
+            reste_mois = max(
+                attendu - montant_paye_pour_mois(dossier, annee, numero), 0
+            )
+            if not reste_mois:
+                self.add_error(
+                    None,
+                    _("%(mois)s %(annee)s est déjà soldé.") % {
+                        'mois': libelle, 'annee': annee},
+                )
+                continue
+            if montant > reste_mois:
+                self.add_error(
+                    None,
+                    _("%(mois)s : le montant dépasse le reste de la mensualité (%(reste)s %(dv)s).") % {
+                        'mois': libelle, 'reste': reste_mois,
+                        'dv': parametres.devise()},
                 )
                 continue
             lignes.append({'mois': numero, 'libelle': libelle, 'montant': montant,
@@ -1960,8 +2150,8 @@ class PaymentMonthsForm(forms.Form):
         if dossier and total and total > dossier.balance_due:
             self.add_error(
                 None,
-                _("Le total dépasse le reste à payer (%(montant)s FCFA).") % {
-                    'montant': dossier.balance_due},
+                _("Le total dépasse le reste à payer (%(montant)s %(dv)s).") % {
+                    'montant': dossier.balance_due, 'dv': parametres.devise()},
             )
 
         cleaned['lignes'] = lignes
@@ -1978,100 +2168,382 @@ class PaymentMonthsForm(forms.Form):
 
 
 class CounterEnrollmentForm(forms.Form):
-    """Inscription créée au guichet : elle reste en attente de validation.
-
-    Le comptable et le secrétariat peuvent ouvrir le dossier d'un étudiant
-    encore inconnu ; la direction valide ensuite l'inscription, et seulement
-    à ce moment le dossier devient encaissable.
-    """
+    """Inscription courte, avec premier versement facultatif."""
 
     student = forms.ModelChoiceField(
-        label=_("Étudiant"),
-        queryset=User.objects.none(),
+        label=_("Compte étudiant existant"), queryset=User.objects.none(),
+        required=False, empty_label=_("— Créer un nouveau dossier —"),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    first_name = forms.CharField(
+        label=_("Prénom"), required=False, max_length=150,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS}),
+    )
+    last_name = forms.CharField(
+        label=_("Nom"), required=False, max_length=150,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS}),
+    )
+    email = forms.EmailField(
+        label=_("Adresse e-mail"), required=False,
+        widget=forms.EmailInput(attrs={'class': INPUT_CLASS}),
+    )
+    phone = forms.CharField(
+        label=_("Téléphone"), required=False, max_length=30,
+        widget=forms.TextInput(attrs={'class': INPUT_CLASS}),
+    )
+    course = forms.ModelChoiceField(
+        label=_("Formation"), queryset=Course.objects.none(),
         widget=forms.Select(attrs={'class': INPUT_CLASS}),
     )
     session = forms.ModelChoiceField(
-        label=_("Formation / groupe"),
-        queryset=enrollable_sessions(),
-        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+        label=_("Groupe"), queryset=CourseSession.objects.none(),
+        widget=CourseSessionSelect(attrs={'class': INPUT_CLASS}),
     )
     start_date = forms.DateField(
-        label=_("Date de début"),
-        required=False,
+        label=_("Date d'inscription"), required=False,
+        initial=timezone.localdate,
         widget=forms.DateInput(
             attrs={'class': INPUT_CLASS, 'type': 'date'}, format='%Y-%m-%d'),
     )
-    tariff_amount = forms.IntegerField(
-        label=_("Tarif appliqué (FCFA)"),
-        min_value=0,
-        required=False,
-        widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
-        help_text=_("Laisser vide pour reprendre le tarif catalogue du groupe."),
-    )
-    discount_amount = forms.IntegerField(
-        label=_("Remise (FCFA)"),
-        min_value=0,
-        required=False,
-        initial=0,
+    monthly_tariff_amount = forms.IntegerField(
+        label=_("Tarif mensuel"), min_value=0, required=False,
         widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 0}),
     )
-    payment_plan = forms.CharField(
-        label=_("Modalités de paiement"),
-        required=False,
-        max_length=200,
-        widget=forms.TextInput(attrs={'class': INPUT_CLASS}),
+    first_payment_amount = forms.IntegerField(
+        label=_("Premier paiement (facultatif)"), min_value=1, required=False,
+        widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 1}),
     )
-    notes = forms.CharField(
-        label=_("Observations"),
+    first_payment_motif = forms.ChoiceField(
+        label=_("Type de paiement"),
+        choices=[
+            (Payment.Motif.ENROLLMENT, _("Frais d'inscription")),
+            (Payment.Motif.MONTHLY, _("Mensualité")),
+        ],
+        initial=Payment.Motif.ENROLLMENT,
         required=False,
-        widget=forms.Textarea(attrs={'class': INPUT_CLASS, 'rows': 2}),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
     )
+    first_payment_month = forms.ChoiceField(
+        label=_("Mois réglé"), required=False,
+        choices=[('', _("— Choisir un mois —"))] + list(MOIS),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    first_payment_year = forms.IntegerField(
+        label=_("Année"), required=False, min_value=2000, max_value=2100,
+        initial=timezone.localdate().year,
+        widget=forms.NumberInput(attrs={'class': INPUT_CLASS}),
+    )
+    first_payment_method = forms.ChoiceField(
+        label=_("Mode de paiement"), required=False,
+        choices=Payment.Method.choices,
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    first_payment_account = forms.ModelChoiceField(
+        label=_("Caisse"), required=False, queryset=CashAccount.objects.none(),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    first_payment_paid_at = forms.DateTimeField(
+        label=_("Date du paiement"), required=False,
+        widget=forms.DateTimeInput(
+            attrs={'class': INPUT_CLASS, 'type': 'datetime-local'},
+            format='%Y-%m-%dT%H:%M'),
+    )
+    submission_key = forms.CharField(max_length=100, widget=forms.HiddenInput)
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, can_override_tariff=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['student'].queryset = (
-            User.objects.filter(roles__key=RoleKey.ETUDIANT)
-            .distinct().order_by('last_name', 'first_name')
+        if not self.is_bound:
+            self.initial.setdefault('submission_key', uuid4().hex)
+            self.initial.setdefault(
+                'first_payment_paid_at',
+                timezone.localtime().strftime('%Y-%m-%dT%H:%M'),
+            )
+        self.can_override_tariff = can_override_tariff
+        self.fields['student'].queryset = User.objects.filter(
+            roles__key=RoleKey.ETUDIANT,
+        ).distinct().order_by('last_name', 'first_name')
+        self.fields['course'].queryset = Course.objects.filter(
+            active=True,
+        ).order_by('title')
+        self.fields['session'].queryset = enrollable_sessions()
+        self.fields['first_payment_account'].queryset = CashAccount.objects.filter(
+            active=True,
         )
+        self.fields['first_payment_paid_at'].input_formats = ['%Y-%m-%dT%H:%M']
         self.fields['start_date'].input_formats = ['%Y-%m-%d']
+        if not can_override_tariff:
+            self.fields['monthly_tariff_amount'].disabled = True
+            self.fields['monthly_tariff_amount'].help_text = _(
+                "Tarif repris automatiquement du catalogue."
+            )
+
+    def clean_email(self):
+        email = (self.cleaned_data.get('email') or '').strip().lower()
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                _("Cette adresse existe déjà : sélectionnez le compte étudiant.")
+            )
+        return email
 
     def clean(self):
         cleaned = super().clean()
         student = cleaned.get('student')
-        session = cleaned.get('session')
-        tariff = cleaned.get('tariff_amount')
-        discount = cleaned.get('discount_amount') or 0
+        new_student_data = (
+            cleaned.get('first_name'), cleaned.get('last_name'),
+            cleaned.get('email'),
+        )
+        if student and any(new_student_data):
+            self.add_error(
+                'student',
+                _("Choisissez un compte existant ou renseignez les informations du nouvel étudiant."),
+            )
+        elif not student and not all(new_student_data):
+            for name in ('first_name', 'last_name', 'email'):
+                if not cleaned.get(name):
+                    self.add_error(name, _("Obligatoire pour créer un dossier étudiant."))
 
-        if tariff is None and session is not None:
-            tariff = session.course.fee_amount
-            cleaned['tariff_amount'] = tariff
-        tariff = tariff or 0
-        if discount > tariff:
-            self.add_error(
-                'discount_amount', _("La remise ne peut pas dépasser le tarif.")
+        course = cleaned.get('course')
+        session = cleaned.get('session')
+        start_date = cleaned.get('start_date') or timezone.localdate()
+        cleaned['start_date'] = start_date
+        if course and session and session.course_id != course.pk:
+            self.add_error('session', _("Choisissez un groupe de cette formation."))
+
+        monthly_tariff = None
+        periods = []
+        if session:
+            periods = session.billing_periods(starts_at=start_date)
+            monthly_tariff = session.course.monthly_fee_amount
+            if monthly_tariff is None:
+                monthly_tariff = round(
+                    session.course.fee_amount
+                    / max(session.course.duration_months or 0, 1)
+                )
+            if self.can_override_tariff:
+                monthly_tariff = (
+                    cleaned.get('monthly_tariff_amount')
+                    if cleaned.get('monthly_tariff_amount') is not None
+                    else monthly_tariff
+                )
+            cleaned['monthly_tariff_amount'] = monthly_tariff
+            if not periods:
+                self.add_error(
+                    'session',
+                    _("Le groupe ne comporte aucun mois de formation à partir de cette date."),
+                )
+            duplicate = Enrollment.objects.filter(session=session)
+            if student:
+                duplicate = duplicate.filter(student=student)
+            elif cleaned.get('email'):
+                duplicate = duplicate.filter(student__email__iexact=cleaned['email'])
+            if duplicate.exists():
+                self.add_error('session', _("Cet étudiant est déjà inscrit à ce groupe."))
+        cleaned['periods'] = periods
+        cleaned['tariff_amount'] = monthly_tariff * len(periods) if periods else 0
+
+        amount = cleaned.get('first_payment_amount')
+        if amount:
+            required_fields = (
+                'first_payment_method', 'first_payment_account',
+                'first_payment_paid_at',
             )
-        if student and session and Enrollment.objects.filter(
-            student=student, session=session
-        ).exists():
-            self.add_error(
-                'session',
-                _("Cet étudiant est déjà inscrit à cette formation."),
+            for name in required_fields:
+                if not cleaned.get(name):
+                    self.add_error(name, _("Obligatoire avec un premier paiement."))
+            paid_at = cleaned.get('first_payment_paid_at')
+            if paid_at and paid_at > timezone.localtime():
+                self.add_error(
+                    'first_payment_paid_at',
+                    _("Le paiement ne peut pas être daté dans le futur."),
+                )
+            motif = (
+                cleaned.get('first_payment_motif')
+                or Payment.Motif.ENROLLMENT
             )
-        cleaned['net_amount'] = max(tariff - discount, 0)
+            cleaned['first_payment_motif'] = motif
+            if motif == Payment.Motif.MONTHLY:
+                month = cleaned.get('first_payment_month')
+                year = cleaned.get('first_payment_year')
+                if not month or not year:
+                    self.add_error(
+                        'first_payment_month',
+                        _("Indiquez le mois et l'année de la mensualité."),
+                    )
+                elif (year, int(month)) not in periods:
+                    self.add_error(
+                        'first_payment_month',
+                        _("Ce mois est antérieur à l'inscription ou hors période du groupe."),
+                    )
+                elif amount > monthly_tariff:
+                    self.add_error(
+                        'first_payment_amount',
+                        _("Le montant dépasse la mensualité attendue (%(amount)s).") % {
+                            'amount': monthly_tariff},
+                    )
         return cleaned
 
     def save(self, user):
         data = self.cleaned_data
-        return Enrollment.objects.create(
-            student=data['student'],
+        student = data.get('student')
+        if student is None:
+            student = User(
+                username=data['email'],
+                email=data['email'],
+                first_name=data['first_name'].strip(),
+                last_name=data['last_name'].strip(),
+                phone=(data.get('phone') or '').strip(),
+                account_status=AccountStatus.PENDING_APPROVAL,
+            )
+            student.set_unusable_password()
+            student.generate_internal_code(RoleKey.ETUDIANT)
+            student.save()
+            role = Role.objects.get(key=RoleKey.ETUDIANT)
+            UserRole.objects.get_or_create(
+                user=student, role=role,
+                defaults={'assigned_by': user},
+            )
+
+        enrollment = Enrollment.objects.create(
+            student=student,
             session=data['session'],
-            status=Enrollment.Status.PENDING,
+            status=Enrollment.Status.ACTIVE,
             start_date=data['start_date'],
-            tariff_amount=data['tariff_amount'] or data['session'].course.fee_amount,
-            discount_amount=data['discount_amount'] or 0,
-            net_amount=data['net_amount'],
-            payment_plan=data['payment_plan'],
-            notes=data['notes'],
+            monthly_tariff_amount=data['monthly_tariff_amount'],
+            tariff_amount=data['tariff_amount'],
+            net_amount=data['tariff_amount'],
             registered_by=user,
         )
+        return enrollment
 
+
+class EnrollmentMonthlyPaymentForm(forms.Form):
+    month = forms.ChoiceField(
+        label=_("Mois"), choices=MOIS,
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    year = forms.IntegerField(
+        label=_("Année"), min_value=2000, max_value=2100,
+        initial=timezone.localdate().year,
+        widget=forms.NumberInput(attrs={'class': INPUT_CLASS}),
+    )
+    amount = forms.IntegerField(
+        label=_("Montant reçu"), min_value=1,
+        widget=forms.NumberInput(attrs={'class': INPUT_CLASS, 'min': 1}),
+    )
+    method = forms.ChoiceField(
+        label=_("Mode de paiement"), choices=Payment.Method.choices,
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    account = forms.ModelChoiceField(
+        label=_("Caisse"), queryset=CashAccount.objects.none(),
+        widget=forms.Select(attrs={'class': INPUT_CLASS}),
+    )
+    paid_at = forms.DateTimeField(
+        label=_("Date du paiement"),
+        widget=forms.DateTimeInput(
+            attrs={'class': INPUT_CLASS, 'type': 'datetime-local'},
+            format='%Y-%m-%dT%H:%M'),
+    )
+    submission_key = forms.CharField(max_length=100, widget=forms.HiddenInput)
+    enrollment = None
+
+    def __init__(self, *args, enrollment, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.enrollment = enrollment
+        if not self.is_bound:
+            self.initial.setdefault('year', timezone.localdate().year)
+            self.initial.setdefault('submission_key', uuid4().hex)
+            self.initial.setdefault(
+                'paid_at', timezone.localtime().strftime('%Y-%m-%dT%H:%M'))
+        self.fields['account'].queryset = CashAccount.objects.filter(active=True)
+        self.fields['paid_at'].input_formats = ['%Y-%m-%dT%H:%M']
+
+    def clean_paid_at(self):
+        paid_at = self.cleaned_data['paid_at']
+        if paid_at > timezone.localtime():
+            raise forms.ValidationError(
+                _("Le paiement ne peut pas être daté dans le futur.")
+            )
+        return paid_at
+
+    def clean(self):
+        cleaned = super().clean()
+        year = cleaned.get('year')
+        month = cleaned.get('month')
+        amount = cleaned.get('amount')
+        if not (year and month and amount):
+            return cleaned
+        month = int(month)
+        expected = self.enrollment.monthly_amount_due(year, month)
+        paid = self.enrollment.payments.filter(
+            status=Payment.Status.COMPLETED,
+            motif=Payment.Motif.MONTHLY,
+            period_year=year,
+            period_month=month,
+        ).aggregate(total=Sum('amount'))['total'] or 0
+        remaining = max(expected - paid, 0)
+        if expected <= 0:
+            self.add_error('month', _("Ce mois n'est pas compris dans l'inscription."))
+        elif remaining <= 0:
+            self.add_error('month', _("Cette mensualité est déjà réglée."))
+        elif amount > remaining:
+            self.add_error(
+                'amount',
+                _("Le montant dépasse le reste de la mensualité (%(amount)s).") % {
+                    'amount': remaining},
+            )
+        return cleaned
+
+
+class AcademicYearForm(forms.ModelForm):
+    """L'année académique, posée par la direction.
+
+    La cohérence des dates et le choix d'une seule année « en cours » sont écrits
+    dans le modèle : le formulaire ne rejoue aucune règle, il montre les mêmes
+    refus.
+    """
+
+    class Meta:
+        model = AcademicYear
+        fields = ['label', 'start_date', 'end_date', 'is_current']
+        widgets = {
+            'label': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'start_date': forms.DateInput(
+                attrs={'class': INPUT_CLASS, 'type': 'date'}, format='%Y-%m-%d'),
+            'end_date': forms.DateInput(
+                attrs={'class': INPUT_CLASS, 'type': 'date'}, format='%Y-%m-%d'),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['start_date'].input_formats = ['%Y-%m-%d']
+        self.fields['end_date'].input_formats = ['%Y-%m-%d']
+
+
+
+class PlatformSettingForm(forms.ModelForm):
+    """Les réglages de l'établissement : les mots, la devise et le seuil.
+
+    Une seule ligne se modifie, jamais une seconde ne se crée : la contrainte de
+    base `parametres_generaux_ligne_unique` garde la place occupée, le
+    formulaire n'a donc pas à réécrire cette règle.
+    """
+
+    class Meta:
+        model = PlatformSetting
+        fields = [
+            'nom', 'signature', 'adresse', 'telephone', 'email',
+            'rccm', 'niu', 'cnss', 'devise', 'seuil_alerte',
+        ]
+        widgets = {
+            'nom': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'signature': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'adresse': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'telephone': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'email': forms.EmailInput(attrs={'class': INPUT_CLASS}),
+            'rccm': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'niu': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'cnss': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'devise': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'seuil_alerte': forms.NumberInput(attrs={'class': INPUT_CLASS}),
+        }

@@ -6,7 +6,7 @@
             <p class="text-xs ua-muted mt-1">{{ chart.note }}</p>
         </div>
         {% if chart.total %}
-        <span class="ua-badge ua-badge-amber whitespace-nowrap">{{ chart.total }} FCFA</span>
+        <span class="ua-badge ua-badge-amber whitespace-nowrap">{{ chart.total }} {{ plateforme.devise }}</span>
         {% endif %}
     </div>
     <div class="ua-chart-box">

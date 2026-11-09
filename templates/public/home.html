@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}Universe Academy — {% translate "Centre de Formation en Langues" %}{% endblock %}
+{% block title %}{{ plateforme.nom }} — {{ plateforme.signature }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen flex flex-col"
@@ -10,13 +10,11 @@
     <main class="flex-1 flex items-center justify-center px-4 py-12">
         <div class="w-full max-w-md text-center">
             <div class="mx-auto mb-6 flex h-20 w-20 items-center justify-center overflow-hidden rounded-full bg-white shadow-xl ring-4 ring-white/10">
-                <img src="{% static 'img/logo-univers.jpg' %}" alt="Univers Academy" class="h-20 w-20 object-cover">
+                <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}" class="h-20 w-20 object-cover">
             </div>
 
-            <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-                Universe Academy
-            </h1>
-            <p class="mt-2 text-sm sm:text-base text-blue-200">{% translate "Centre de Formation en Langues — Brazzaville" %}</p>
+            <h1 class="text-3xl sm:text-4xl font-semibold tracking-tight text-white">{{ plateforme.nom }}</h1>
+            <p class="mt-2 text-sm sm:text-base text-blue-200">{{ plateforme.signature }}</p>
 
             {% if messages %}
             <div class="mt-6 space-y-2 text-left">
@@ -40,13 +38,13 @@
                    class="text-sm text-blue-200 underline-offset-4 transition hover:text-white hover:underline">{% translate "Candidater à une bourse d'études" %}</a>
             </div>
 
-            <p class="mt-10 text-xs text-blue-300/80">{% translate "Connexion sécurisée par Clerk — Google, Gmail ou email et mot de passe." %}</p>
+            <p class="mt-10 text-xs text-blue-300/80">{% translate "Connexion sécurisée par e-mail ou code interne." %}</p>
         </div>
     </main>
 
     <footer class="border-t border-white/10 px-4 py-5 text-center text-xs text-blue-200/80">
-        <p>{% translate "Immeuble Monte Cristo, Rond-point la Gare — Brazzaville" %}</p>
-        <p class="mt-1">+242 068 517 179 · universeacademy70@gmail.com</p>
+        <p>{{ plateforme.adresse }}</p>
+        <p class="mt-1">{{ plateforme.telephone }} · {{ plateforme.email }}</p>
     </footer>
 </div>
 {% endblock %}

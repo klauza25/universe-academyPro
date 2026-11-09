@@ -25,8 +25,12 @@ TRANS_RE = re.compile(
     r"""\s*(?:as\s+\w+)?\s*%}""",
     re.VERBOSE,
 )
+# Django admet les deux orthographes, à l'ouverture comme à la fermeture. Les
+# exiger identiques faisait sauter la fermeture d'un `blocktranslate` :
+# l'extraction avalait alors tout le texte jusqu'au `endblocktrans` suivant.
 BLOCKTRANS_RE = re.compile(
-    r"""{%\s*blocktrans(?P<options>[^%]*)%}\s*(?P<body>.*?)\s*{%\s*endblocktrans\s*%}""",
+    r"""{%\s*block(?:trans|translate)(?P<options>[^%]*)%}\s*(?P<body>.*?)\s*"""
+    r"""{%\s*endblock(?:trans|translate)\s*%}""",
     re.DOTALL,
 )
 VARIABLE_RE = re.compile(r"{{\s*(?P<name>[a-zA-Z_][a-zA-Z0-9_]*)\s*}}")
@@ -126,7 +130,16 @@ def sources_python() -> list[Path]:
     exclus = {'tests', 'migrations', '__pycache__'}
     fichiers = [core / 'models.py', core / 'forms.py', core / 'decorators.py',
                 core / 'utils.py', core / 'context_processors.py', core / 'admin.py',
-                core / 'graphiques.py', core / 'taches.py']
+                core / 'graphiques.py', core / 'taches.py',
+                # Deux services qui écrivent des mots donnés à voir : le bandeau
+                # d'année et les avertissements de caisse sortent de là, pas d'une vue.
+                core / 'annee_academique.py', core / 'caisse.py',
+                # La règle d'affectation des groupes formule son refus elle-même :
+                # l'écran Groupes et Django Admin montrent le même message.
+                core / 'groupes.py',
+                # Le service des réglages lit la ligne de la direction : s'il
+                # venait à nommer lui-même un libellé, le portique doit le voir.
+                core / 'parametres.py']
     fichiers += sorted(core.glob('views*.py'))
     return sorted({f for f in fichiers if f.exists() and not f.is_dir()})
 

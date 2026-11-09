@@ -323,7 +323,7 @@ table(
     ['Chapitre', 'Ce que vous y trouverez'],
     [
         ['1. Avant de commencer', 'Prérequis, vocabulaire et logique générale.'],
-        ['2. Se connecter', 'Les deux moyens de connexion, la déconnexion, les comptes bloqués.'],
+        ['2. Se connecter', 'Le formulaire de connexion, la déconnexion, les comptes bloqués.'],
         ['3. Créer un compte ou demander un accès', 'Inscription publique, demande d’accès et décision.'],
         ['4. Comprendre l’espace de travail', 'Menus, tableau de bord, profil, notifications.'],
         ['5. Qui fait quoi', 'Matrice des rôles et séparation des pouvoirs.'],
@@ -436,11 +436,9 @@ step(4, 'Cliquez sur « Se connecter ». Vous arrivez directement sur le '
         'tableau de bord correspondant à votre rôle.')
 
 para(
-    'La page propose deux moyens de connexion, sur le même écran : le '
-    'formulaire interne (e-mail ou code interne + mot de passe) et, lorsque '
-    'le service Clerk est activé, un bouton de connexion sécurisée Google ou '
-    'e-mail. Les deux mènent au même compte : utilisez toujours le même moyen '
-    'pour éviter de créer un doublon.'
+    'La page propose un formulaire interne unique : identifiant (e-mail ou '
+    'code interne) et mot de passe. Aucun service de connexion externe '
+    'n’intervient.'
 )
 
 note(
@@ -513,13 +511,14 @@ para(
     'rattaché à un groupe : la validation crée son inscription.'
 )
 
-h2('3.2 La demande d’accès complémentaire (comptes Clerk)')
+h2('3.2 La demande d’accès complémentaire (compte en attente)')
 
 para(
-    'Un utilisateur qui se connecte avec Clerk sans dossier complet est '
-    'redirigé vers « Demande d’accès » (/demande-acces/). Il y choisit son '
-    'rôle et enregistre. La demande apparaît ensuite dans la file de '
-    'validation, avec le même contrôle que l’inscription publique.'
+    'Un compte en attente dont le dossier est incomplet (par exemple une '
+    'fiche créée par le secrétariat ou importée des classeurs) est redirigé '
+    'vers « Demande d’accès » (/demande-acces/). Il y choisit son rôle et '
+    'enregistre. La demande apparaît ensuite dans la file de validation, avec '
+    'le même contrôle que l’inscription publique.'
 )
 
 h2('3.3 La décision d’approbation')
@@ -1716,7 +1715,7 @@ table(
         ['Accueil public', '/'],
         ['Connexion', '/login/'],
         ['Créer un compte', '/register/'],
-        ['Demande d’accès (Clerk)', '/demande-acces/'],
+        ['Demande d’accès', '/demande-acces/'],
         ['Attente d’approbation', '/pending-approval/'],
         ['Candidature bourse', '/bourses/candidature/'],
         ['Suivi de candidature', '/bourses/suivi/'],
@@ -1804,7 +1803,6 @@ table(
         ['Audit', 'Journal horodaté des actions sensibles, avec auteur et valeurs avant/après.'],
         ['Caisse', 'Compte physique ou mobile qui porte les mouvements d’argent.'],
         ['Clôture', 'Contrôle de fin de journée comparant solde théorique et montant compté.'],
-        ['Clerk', 'Service de connexion sécurisée (Google ou e-mail) proposé en complément du formulaire interne.'],
         ['Code interne', 'Identifiant lisible attribué par la plateforme (UA-ETU-…, UA-CPT-…).'],
         ['Dossier', 'Synonyme d’inscription : un étudiant dans un groupe, avec son volet financier.'],
         ['Encaissement', 'Paiement d’un étudiant, rattaché à un dossier et à une caisse.'],

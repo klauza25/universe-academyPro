@@ -1,27 +1,50 @@
+from django import forms
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
+from . import groupes
 from .models import (
     User, Role, Permission, UserRole, RolePermission,
-    AccessRequest, Course, CourseSession, Enrollment,
+    AccessRequest, Course, CourseSession, Enrollment, AcademicYear,
     Attendance, Payment, Expense,
     ScholarshipApplication, ScholarshipDocument, Destination,
     AccessEvent, Notification, AuditLog, Certificate, ResourceFeedback,
     CashAccount, CashClosure, CashTransaction, TransactionCategory,
+    PlatformSetting,
 )
+
+
+class ConsultationSeule(admin.ModelAdmin):
+    """Ligne consultable ici, mais écrite seulement au tableau de bord.
+
+    Une écriture de caisse, un encaissement, une présence ou un certificat se
+    posent par le service d'écriture : c'est lui qui garde le solde, exige un
+    motif, rattache l'écriture de caisse et laisse sa ligne d'audit. Ouvrir une
+    seconde porte d'écriture reviendrait à pouvoir déplacer un solde en silence
+    ou créer un paiement qui n'est jamais rentré en caisse.
+    """
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     list_display = ('email', 'internal_code', 'get_full_name', 'account_status', 'date_joined')
     list_filter = ('account_status', 'roles')
-    search_fields = ('email', 'first_name', 'last_name', 'internal_code', 'clerk_user_id')
+    search_fields = ('email', 'first_name', 'last_name', 'internal_code')
     ordering = ('-date_joined',)
     readonly_fields = ('internal_code',)
     fieldsets = BaseUserAdmin.fieldsets + (
-        ('Univers Academy', {
+        (_('Compte et coordonnées'), {
             'fields': ('internal_code', 'account_status', 'phone', 'address',
-                       'birth_date', 'clerk_user_id')
+                       'birth_date')
         }),
     )
 
@@ -44,24 +67,60 @@ class PermissionAdmin(admin.ModelAdmin):
 
 @admin.register(Course)
 class CourseAdmin(admin.ModelAdmin):
-    list_display = ('title', 'domain', 'fee_amount', 'duration_months', 'active')
+    class CourseForm(forms.ModelForm):
+        monthly_fee_amount = forms.IntegerField(
+            min_value=0,
+            label=_("Tarif mensuel"),
+        )
+
+        class Meta:
+            model = Course
+            fields = '__all__'
+
+    form = CourseForm
+    list_display = (
+        'title', 'domain', 'monthly_fee_amount', 'fee_amount',
+        'duration_months', 'active',
+    )
     list_filter = ('domain', 'active')
+
+class FormuleGroupeAdmin(forms.ModelForm):
+    """La même règle que l'écran Groupes, appliquée ici aussi.
+
+    Laisser cette porte ouverte sans elle reviendrait à créer ici un groupe
+    qu'il est impossible de créer là.
+    """
+
+    class Meta:
+        model = CourseSession
+        fields = '__all__'
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance._state.adding:
+            self.fields['name'].required = True
+
+    def clean(self):
+        cleaned = super().clean()
+        groupes.applique_la_regle(self)
+        return cleaned
 
 
 @admin.register(CourseSession)
 class CourseSessionAdmin(admin.ModelAdmin):
-    list_display = ('course', 'starts_at', 'ends_at', 'status', 'capacity')
+    form = FormuleGroupeAdmin
+    list_display = ('name', 'course', 'starts_at', 'ends_at', 'status', 'capacity')
     list_filter = ('status',)
 
 
 @admin.register(Enrollment)
-class EnrollmentAdmin(admin.ModelAdmin):
+class EnrollmentAdmin(ConsultationSeule):
     list_display = ('student', 'session', 'status', 'enrolled_at')
     list_filter = ('status',)
 
 
 @admin.register(Payment)
-class PaymentAdmin(admin.ModelAdmin):
+class PaymentAdmin(ConsultationSeule):
     list_display = ('reference', 'amount', 'currency', 'method', 'status', 'paid_at')
     list_filter = ('status', 'method')
     search_fields = ('reference',)
@@ -86,25 +145,6 @@ class AuditLogAdmin(admin.ModelAdmin):
     readonly_fields = ('id', 'actor', 'action', 'entity_type', 'entity_id',
                        'before_summary', 'after_summary', 'ip_address', 'created_at')
     search_fields = ('action', 'entity_id')
-
-    def has_add_permission(self, request):
-        return False
-
-    def has_change_permission(self, request, obj=None):
-        return False
-
-    def has_delete_permission(self, request, obj=None):
-        return False
-
-
-class ConsultationSeule(admin.ModelAdmin):
-    """Modèle financier consultable ici, mais écrit au tableau de bord.
-
-    Une écriture de caisse se pose, se corrige et s'annule par le service
-    d'écriture : c'est lui qui garde le solde, exige un motif et laisse sa
-    ligne d'audit. Ouvrir une seconde porte d'écriture reviendrait à pouvoir
-    déplacer un solde en silence.
-    """
 
     def has_add_permission(self, request):
         return False
@@ -160,13 +200,57 @@ class CashClosureAdmin(ConsultationSeule):
     list_select_related = ('account', 'closed_by')
 
 
+@admin.register(AcademicYear)
+class AcademicYearAdmin(ConsultationSeule):
+    """Calendrier consultable ici : la direction pose les dates au tableau de bord.
+
+    Écrire l'année depuis cet écran passerait devant l'audit et laisserait deux
+    années cochées « en cours » : le geste garde sa porte unique, le réglage du
+    calendrier académique.
+    """
+    list_display = ('label', 'start_date', 'end_date', 'is_current')
+    list_filter = ('is_current',)
+    search_fields = ('label',)
+    ordering = ('-start_date',)
+
+
+@admin.register(Attendance)
+class AttendanceAdmin(ConsultationSeule):
+    list_display = ('enrollment', 'date', 'status', 'recorded_by')
+    list_filter = ('status',)
+    search_fields = ('enrollment__student__last_name',)
+    ordering = ('-date',)
+
+
+@admin.register(Expense)
+class ExpenseAdmin(ConsultationSeule):
+    list_display = ('category', 'amount', 'currency', 'occurred_at', 'status')
+    list_filter = ('status',)
+    ordering = ('-occurred_at',)
+
+
+@admin.register(Certificate)
+class CertificateAdmin(ConsultationSeule):
+    list_display = ('certificate_number', 'enrollment', 'status', 'issued_at')
+    list_filter = ('status',)
+    search_fields = ('certificate_number',)
+
+
+@admin.register(PlatformSetting)
+class PlatformSettingAdmin(ConsultationSeule):
+    """Réglages consultés ici : la direction les écrit à l'écran des réglages.
+
+    Le nom et les coordonnées signent documents et écrans ; les modifier ici se
+    ferait sans motif et sans la ligne d'audit que l'écran de réglages laisse.
+    """
+    list_display = ('nom', 'telephone', 'email', 'devise', 'seuil_alerte',
+                    'mise_a_jour_le')
+
+
 admin.site.register(UserRole)
 admin.site.register(RolePermission)
 admin.site.register(AccessRequest)
 admin.site.register(ScholarshipDocument)
-admin.site.register(Attendance)
-admin.site.register(Expense)
 admin.site.register(AccessEvent)
 admin.site.register(Notification)
-admin.site.register(Certificate)
 admin.site.register(ResourceFeedback)

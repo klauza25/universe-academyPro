@@ -1,17 +1,17 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Comptabilité — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Comptabilité" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 
 {% block hero_title %}{% translate "Santé financière du mois" %}{% endblock %}
 {% block hero_text %}
-{% blocktrans with r=total_revenue_month|floatformat:0 d=total_expenses_month|floatformat:0 %}{{ r }} FCFA de recettes pour {{ d }} FCFA de dépenses enregistrées.{% endblocktrans %}
+{% blocktrans with dv=plateforme.devise r=total_revenue_month|floatformat:0 d=total_expenses_month|floatformat:0 %}{{ r }} {{ dv }} de recettes pour {{ d }} {{ dv }} de dépenses enregistrées.{% endblocktrans %}
 {% endblock %}
 {% block hero_actions %}
 <a href="{% url 'core:dashboard:payment-create' %}" class="ua-btn ua-btn-light">
-    {% icon "credit-card" %} {% translate "Encaisser un paiement" %}
+    {% icon "user-plus" %} {% translate "Inscrire un étudiant" %}
 </a>
 <a href="{% url 'core:dashboard:transaction-create' %}" class="ua-btn ua-btn-ghost">
     {% icon "wallet" %} {% translate "Nouvelle opération" %}
@@ -20,21 +20,22 @@
 {% block hero_aside %}
 <div class="ua-hero-card">
     <p class="ua-hero-card-value">{{ total_balance|floatformat:0 }}</p>
-    <p class="ua-hero-card-label">{% translate "FCFA de solde des caisses" %}</p>
+    <p class="ua-hero-card-label">{% blocktrans with dv=plateforme.devise trimmed %}{{ dv }} de solde des caisses{% endblocktrans %}</p>
 </div>
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Entrées du jour" as lbl_entrees_jour %}
 {% translate "Sorties du jour" as lbl_sorties_jour %}
 {% translate "Solde des caisses" as lbl_solde_caisses %}
 {% translate "En attente" as lbl_en_attente %}
-{% translate "FCFA validés" as hint_fcfa_valides %}
+{% translate "Validés" as hint_valides %}
 {% translate "Toutes caisses actives" as hint_toutes_caisses %}
 {% translate "Opérations non validées" as hint_non_validees %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-    {% include "dashboard/_stat.html" with label=lbl_entrees_jour value=today_in icon="trending-up" tone="green" hint=hint_fcfa_valides %}
-    {% include "dashboard/_stat.html" with label=lbl_sorties_jour value=today_out icon="wallet" tone="rose" hint=hint_fcfa_valides %}
+    {% include "dashboard/_stat.html" with label=lbl_entrees_jour value=today_in icon="trending-up" tone="green" unite=plateforme.devise hint=hint_valides %}
+    {% include "dashboard/_stat.html" with label=lbl_sorties_jour value=today_out icon="wallet" tone="rose" unite=plateforme.devise hint=hint_valides %}
     {% include "dashboard/_stat.html" with label=lbl_solde_caisses value=total_balance icon="chart" tone="indigo" hint=hint_toutes_caisses %}
     {% include "dashboard/_stat.html" with label=lbl_en_attente value=pending_transactions icon="clock" tone="amber" hint=hint_non_validees %}
 </div>
@@ -55,7 +56,7 @@
                 <p class="text-sm font-semibold">{{ row.account.name }}</p>
                 <p class="text-xs ua-muted">{{ row.account.get_kind_display }}</p>
             </div>
-            <span class="text-sm font-bold">{{ row.balance }} FCFA</span>
+            <span class="text-sm font-bold">{{ row.balance }} {{ plateforme.devise }}</span>
         </div>
         {% empty %}
         <p class="ua-empty">{% translate "Aucune caisse active." %}</p>
@@ -83,7 +84,7 @@
                         <td>{{ tx.account.name }}</td>
                         <td>{{ tx.occurred_at|date:"d/m/Y H:i" }}</td>
                         <td class="text-right font-bold" {% if tx.tx_type == 'OUT' %}style="color:#be123c;"{% else %}style="color:#15803d;"{% endif %}>
-                            {% if tx.tx_type == 'OUT' %}−{% endif %}{{ tx.amount }} FCFA
+                            {% if tx.tx_type == 'OUT' %}−{% endif %}{{ tx.amount }} {{ plateforme.devise }}
                         </td>
                     </tr>
                     {% empty %}
@@ -143,7 +144,7 @@
                         {% endif %}
                     </td>
                     <td class="text-right font-bold" style="color:#15803d;">
-                        {{ payment.amount|floatformat:0 }} FCFA
+                        {{ payment.amount|floatformat:0 }} {{ plateforme.devise }}
                     </td>
                 </tr>
                 {% empty %}

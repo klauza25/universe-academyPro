@@ -368,10 +368,13 @@ DOMAINS = [
      ['Destination', 'ScholarshipApplication', 'ScholarshipDocument']),
     ('Supervision et audit', 'Traçabilité et contrôle de gestion',
      ['AuditLog']),
+    ('Calendrier et réglages', 'Année académique et identité posées par la '
+     'direction',
+     ['AcademicYear', 'PlatformSetting']),
 ]
 
 MODEL_DESCRIPTIONS = {
-    'User': 'Compte utilisateur (authentification locale ou Clerk), statut '
+    'User': 'Compte utilisateur (authentification locale), statut '
             'd’accès, code interne, profil et rôles.',
     'Role': 'Rôle métier (neuf valeurs) porteur de permissions.',
     'Permission': 'Permission applicative atomique (19 clés).',
@@ -471,10 +474,7 @@ def field_rows(model):
 
 AUDIT_ACTIONS = [
     ('REGISTER', 'Identité', 'Création d’un compte local.'),
-    ('REGISTER_CLERK', 'Identité', 'Création d’un compte à la première '
-     'connexion Clerk.'),
     ('LOGIN', 'Identité', 'Connexion réussie.'),
-    ('LOGIN_CLERK', 'Identité', 'Connexion via Clerk.'),
     ('LOGOUT', 'Identité', 'Déconnexion.'),
     ('ACCESS_REQUEST_SUBMIT', 'Identité', 'Dépôt d’une demande d’accès.'),
     ('ACCESS_APPROVE', 'Identité', 'Approbation d’une demande et attribution du rôle.'),
@@ -484,6 +484,9 @@ AUDIT_ACTIONS = [
     ('USER_STATUS_CHANGE', 'Identité', 'Changement du statut d’accès.'),
     ('ROLE_ASSIGN', 'Identité', 'Attribution d’un rôle.'),
     ('ROLE_REMOVE', 'Identité', 'Retrait d’un rôle.'),
+    ('ROLE_PERMISSIONS_UPDATE', 'Identité',
+     'Matrice des permissions enregistrée depuis l’écran de réglages ; une ligne '
+     'par rôle modifié, l’avant/après des clés est consigné.'),
     ('PROFILE_UPDATE', 'Identité', 'Mise à jour du profil.'),
     ('PROFILE_EMAIL_REQUEST', 'Identité', 'Demande de changement d’e-mail.'),
     ('PROFILE_EMAIL_CONFIRM', 'Identité', 'Confirmation du changement d’e-mail.'),
@@ -542,6 +545,13 @@ AUDIT_ACTIONS = [
      'Renommage ou activation/désactivation d’une catégorie.'),
     ('JOURNAL_EXPORT', 'Finances', 'Export CSV du journal de caisse.'),
     ('FINANCE_EXPORT', 'Finances', 'Export CSV de la supervision financière.'),
+    ('ACADEMIC_YEAR_CREATE', 'Calendrier',
+     'Création d’une année académique, avec l’année décochée si « en cours ».'),
+    ('ACADEMIC_YEAR_EDIT', 'Calendrier',
+     'Réglage des dates ou du cochage « en cours » d’une année.'),
+    ('PLATFORM_SETTINGS_EDIT', 'Réglages',
+     'Nom, coordonnées, devise ou seuil d’alerte de l’établissement — avant/après '
+     'conservés.'),
     ('SCHOLARSHIP_SUBMIT', 'Bourses', 'Dépôt d’une candidature.'),
     ('SCHOLARSHIP_REVIEW', 'Bourses', 'Décision sur une candidature.'),
     ('FILE_ACCESS', 'Sécurité', 'Téléchargement contrôlé d’un fichier privé.'),
@@ -785,7 +795,7 @@ add_table(
     ['Domaine', 'Réponse apportée'],
     [
         ['Identité et accès', 'Comptes approuvés par un humain, rôles '
-         'multiples, permissions, code interne, Clerk ou mot de passe local.'],
+         'multiples, permissions, code interne et mot de passe local.'],
         ['Admissions et accueil', 'Visites, contacts, prospects, relances et '
          'conversion en étudiant.'],
         ['Scolarité', 'Dossier étudiant, inscriptions, tarifs, remises, '
@@ -834,12 +844,12 @@ add_table(
         ['Permissions atomiques', '19', 'Catalogue `seed_roles`.'],
         ['Modèles de données', str(len(MODELS)),
          'Tous rattachés à l’application `core`.'],
-        ['Migrations', '14', '`0001` à `0014`, additives — aucune colonne, '
+        ['Migrations', '15', '`0001` à `0015`, additives — aucune colonne, '
          'aucune ligne supprimée.'],
-        ['Tests automatisés', '519', 'Base de test isolée, aucun accès à la '
+        ['Tests automatisés', '560', 'Base de test isolée, aucun accès à la '
          'base réelle.'],
         ['Statut technique', 'OK', '`check` sans erreur ; `makemigrations '
-         '--check` ne signale aucun changement en attente (14 migrations '
+         '--check` ne signale aucun changement en attente (18 migrations '
          'appliquées).'],
     ],
     widths=[4.5, 3, 9.5], size=9.5, header_size=9.5, first_col_bold=True,
@@ -911,8 +921,7 @@ add_paragraph(
     'L’inscription publique crée un compte `PENDING_APPROVAL` sans aucun '
     '`UserRole`. Le rôle souhaité est enregistré dans `AccessRequest` mais '
     'n’est pas attribué. Seule une décision humaine (SUPER_ADMIN ou ADMIN) '
-    'attribue un rôle, dans la limite des rôles demandables. Les métadonnées '
-    'Clerk ne sont jamais lues pour accorder un privilège.'
+    'attribue un rôle, dans la limite des rôles demandables.'
 )
 h3('Principe 2 — L’écriture métier appartient aux rôles opérationnels')
 add_paragraph(
@@ -966,8 +975,8 @@ add_table(
          'formulaires, règles métier, permissions.'],
         ['Persistance', 'SQLite en développement ; PostgreSQL visé en '
          'production', 'Données métier, audit, sessions.'],
-        ['Authentification', 'Session Django + Clerk (v6) en option',
-         'Connexion locale ou Clerk, sans privilège déduit du fournisseur.'],
+        ['Authentification', 'Session Django', 'Connexion locale par e-mail '
+         'ou code interne et mot de passe.'],
         ['Fichiers', 'Système de fichiers `media/` privé + vue avatar',
          'Pièces justificatives, ressources, photos de profil.'],
         ['Impression', 'HTML/CSS `@media print`', 'Cahier de texte, feuille '
@@ -1007,7 +1016,7 @@ h2('3.3', 'Découpage du code')
 add_table(
     ['Élément', 'Contenu', 'Responsabilité'],
     [
-        ['`core/models.py`', '35 modèles, propriétés calculées, contraintes',
+        ['`core/models.py`', '37 modèles, propriétés calculées, contraintes',
          'Source de vérité du domaine.'],
         ['`core/views.py`', 'Accueil, authentification, dashboards, '
          'utilisateurs, bourses, audit', 'Pilotage et identité.'],
@@ -1043,7 +1052,7 @@ add_paragraph(
     'fichiers autorisés. Cette simplicité est adaptée à un établissement de '
     'taille moyenne et facilite l’exploitation locale. En production, les '
     'éléments suivants doivent être externalisés ou sauvegardés : base de '
-    'données, répertoire `media/`, clés Clerk et `SECRET_KEY`.'
+    'données, répertoire `media/` et `SECRET_KEY`.'
 )
 add_table(
     ['Élément', 'Développement', 'Production visée'],
@@ -1143,9 +1152,10 @@ add_paragraph(
     'Le modèle de données comporte ' + str(len(MODELS)) + ' modèles, tous '
     'rattachés à l’application `core`. Les identifiants sont des UUID, ce qui '
     'évite l’énumération des ressources dans les URL. Les montants sont des '
-    'entiers exprimés en francs CFA. Les dates et heures sont stockées '
-    'séparément lorsque le métier l’exige (une séance a une date et des '
-    'horaires).'
+    'entiers, libellés dans la devise posée par la direction (`PlatformSetting.'
+    'devise`) : chaque écriture garde la devise où elle est entrée, le libellé '
+    'commun ne convertit rien. Les dates et heures sont stockées séparément '
+    'lorsque le métier l’exige (une séance a une date et des horaires).'
 )
 
 h2('5.1', 'Vue relationnelle simplifiée')
@@ -1168,13 +1178,17 @@ code_block([
     'ScholarshipApplication 1 ─── N ScholarshipDocument',
     'User 1 ─── N Notification',
     'User 1 ─── N AuditLog (actor)',
+    'AcademicYear  ─── fenêtre de dates sans clé étrangère : le service filtre '
+    'les groupes sur leur date de début',
+    'PlatformSetting ─── une seule ligne (id = 1) : nom, coordonnées, devise, '
+    'seuil d’alerte',
 ])
 
 h2('5.2', 'Description par domaine')
 
 DOMAIN_DETAILS = {
     'Identité et accès': [
-        ['User', 'Compte, profil, statut, code interne, Clerk, avatar.',
+        ['User', 'Compte, profil, statut, code interne, avatar.',
          'N–N Role ; 1–N AccessRequest ; 1–N AuditLog'],
         ['Role', 'Rôle métier et indicateur de privilège.',
          'N–N User ; N–N Permission'],
@@ -1255,6 +1269,17 @@ DOMAIN_DETAILS = {
     'Supervision et audit': [
         ['AuditLog', 'Acteur, action, entité, avant/après, IP, date.',
          'N–1 User (actor)'],
+    ],
+    'Calendrier et réglages': [
+        ['AcademicYear', 'Libellé unique (« 2026-2027 »), premier et dernier '
+         'jour, case « année en cours » — une seule cochée, en base comme à '
+         'l’écran.',
+         'Aucune clé étrangère : le service `core.annee_academique` juge les '
+         'groupes sur leur date de début'],
+        ['PlatformSetting', 'Nom, signature, adresse, téléphone, e-mail, RCCM, '
+         'NIU, CNSS, libellé de devise, seuil d’alerte de caisse.',
+         'Ligne unique (id = 1) : `parametres_generaux_ligne_unique` ; lue par '
+         '`core.parametres`, le contexte `plateforme` et le service de caisse'],
     ],
 }
 
@@ -1412,7 +1437,7 @@ h2('6.5', 'Cycle de vie d’un compte')
 add_table(
     ['État', 'Origine', 'Accès', 'Transition possible'],
     [
-        ['PENDING_APPROVAL', 'Inscription locale ou Clerk ; fiche étudiante '
+        ['PENDING_APPROVAL', 'Inscription publique, fiche étudiante '
          'du secrétariat ou import des classeurs', 'Aucun écran métier ; page '
          'd’attente. Le dossier reste lisible du personnel.',
          'ACTIVE (approbation, ou validation d’une inscription) ou REJECTED '
@@ -1471,7 +1496,7 @@ h2('7.1', 'Admission et demande d’accès')
 add_table(
     ['#', 'Acteur', 'Action', 'Contrôle / résultat'],
     [
-        ['1', 'Visiteur', 'Crée un compte local ou se connecte via Clerk.',
+        ['1', 'Visiteur', 'Crée un compte local et choisit un rôle demandé.',
          'Compte `PENDING_APPROVAL`, aucun `UserRole`.'],
         ['2', 'Visiteur', 'Choisit un rôle demandé.', 'Rôle limité à la liste '
          '`REQUESTABLE_ROLES` ; enregistré dans `AccessRequest`.'],
@@ -1568,15 +1593,21 @@ add_table(
     [
         ['1', 'DIRECTION / RESP_PEDA', 'Crée la formation.', 'Titre, domaine, '
          'durée, tarif, éligibilité certificat.'],
-        ['2', 'DIRECTION / RESP_PEDA', 'Crée le groupe (`CourseSession`).',
-         'Dates cohérentes (fin > début), capacité, statut, formateurs '
-         'affectés ; audit `COURSE_SESSION_CREATE`.'],
+        ['2', 'DIRECTION / RESP_PEDA', 'Crée le groupe (`CourseSession`) et '
+         'affecte son formateur.',
+         'Dates cohérentes (fin > début), capacité, statut ; un groupe '
+         '« Planifiée » ou « En cours » sans au moins un formateur est refusé '
+         '(règle unique de `core/groupes.py`, appliquée à l’écran Groupes et '
+         'dans l’admin Django) ; « Terminée » et « Annulée » y échappent ; '
+         'audit `COURSE_SESSION_CREATE`.'],
         ['3', 'DIRECTION / RESP_PEDA', 'Structure les modules et leçons.',
          'Rattachement à la formation ; ordre et heures prévues.'],
         ['4', 'RESP_PEDA / FORMATEUR', 'Planifie les séances.', 'Date, '
          'horaires prévus, module, leçon ; audit `SESSION_CREATE`.'],
         ['5', 'RESP_PEDA / FORMATEUR', 'Publie les ressources.', 'Brouillon, '
-         'publié ou archivé ; visibilité limitée aux inscrits.'],
+         'publié ou archivé ; visibilité limitée aux inscrits. L’inscrit '
+         'reçoit automatiquement tout le contenu et toutes les ressources de '
+         'son groupe ; sans formateur affecté, rien ne peut y être publié.'],
     ],
     widths=[0.9, 3.4, 6.4, 6.3], size=8.6, header_size=8.6,
     align_center={0},
@@ -1774,6 +1805,27 @@ add_paragraph(
     'et du journal d’audit, mais les décisions de bourse et les actes '
     'de gestion des comptes restent réservés au SUPER_ADMIN.'
 )
+add_paragraph(
+    'Deux écrans de réglages complètent la supervision. « Paramètres généraux » '
+    'pose le nom de l’établissement, ses coordonnées, le libellé de devise et le '
+    'seuil d’alerte de caisse : ce que la direction écrit là signe tous les '
+    'écrans et les trois documents imprimés, et chaque enregistrement laisse une '
+    'entrée d’audit avec l’état d’avant et l’état d’après. « Années académiques » '
+    'coche l’année en cours et décide de ce que montrent les listes d’étudiants, '
+    'd’inscrits et de groupes.'
+)
+add_paragraph(
+    'En dehors des écrans, `manage.py verifier_relations` passe les seize '
+    'relations du modèle au crible et compte les écarts sans rien corriger : '
+    'une recette en caisse sans paiement étudiant, un dossier payé au-delà de '
+    'son net, deux dossiers pour la même personne, une écriture datée après '
+    'aujourd’hui. Deux points sont comptés à part comme de simples '
+    'signalements : les traces du journal citant une entité disparue, et les '
+    'groupes qui doivent enseigner sans formateur — la garde d’écriture ne '
+    's’applique qu’aux saisies futures, l’import des classeurs reste donc à '
+    'compléter. La mesure est seule juge de ce qui est montré à la direction ; '
+    'aucune correction automatique n’est tentée, de peur d’effacer une trace.'
+)
 
 page_break()
 
@@ -1931,8 +1983,8 @@ RULES = [
                   'le nouveau passe les quatre règles de validité du projet, et '
                   'un refus laisse le mot de passe en place.'),
         ('RG-60', 'Le mot de passe actuel n’est exigé que si le compte en '
-                  'possède un : une fiche sortie des classeurs ou un compte lié '
-                  'à Clerk arrive sans mot de passe local et l’écran sert alors '
+                  'possède un : une fiche sortie des classeurs arrive sans mot '
+                  'de passe local et l’écran sert alors '
                   'à en poser un. La même règle vaut pour la preuve du '
                   'changement d’adresse e-mail.'),
         ('RG-61', 'Après un changement, la session en cours reste valide ; les '
@@ -2076,6 +2128,96 @@ RULES = [
                   'geste, quel que soit le rôle, écrit une entrée d’audit avec '
                   'l’acteur, la valeur d’avant et la valeur d’après.'),
     ]),
+    ('Année académique', [
+        ('RG-90', 'Une année académique est une fenêtre de dates posée par la '
+                  'direction (« Années académiques »), avec un libellé unique. '
+                  'Rien n’est inventé : tant qu’aucune année n’est écrite, les '
+                  'listes montrent toutes les années et un bandeau le dit.'),
+        ('RG-91', 'Une seule année est « en cours » à la fois. Cocher la case '
+                  'décoche la précédente dans la même écriture, et la base '
+                  'refuse un second cochage (`une_seule_annee_en_cours`) même si '
+                  'l’on passe devant l’écran.'),
+        ('RG-92', 'La fenêtre d’une année se juge sur la date de début du '
+                  'groupe : un étudiant appartient à l’année où son groupe a '
+                  'commencé, une inscription suit la fenêtre de son groupe, et '
+                  'un dossier annulé ne place personne dans une année.'),
+        ('RG-93', 'Le filtre s’applique à quatre écrans — liste des étudiants, '
+                  'deux écrans d’encaissement, liste des groupes — avec le même '
+                  'sélecteur et le même mot partout ; « Toutes les années » '
+                  'rouvre la liste complète.'),
+        ('RG-94', 'Un compte étudiant sans inscription n’est d’aucune année : '
+                  'il disparaît des listes tant qu’une année est posée et '
+                  'revient sous « Toutes les années ». Le formulaire '
+                  'd’inscription, lui, garde tous les comptes — l’année se joue '
+                  'du groupe choisi.'),
+        ('RG-95', 'L’année se règle depuis le tableau de bord, jamais depuis '
+                  'Django Admin (`ConsultationSeule`) : un seul chemin '
+                  'd’écriture, audité `ACADEMIC_YEAR_CREATE` / '
+                  '`ACADEMIC_YEAR_EDIT` avec l’année décochée en conséquence.'),
+    ]),
+    ('Paramètres généraux', [
+        ('RG-96', 'Les réglages de l’établissement tiennent sur une seule ligne '
+                  '(`PlatformSetting`, `id = 1`), créée avec la migration '
+                  '`0016_parametres_generaux`.'),
+        ('RG-97', 'Le seul chemin d’écriture est l’écran « Paramètres généraux », '
+                  'ouvert à la direction et aux rôles à accès transversal '
+                  '(`SUPER_ADMIN`, `ADMIN`). Django Admin consulte cette ligne '
+                  'sans la modifier : un changement y serait sans motif et sans '
+                  'trace.'),
+        ('RG-98', 'Enregistrer écrit une entrée `PLATFORM_SETTINGS_EDIT` portant '
+                  'l’état d’avant et l’état d’après. L’avant se relève avant la '
+                  'validation du formulaire, qui écrit déjà les nouvelles '
+                  'valeurs sur l’instance — sinon l’audit perdrait sa base.'),
+        ('RG-99', 'Lire n’écrit jamais : `core.parametres.ligne()` rend les '
+                  'valeurs par défaut du modèle tant qu’aucun écran n’a '
+                  'enregistré la sienne. Une page publique ne peut pas créer '
+                  'les réglages à la place de la direction.'),
+        ('RG-100', 'Le nom et les coordonnées posés ici signent les titres '
+                   'd’écran, la barre latérale, l’accueil public, le reçu et les '
+                   'documents imprimés : une seule orthographe pour une même '
+                   'direction.'),
+        ('RG-101', 'Le libellé de devise change ce qui s’écrit à côté des '
+                   'montants, rien de plus : il ne convertit aucun montant et '
+                   'chaque écriture garde la devise où elle est entrée.'),
+        ('RG-102', 'Le seuil d’alerte (80 % par défaut, borné de 1 à 100) est '
+                   'une part du disponible : une sortie qui consomme au moins '
+                   'cette part demande une confirmation explicite. Recette et '
+                   'brouillon y échappent ; au-delà du disponible ce n’est plus '
+                   'un avertissement mais un refus.'),
+    ]),
+    ('Cohérence des tables', [
+        ('RG-103', 'La cohérence se mesure et ne se corrige pas : '
+                   '`core/relations.py` lit et compte, `verifier_relations` '
+                   'affiche. Aucun contrôle n’écrit, n’annule ni n’efface une '
+                   'ligne pour faire disparaître un écart.'),
+        ('RG-104', 'Le portique `--maxi` refuse au-dessus du seuil en nommant '
+                   'les codes fautifs, pour que la direction sache quoi '
+                   'arbitrer ; `--lignes` donne le détail, `--json` rend une '
+                   'seule ligne à une machine.'),
+        ('RG-105', 'Un écart est une règle bafouée (recette sans paiement, '
+                   'trop-perçu, dossier doublon, date future, net incohérent) ; '
+                   'une trace du journal sans entité correspondante est un '
+                   'signalement : le passé enregistré n’est pas réécrit.'),
+    ]),
+    ('Compteurs des tableaux de bord', [
+        ('RG-106', 'La bande « Utilisateurs / Étudiants / Staff » est la seule '
+                   'affiche de ces trois nombres, carte comme phrase '
+                   'd’accroche : celles qui les répétaient ont été retirées '
+                   '(super administrateur, secrétariat). Un test, gabarit en '
+                   'main, interdit qu’une carte ou qu’un encart d’en-tête '
+                   'reprenne `total_users`, `total_students` ou `total_staff`.'),
+        ('RG-107', 'Une carte peut afficher un nombre voisin à condition de le '
+                   'nommer : « Étudiants actifs » compte le rôle étudiant '
+                   'et le compte approuvé, quand la bande compte le rôle '
+                   'étudiant tous statuts. Les deux chiffres sont donc attendus '
+                   'différents (200 et 73 sur la base du 05/11/2026).'),
+        ('RG-108', 'Le compte des étudiants se prend dans '
+                   '`core.utils.students_count()`, jamais dans une requête écrite '
+                   'à la main dans une vue : le `distinct()` qui empêche un '
+                   'double rôle d’être compté deux fois est garanti par le '
+                   'service, et changer le périmètre ne demande plus qu’un seul '
+                   'endroit.'),
+    ]),
 ]
 
 for group, rules in RULES:
@@ -2094,12 +2236,10 @@ h1('9', 'Sécurité et contrôle d’accès')
 
 h2('9.1', 'Authentification')
 bullets([
-    ('Double voie. ', 'Connexion locale par e-mail ou code interne, ou '
-     'connexion Clerk (Google ou e-mail/mot de passe). Les deux formulaires '
-     'cohabitent sur `/login/`.'),
-    ('Aucun privilège déduit du fournisseur. ', 'Les métadonnées Clerk ne '
-     'sont jamais lues pour accorder un rôle. Un compte Clerk reste soumis à '
-     'l’approbation humaine.'),
+    ('Connexion locale. ', 'E-mail ou code interne et mot de passe, vérifiés '
+     'côté serveur sur `/login/`. Aucun fournisseur d’identité externe.'),
+    ('Aucun privilège implicite. ', 'Un compte reste soumis à '
+     'l’approbation humaine, quel que soit son mode de création.'),
     ('Mots de passe. ', 'Hachage Django ; les tests utilisent un hasheur rapide '
      'isolé. Les mots de passe de démonstration doivent être renouvelés avant '
      'production.'),
@@ -2174,8 +2314,6 @@ numbered([
     'Activer HTTPS, HSTS, cookies sécurisés et redirection HTTP → HTTPS.',
     'Désactiver ou renouveler les comptes de démonstration, notamment le '
     'superutilisateur `admin@univers.academy`.',
-    'Vérifier l’attribution SUPER_ADMIN du compte Clerk '
-    '`japhetsamba52@gmail.com`.',
     'Configurer un backend e-mail réel et tester l’envoi des confirmations.',
     'Mettre en place des sauvegardes chiffrées de la base et de `media/`.',
     'Restreindre l’accès à l’admin Django ou le désactiver si inutile.',
@@ -2252,8 +2390,8 @@ h2('11.1', 'Parcours public')
 add_table(['Écran', 'Route', 'Fonction'], [
     ['Accueil', '`/`', 'Présentation de l’établissement, formations, appel à '
      'candidature.'],
-    ['Connexion', '`/login/`', 'Compte local (e-mail ou code interne) et '
-     'connexion Clerk sur la même page.'],
+    ['Connexion', '`/login/`', 'Compte local : e-mail ou code interne et '
+     'mot de passe.'],
     ['Inscription', '`/register/`', 'Création de compte et choix du rôle '
      'demandé.'],
     ['Demande d’accès', '`/demande-acces/`', 'Complément de rôle pour un '
@@ -2356,12 +2494,21 @@ page_break()
 h1('12', 'Architecture applicative et conventions')
 
 h2('12.1', 'Arborescence')
-code_block([
+arborescence = [
     'academy/',
     '├── manage.py',
     '├── univers_academy/          réglages, URLs racine, WSGI',
     '├── core/',
-    '│   ├── models.py             35 modèles et propriétés métier',
+    '│   ├── models.py             37 modèles et propriétés métier',
+    '│   ├── annee_academique.py   service unique de l’année académique',
+    '│                             (résoudre, filtrer étudiants, inscrits,',
+    '│                              groupes, drapeau)',
+    '│   ├── parametres.py         lecture unique des réglages de l’établissement',
+    '│                             (ligne, nom, devise, seuil, contacts)',
+    '│   ├── groupes.py            règle unique d’affectation des groupes',
+    '│                             (formateur exigé pour un groupe qui enseigne)',
+    '│   ├── relations.py          mesure en lecture seule des 16 relations',
+    '│                             promises par les modèles',
     '│   ├── caisse.py             service unique d’écriture en caisse',
     '│                             (juger, poster, annuler, ajuster,',
     '│                              réinitialiser, corriger)',
@@ -2369,22 +2516,25 @@ code_block([
     '│   ├── decorators.py         contrôles d’accès — caisse à part :',
     '│                             `cash_write_required`',
     '│   ├── middleware.py         statut de compte',
-    '│   ├── utils.py              audit, soldes, helpers',
+    '│   ├── utils.py              audit, soldes, compte des étudiants',
     '│   ├── views.py             identité, dashboards, bourses, audit',
     '│   ├── views_accueil.py',
     '│   ├── views_secretariat.py',
     '│   ├── views_pedagogie.py',
     '│   ├── views_comptabilite.py',
+    '│   ├── views_reglages.py     années académiques et paramètres généraux',
     '│   ├── views_supervision.py',
     '│   ├── views_profile.py',
     '│   ├── urls.py',
-    '│   ├── migrations/          0001 → 0014',
+    '│   ├── migrations/          0001 → 0018',
     '│   ├── management/commands/ audit_finances, audit_privileges,',
     '│   │                         create_superadmin, seed_demo, seed_roles,',
     '│   │                         importer_etudiants, importer_feuille,',
     '│   │                         importer_formations, mettre_en_attente,',
+    '│   │                         regulariser_dates_caisse,',
+    '│   │                         verifier_relations, analyser_donnees,',
     '│   │                         compiler_traductions, verifier_i18n',
-    '│   └── tests/               22 modules, 519 tests',
+    '│   └── tests/               27 modules, 632 tests',
     '├── templates/',
     '│   ├── public/              accueil, login, register, bourses',
     '│   └── dashboard/           base, partiels, espaces par rôle',
@@ -2392,7 +2542,8 @@ code_block([
     '├── media/                   fichiers privés (non servis directement)',
     '├── docs/                    ce document et son générateur',
     '└── db.sqlite3               base de développement',
-])
+]
+code_block(arborescence)
 
 h2('12.2', 'Conventions de développement')
 add_table(['Convention', 'Règle'], [
@@ -2404,6 +2555,10 @@ add_table(['Convention', 'Règle'], [
      'sont préfixés par `_`.'],
     ['Formulaires', 'Toute règle de saisie est dans `forms.py` ; la vue ne '
      'duplique que les contrôles d’objet.'],
+    ['Règles partagées', 'Une règle que plusieurs portes d’entrée doivent '
+     'appliquer vit dans un service (`caisse.py`, `groupes.py`, `parametres.py`, '
+     '`annee_academique.py`) appelé par l’écran et par l’admin Django, jamais '
+     'recopiée dans les vues.'],
     ['Gabarits', 'Un gabarit de base `base_dashboard.html`, des partiels '
      '`_stat.html`, `_form.html`, `_audit_trail.html`.'],
     ['Styles', 'Classes `ua-*` du thème ; Tailwind compilé dans '
@@ -2432,6 +2587,9 @@ add_table(['Composant', 'Rôle'], [
     ['`caisse.juger` / `caisse.poster`', 'Verdict puis écriture d’une '
      'mouvement de caisse, dans une transaction atomique — l’écran et le '
      'service rendent le même verdict.'],
+    ['`groupes.formateur_requis` / `groupes.applique_la_regle`', 'Un groupe '
+     '« Planifiée » ou « En cours » exige un formateur ; l’écran Groupes et '
+     'l’admin Django posent le même refus sur le champ « Formateurs ».'],
     ['`serve_private_file`', 'Sert un fichier après contrôle d’accès.'],
 ], widths=[6, 11], size=9, header_size=9, first_col_bold=True)
 
@@ -2445,6 +2603,17 @@ add_table(['Commande', 'Usage', 'Effet'], [
      'secret d’environnement ; aucun compte privilégié par inscription.'],
     ['`audit_finances`', 'Contrôler la cohérence financière.', 'Signale '
      'trop-perçus, paiements sans caisse, écarts et soldes négatifs.'],
+    ['`verifier_relations`', 'Contrôler les 16 relations entre tables.', 'Compte '
+     'les écarts sans rien écrire ; `--maxi` en fait un portique, `--lignes` un '
+     'détail, `--json` une sortie pour une machine.'],
+    ['`regulariser_dates_caisse`', 'Ramenir au jour de saisie les écritures '
+     'datées dans l’avenir.', 'Aperçu par défaut ; `--ecrire` corrige, audite '
+     '(`PAYMENT_DATE_FIX` / `CASH_DATE_FIX`) et laisse le mois réglé intact ; '
+     'réexécutable sans effet.'],
+    ['`compiler_traductions`', 'Rouvrir le catalogue anglais.', 'Fusionne les '
+     'fragments et retire les messages qui n’existent plus.'],
+    ['`verifier_i18n`', 'Contrôler balisage et traduction.', 'Refuse un littéral '
+     'non balisé ou un message sans traduction ; `--maxi 0` est le seuil retenu.'],
     ['`audit_privileges`', 'Contrôler les privilèges.', 'Signale les '
      'attributions à vérifier.'],
 ], widths=[3.8, 6.2, 7], size=9, header_size=9, first_col_bold=True)
@@ -2452,9 +2621,9 @@ add_table(['Commande', 'Usage', 'Effet'], [
 h2('12.5', 'Dépendances et configuration')
 add_paragraph(
     'Le projet repose sur Django 5.1, `django-cleanup` pour la suppression des '
-    'fichiers orphelins, Tailwind CSS pour la compilation des styles et Clerk '
-    'pour l’authentification optionnelle. Les réglages sensibles sont lus dans '
-    '`.env` : `SECRET_KEY`, `DEBUG`, clés Clerk, backend e-mail et chemins de '
+    'fichiers orphelins et Tailwind CSS pour la compilation des styles. '
+    'Les réglages sensibles sont lus dans '
+    '`.env` : `SECRET_KEY`, `DEBUG`, backend e-mail et chemins de '
     'stockage.'
 )
 
@@ -2476,9 +2645,9 @@ add_paragraph(
 
 h2('13.2', 'Couverture par module')
 test_rows = [
-    ['`test_public.py`', '16', 'Landing, connexion locale prioritaire, code '
+    ['`test_public.py`', '16', 'Landing, connexion locale, code '
      'interne, inscription, rôles demandés, comptes bloqués.'],
-    ['`test_auth_roles.py`', '31', 'Clerk, onboarding, approbation/refus, '
+    ['`test_auth_roles.py`', '29', 'Onboarding, approbation/refus, '
      'rôle suggéré, inscription automatique de l’étudiant, anti-doublon.'],
     ['`test_profile.py`', '22', 'Profil, avatar, mot de passe (session '
      'conservée, refus, compte sans mot de passe local), e-mail signé, échecs '
@@ -2490,8 +2659,9 @@ test_rows = [
      'motifs, recherche.'],
     ['`test_secretariat.py`', '15', 'Étudiants, conversion, inscriptions, '
      'remises, documents.'],
-    ['`test_pedagogie.py`', '58', 'Modules, groupes, séances, présences, '
-     'ressources, retours, fiches de cours, impressions.'],
+    ['`test_pedagogie.py`', '62', 'Modules, groupes (dont l’affectation '
+     'obligatoire d’un formateur et l’exemption des groupes terminés), séances, '
+     'présences, ressources, retours, fiches de cours, impressions.'],
     ['`test_comptabilite.py`', '111', 'Journal, CSV, opérations, transferts, '
      'soldes, clôtures, paiements, reçus, permissions, encaissement '
      'multi-mois, date de recette, solde de caisse jamais négatif, '
@@ -2515,8 +2685,12 @@ test_rows = [
      'révocation automatique.'],
     ['`test_import_eleves.py`', '37', 'Vague 2 : comptes, groupes, '
      'inscriptions et paiements devenus exploitables ou refusés.'],
-    ['`test_feuille_import.py`', '16', 'Rapprochement du journal de caisse '
-     '« Contrôles Mensuels » avec les écritures.'],
+    ['`test_feuille_import.py`', '19', 'Rapprochement du journal de caisse '
+     '« Contrôles Mensuels » avec les écritures, dates ramenées au jour de '
+     'l’import.'],
+    ['`test_dates_caisse.py`', '6', 'Régularisation des dates de caisse : '
+     'aperçu qui ne modifie rien, paiement et écriture ramené au jour de '
+     'saisie, mois réglé conservé, trace d’audit, seconde passe sans effet.'],
     ['`test_importer_formations.py`', '15', 'Tarif lu dans les classeurs et '
      'portique de la vague 1.'],
     ['`test_data_tools.py`', '9', 'Lecteurs de classeurs : en-têtes, dates, '
@@ -2525,18 +2699,40 @@ test_rows = [
      'effet réel à l’écran.'],
     ['`test_graphiques.py`', '19', 'Séries numériques des graphiques de '
      'tableau de bord.'],
+    ['`test_compteurs.py`', '5', 'Bande de compteurs commune aux neuf tableaux '
+     'de bord : tous les comptes, étudiants, encadrement ; un compte sans rôle '
+     'ne compte que comme utilisateur, un double rôle compte dans les deux '
+     'groupes ; aucune carte d’un gabarit ne reprend l’un de ces trois nombres.'],
     ['`test_i18n_theme.py`', '17', 'Coquille bilingue, thème neutre, '
      'notifications empilées.'],
-    ['`test_sans_melange.py`', '4', 'Aucun mélange de langue au rendu, page '
-     'par page.'],
+    ['`test_annee_academique.py`', '40', 'Année posée par la direction : une '
+     'seule « en cours » (modèle et base), fenêtre incohérente refusée, service '
+     'de filtrage, écran des années (création, réglage, audit, rôles) et les '
+     'quatre écrans filtrés — étudiants, groupes, deux écrans d’encaissement.'],
+    ['`test_sans_melange.py`', '8', 'Aucun mélange de langue au rendu, page '
+     'par page (calendrier, sélecteur d’année et paramètres généraux inclus) ; '
+     'compilation de tous les gabarits et refus d’une variable à points dans '
+     'un `{% blocktrans %}`.'],
+    ['`test_parametres.py`', '19', 'Paramètres généraux : ligne unique née avec '
+     'la migration, service qui ne crée rien, seuil lu par l’avertissement de '
+     'caisse, écran et son audit (avant/après), 403 du secrétariat, nom et '
+     'devise aux affichages, coordonnées du reçu, Django Admin en consultation '
+     'seule.'],
+    ['`test_relations.py`', '34', 'Cohérence des 16 relations : base saine muette, '
+     'mesure prouvée sans écriture, chaque écart semé nommé par son code, '
+     'signalements du journal et des groupes sans formateur, portique de '
+     '`verifier_relations` (`--maxi`, `--code`, `--json`, `--lignes`).'],
 ]
+TOTAL_TESTS = sum(int(ligne[1]) for ligne in test_rows)
+assert f'{len(test_rows)} modules, {TOTAL_TESTS} tests' in '\n'.join(arborescence), \
+    "l'arborescence annonce un compte de tests différent du tableau de couverture"
 add_table(['Fichier', 'Tests', 'Périmètre'], test_rows,
           widths=[4.6, 2.2, 10.2], size=8.6, header_size=8.6,
           first_col_bold=True, align_center={1})
 add_paragraph(
-    'Total : 519 tests, 0 échec (04/11/2026). `manage.py check` est sans '
-    'erreur et `makemigrations --check` ne signale aucun changement en '
-    'attente : les modèles et les 14 migrations appliquées sont alignés.',
+    f'Total : {TOTAL_TESTS} tests (06/11/2026), 0 échec. `manage.py check` est '
+    'sans erreur et `makemigrations --check` ne signale aucun changement en '
+    'attente : les modèles et les 19 migrations appliquées sont alignés.',
     bold_lead='Résultat de référence : ', size=10,
 )
 
@@ -2568,6 +2764,14 @@ bullets([
     'inchangée, archivage avec compte de remplacement.',
     'Rôles élevés : écriture ouverte sur la caisse et journalisée, lecture '
     'seule maintenue sur le reste du métier.',
+    'Cohérence des tables : les 15 contrôles sont muets sur une base saine, '
+    'chaque écart semé est nommé par son code, et mesurer n’écrit rien.',
+    'Paramètres généraux : une seule ligne de réglages, écran audité avec son '
+    'avant/après, Django Admin en consultation seule, nom et devise lus par '
+    'tous les affichages et le reçu.',
+    'Rendu bilingue : aucune chrome française visible page par page en anglais, '
+    'les 107 gabarits se compilent et un `{% blocktrans %}` ne peut plus garder '
+    'une variable à points.',
 ])
 
 h2('13.4', 'Exploitation courante')
@@ -2577,7 +2781,12 @@ add_table(['Tâche', 'Commande / action'], [
     ['Créer le premier super admin', '`manage.py create_superadmin` avec '
      '`SUPERADMIN_SETUP_SECRET`'],
     ['Contrôler la cohérence financière', '`manage.py audit_finances`'],
+    ['Contrôler la cohérence des relations', '`manage.py verifier_relations` '
+     '(`--maxi 0` pour bloquer, `--lignes` pour le détail, `--json` pour une '
+     'machine)'],
     ['Contrôler les privilèges', '`manage.py audit_privileges`'],
+    ['Bousculer le catalogue anglais', '`manage.py compiler_traductions`'],
+    ['Vérifier balisage et traduction', '`manage.py verifier_i18n --maxi 0`'],
     ['Vérifier le projet', '`manage.py check` et `makemigrations --check`'],
     ['Lancer les tests', '`manage.py test core.tests`'],
     ['Sauvegarder', 'Base de données + répertoire `media/`'],
@@ -2589,7 +2798,6 @@ numbered([
     'HTTPS, HSTS, cookies sécurisés et redirection HTTP.',
     'Base PostgreSQL et sauvegardes testées.',
     'Comptes de démonstration désactivés ou mots de passe renouvelés.',
-    'Attribution SUPER_ADMIN du compte Clerk vérifiée.',
     'Backend e-mail configuré et testé.',
     'Accès à l’admin Django restreint.',
     'Surveillance planifiée de `audit_finances` et `audit_privileges`.',
@@ -2624,8 +2832,6 @@ add_table(['Sujet', 'État actuel', 'Impact'], [
      'des séries.'],
     ['Notifications', 'Notification interne ; e-mail fiable uniquement pour '
      'le changement d’adresse.', 'Pas d’envoi métier automatique.'],
-    ['Clerk réel', 'Parcours simulé dans les tests.', 'Dépend de clés '
-     'externes et d’un environnement connecté.'],
     ['Tests E2E', 'Tests Django uniquement.', 'Pas de test navigateur '
      'automatisé.'],
     ['Présence multi-séances', '`Attendance` unique par inscription et date.',
@@ -2665,15 +2871,12 @@ bullets([
     ('Comptes de démonstration.', 'Les comptes `admin@univers.academy`, '
      '`secretaire@…`, `comptable@…`, `formateur@…`, `etudiant@…` et '
      '`accueil@…` ont encore leurs mots de passe par défaut.'),
-    ('Compte Clerk privilégié.', '`japhetsamba52@gmail.com` est SUPER_ADMIN et '
-     'lié à Clerk ; `audit_privileges` demande une vérification.'),
 ])
 
 h2('14.3', 'Feuille de route proposée')
 add_table(['Priorité', 'Chantier', 'Objectif'], [
     ['P0', 'Sécuriser la production', 'Désactiver les comptes de démo, '
-     'renouveler les secrets, activer HTTPS/HSTS, vérifier le compte Clerk '
-     'privilégié.'],
+     'renouveler les secrets, activer HTTPS/HSTS.'],
     ['P0', 'Régulariser le trop-perçu', 'Remboursement ou annulation tracée '
      'du dossier « Les langues étrangères ».'],
     ['P1', 'Workflow de remboursement', 'Rembourser un paiement en mettant à '

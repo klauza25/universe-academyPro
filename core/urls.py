@@ -2,7 +2,7 @@ from django.urls import path, include
 
 from . import (
     views, views_accueil, views_comptabilite, views_pedagogie,
-    views_profile, views_secretariat, views_supervision,
+    views_profile, views_reglages, views_secretariat, views_supervision,
 )
 
 app_name = 'core'
@@ -10,7 +10,6 @@ app_name = 'core'
 public_urlpatterns = [
     path('', views.home, name='home'),
     path('login/', views.login_view, name='login'),
-    path('clerk/session/', views.clerk_session, name='clerk-session'),
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
     path('demande-acces/', views.complete_access_request,
@@ -27,6 +26,7 @@ bourses_urlpatterns = [
 
 dashboard_urlpatterns = [
     path('', views.dashboard_router, name='dashboard-router'),
+    path('notifications/poll/', views.notifications_poll, name='notifications-poll'),
 
     # Profil -----------------------------------------------------------------
     path('profil/', views_profile.profile_view, name='profile'),
@@ -54,6 +54,14 @@ dashboard_urlpatterns = [
     path('super-admin/scholarships/<uuid:app_id>/', views.scholarship_review_detail, name='scholarship-review-detail'),
     path('admin/', views.admin_dashboard, name='admin-dashboard'),
     path('direction/', views.direction_dashboard, name='direction-dashboard'),
+
+    # Réglages de l'établissement --------------------------------------------
+    path('reglages/parametres-generaux/', views_reglages.parametres_generaux,
+         name='platform-settings'),
+    path('reglages/annees-academiques/', views_reglages.annee_academique_list,
+         name='academic-years'),
+    path('reglages/annees-academiques/<uuid:year_id>/',
+         views_reglages.annee_academique_update, name='academic-year-update'),
 
     # Accueil ----------------------------------------------------------------
     path('accueil/', views.accueil_dashboard, name='accueil-dashboard'),
@@ -85,6 +93,14 @@ dashboard_urlpatterns = [
 
     # Pédagogie --------------------------------------------------------------
     path('pedagogie/programmes/', views_pedagogie.program_list, name='programs'),
+    path('pedagogie/formations/nouvelle/', views_pedagogie.course_create,
+         name='course-create'),
+    path('pedagogie/formations/<uuid:course_id>/modifier/',
+         views_pedagogie.course_edit, name='course-edit'),
+    path('pedagogie/formations/<uuid:course_id>/archiver/',
+         views_pedagogie.course_archive, name='course-archive'),
+    path('pedagogie/formations/<uuid:course_id>/reactiver/',
+         views_pedagogie.course_restore, name='course-restore'),
     path('pedagogie/modules/nouveau/', views_pedagogie.module_create, name='module-create'),
     path('pedagogie/modules/<uuid:module_id>/modifier/', views_pedagogie.module_edit, name='module-edit'),
     path('pedagogie/lecons/nouvelle/', views_pedagogie.lesson_create, name='lesson-create'),

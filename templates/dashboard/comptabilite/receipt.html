@@ -5,7 +5,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{% translate "Reçu" %} {{ payment.reference }} — Univers Academy</title>
+    <title>{% translate "Reçu" %} {{ payment.reference }} — {{ plateforme.nom }}</title>
     <style><!--
         @page { size: A5; margin: 12mm; }
         * { box-sizing: border-box; }
@@ -40,8 +40,10 @@
     <div class="sheet">
         <div class="head">
             <div class="brand">
-                Univers Academy
+                {{ plateforme.nom }}
                 <small>{% translate "Reçu de paiement étudiant" %}</small>
+                {% for ligne in plateforme.bloc_legal %}<small>{{ ligne }}</small>{% endfor %}
+                {% for ligne in plateforme.contacts %}<small>{{ ligne }}</small>{% endfor %}
             </div>
             <div class="ref">
                 {% translate "Reçu n°" %}
@@ -66,12 +68,12 @@
         </table>
 
         <p class="muted" style="margin:0;">{% translate "Montant encaissé" %}</p>
-        <p class="amount">{{ payment.amount }} FCFA</p>
+        <p class="amount">{{ payment.amount }} {{ plateforme.devise }}</p>
 
         <div class="grid">
-            <div><span>{% translate "Net dû" %}</span>{{ enrollment.net_amount }} FCFA</div>
-            <div><span>{% translate "Total payé" %}</span>{{ enrollment.total_paid }} FCFA</div>
-            <div><span>{% translate "Reste à payer" %}</span>{{ enrollment.balance_due }} FCFA</div>
+            <div><span>{% translate "Net dû" %}</span>{{ enrollment.net_amount }} {{ plateforme.devise }}</div>
+            <div><span>{% translate "Total payé" %}</span>{{ enrollment.total_paid }} {{ plateforme.devise }}</div>
+            <div><span>{% translate "Reste à payer" %}</span>{{ enrollment.balance_due }} {{ plateforme.devise }}</div>
             <div><span>{% translate "Statut du dossier" %}</span>{{ enrollment.payment_state }}</div>
         </div>
 

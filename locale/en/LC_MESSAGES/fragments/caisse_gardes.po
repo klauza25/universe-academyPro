@@ -1,0 +1,40 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+# core/caisse.py — gardes de caisse (dette rattrapée par le portique)
+msgid "Ajustement %(signe)s %(montant)s demandé : %(motif)s"
+msgstr "Adjustment %(signe)s %(montant)s requested: %(motif)s"
+
+msgid "Annulation refusée : il manquerait %(creux)s %(devise)s sur « %(caisse)s ». Régularisez plutôt par une écriture contraire."
+msgstr "Cancellation refused: it would leave %(creux)s %(devise)s short on “%(caisse)s”. Settle it instead with a contra entry."
+
+msgid "Cette sortie consomme %(pourcent)s %% du solde disponible de « %(caisse)s » (%(disponible)s %(devise)s)."
+msgstr "This payout consumes %(pourcent)s%% of the available balance of “%(caisse)s” (%(disponible)s %(devise)s)."
+
+msgid "Correction du %(jour)s : %(motif)s"
+msgstr "Correction on %(jour)s: %(motif)s"
+
+msgid "La réinitialisation d'une caisse demande une confirmation explicite."
+msgstr "Resetting a cash account requires explicit confirmation."
+
+msgid "Réinitialisation du %(jour)s (solde de %(solde)s emporté) : %(motif)s"
+msgstr "Reset on %(jour)s (balance of %(solde)s carried away): %(motif)s"
+
+msgid "Solde insuffisant sur « %(caisse)s » : il manque %(manque)s %(devise)s (découvert autorisé : %(plafond)s)."
+msgstr "Insufficient balance on “%(caisse)s”: %(manque)s %(devise)s missing (allowed overdraft: %(plafond)s)."
+
+msgid "Un transfert doit désigner le compte destinataire."
+msgstr "A transfer must name the destination account."
+
+msgid "Une écriture de caisse ne se date pas après aujourd'hui (%(jour)s)."
+msgstr "A cash entry cannot be dated after today (%(jour)s)."
+
+msgid "« %(caisse)s » est archivé : plus aucune écriture ne l'atteint."
+msgstr "“%(caisse)s” is archived: no entry can reach it any more."
+
+msgid "« %(caisse)s » est clôturée au %(date)s : régularisez par une écriture d'ajustement, pas par une écriture ordinaire antidatée."
+msgstr "“%(caisse)s” is closed as of %(date)s: settle it with an adjustment entry, not with a backdated ordinary entry."

@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Administrateur — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Administrateur" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
 
@@ -25,6 +25,7 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Rôle à définir" as var_role_definir %}
 {% translate "Étudiants actifs" as lbl_etudiants %}
 {% translate "Comptes étudiants ouverts" as hint_etudiants %}

@@ -1,0 +1,27 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load ui i18n %}
+
+{% block title %}{% if creating %}{% translate "Ajouter une formation" %}{% else %}{% translate "Modifier la formation" %}{% endif %} — {{ plateforme.nom }}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="ua-page-head">
+    <div>
+        <h1 class="ua-page-title">{% if creating %}{% translate "Ajouter une formation" %}{% else %}{% translate "Modifier la formation" %}{% endif %}</h1>
+        <p class="ua-page-sub">{% translate "Exemples : Anglais, Informatique générale, Excel." %}</p>
+    </div>
+    <a href="{% url 'core:dashboard:programs' %}" class="ua-btn ua-btn-ghost">{% translate "Retour au catalogue" %}</a>
+</div>
+<section class="ua-card ua-card-pad max-w-2xl">
+    <form method="post" class="ua-form">
+        {% csrf_token %}
+        {% include "dashboard/_form.html" with form=form %}
+        <div class="flex flex-wrap gap-3 mt-5">
+            <button type="submit" class="ua-btn ua-btn-primary">{% icon "check-circle" %} {% translate "Enregistrer la formation" %}</button>
+            <a href="{% url 'core:dashboard:programs' %}" class="ua-btn ua-btn-ghost">{% translate "Annuler" %}</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Génère la note d'hébergement d'Univers Academy (DOCX puis PDF).
 
-Le document reprend les contraintes réelles du projet (Django 5.1, Clerk,
+Le document reprend les contraintes réelles du projet (Django 5.1,
 media locaux, PostgreSQL prêt via DATABASE_URL) et compare quatre scénarios
 d'hébergement, avec une recommandation chiffrée.
 """
@@ -248,7 +248,7 @@ para(
     'Cette note compare quatre familles d’hébergement pour la plateforme '
     'de gestion d’Univers Academy, en tenant compte du code réel du projet : '
     'Django 5.1, PostgreSQL déjà préparé, fichiers media locaux, '
-    'authentification Clerk et un volume d’utilisation de petite structure. '
+    'authentification locale et un volume d’utilisation de petite structure. '
     'Elle se termine par une recommandation, un budget et une liste de '
     'contrôles à passer avant l’ouverture au public.'
 )
@@ -275,9 +275,6 @@ table(
         ['Media locaux : avatars, documents jusqu’à 10 Mo',
          'Disque persistant **obligatoire**, ou stockage objet S3. '
          'Un disque éphémère perd les fichiers à chaque déploiement.'],
-        ['Clerk (Google et e-mail / mot de passe)',
-         'HTTPS, domaine public et origines autorisées ; les clés '
-         'publishable et secrète passent par l’environnement.'],
         ['E-mails transactionnels',
          'SMTP réel (Brevo, Resend, Mailgun) : le backend console du '
          'développement n’envoie rien.'],
@@ -440,18 +437,14 @@ table(
         ['2', 'Comptes de démonstration', 'Supprimer ou changer les mots '
          'de passe par défaut (`admin@`, `comptable@`, `secretaire@`, etc.).',
          'Bloquant'],
-        ['3', 'Compte Clerk privilégié', 'Vérifier l’attribution '
-         'SUPER_ADMIN de `japhetsamba52@gmail.com`.', 'Haute'],
-        ['4', 'Serveur d’application', 'Ajouter gunicorn et WhiteNoise '
+        ['3', 'Serveur d’application', 'Ajouter gunicorn et WhiteNoise '
          '(ou nginx) ; lancer `collectstatic` au déploiement.', 'Bloquant'],
-        ['5', 'Sauvegardes', 'Sauvegarde quotidienne **et** restauration '
+        ['4', 'Sauvegardes', 'Sauvegarde quotidienne **et** restauration '
          'testée, pas seulement planifiée.', 'Bloquant'],
-        ['6', 'Données financières', 'Régulariser le trop-perçu '
+        ['5', 'Données financières', 'Régulariser le trop-perçu '
          '« Anglais B2 » (60 000 FCFA) et le solde Mobile Money négatif '
          '(−5 100 FCFA).', 'Haute'],
-        ['7', 'Clerk', 'Associer le domaine de production et les origines '
-         'autorisées ; vérifier les clés.', 'Bloquant'],
-        ['8', 'E-mail', 'Configurer un SMTP réel (Brevo, Resend, '
+        ['6', 'E-mail', 'Configurer un SMTP réel (Brevo, Resend, '
          'Mailgun) et tester un envoi.', 'Moyenne'],
     ],
     [0.9, 4.2, 9.4, 2.5],
@@ -469,7 +462,7 @@ bullet('Dockerfile et `docker-compose.yml` (Django + PostgreSQL) prêts '
        'pour Coolify ;', 'Conteneurisation : ')
 bullet('gunicorn, WhiteNoise, `dj-database-url`, stockage S3 ;',
        'Dépendances de production : ')
-bullet('sécurité, media, e-mail et Clerk ;',
+bullet('sécurité, media et e-mail ;',
        '`settings/production.py` : ')
 bullet('DNS, certificats, premier déploiement, sauvegardes et '
        'restauration.', 'Guide pas à pas : ')

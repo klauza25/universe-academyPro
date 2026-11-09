@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Programmes — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Programmes" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -12,7 +12,16 @@
         <h1 class="ua-page-title">{% translate "Programmes pédagogiques" %}</h1>
         <p class="ua-page-sub">{% translate "Modules et leçons par formation." %}</p>
     </div>
-    {% if can_manage %}
+    {% if can_manage_courses %}
+    <div class="flex flex-wrap gap-2">
+        <a href="{% url 'core:dashboard:course-create' %}" class="ua-btn ua-btn-primary">{% icon "book-open" %} {% translate "Ajouter une formation" %}</a>
+        {% if show_archived %}
+        <a href="{% url 'core:dashboard:programs' %}" class="ua-btn ua-btn-ghost">{% translate "Voir les formations actives" %}</a>
+        {% else %}
+        <a href="{% url 'core:dashboard:programs' %}?archives=1" class="ua-btn ua-btn-ghost">{% translate "Formations archivées" %}</a>
+        {% endif %}
+    </div>
+    {% elif can_manage %}
     <div class="flex flex-wrap gap-2">
         <a href="{% url 'core:dashboard:module-create' %}" class="ua-btn ua-btn-primary">{% icon "book-open" %} {% translate "Nouveau module" %}</a>
         <a href="{% url 'core:dashboard:lesson-create' %}" class="ua-btn ua-btn-light">{% icon "file-text" %} {% translate "Nouvelle leçon" %}</a>
@@ -22,38 +31,110 @@
 
 <div class="space-y-5">
     {% for course in courses %}
-    <section class="ua-card ua-card-pad">
+    <section class="ua-card ua-card-pad" id="formation-{{ course.id }}">
         <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
             <div>
-                <h2 class="ua-section-title">{{ course.title }}</h2>
-                <p class="text-xs ua-muted">{{ course.domain }} · {% blocktrans with m=course.duration_months %}{{ m }} mois{% endblocktrans %} · {{ course.fee_amount }} FCFA</p>
+                <div class="flex flex-wrap items-center gap-2">
+                    <h2 class="ua-section-title">{{ course.title }}</h2>
+                    {% if not course.active %}<span class="ua-badge ua-badge-amber">{% translate "Archivée" %}</span>{% endif %}
+                </div>
+                <p class="text-xs ua-muted">{{ course.domain }} · {% blocktrans with m=course.duration_months %}{{ m }} mois{% endblocktrans %} · {{ course.fee_amount }} {{ plateforme.devise }}</p>
             </div>
+            {% if can_manage_courses %}
+            <div class="flex flex-wrap gap-2">
+                <a href="{% url 'core:dashboard:course-edit' course.id %}" class="ua-btn ua-btn-ghost ua-btn-sm">{% translate "Modifier la formation" %}</a>
+                <form method="post" action="{% if course.active %}{% url 'core:dashboard:course-archive' course.id %}{% else %}{% url 'core:dashboard:course-restore' course.id %}{% endif %}"
+                      onsubmit="return confirm('{% if course.active %}{% translate "Retirer cette formation du catalogue ? Les inscriptions et l’historique seront conservés." %}{% else %}{% translate "Réactiver cette formation ?" %}{% endif %}')">
+                    {% csrf_token %}
+                    {% if course.active %}
+                    <button type="submit" class="ua-btn ua-btn-ghost ua-btn-sm text-rose-600">{% translate "Supprimer du catalogue" %}</button>
+                    {% else %}
+                    <button type="submit" class="ua-btn ua-btn-primary ua-btn-sm">{% translate "Réactiver" %}</button>
+                    {% endif %}
+                </form>
+            </div>
+            {% endif %}
             {% if can_manage %}
+            {% if course.active %}
             <a href="{% url 'core:dashboard:module-create' %}?course={{ course.id }}" class="ua-btn ua-btn-ghost ua-btn-sm">{% translate "Ajouter un module" %}</a>
+            {% endif %}
             {% endif %}
         </div>
         {% for module in course.modules.all %}
-        <div class="ua-list-row">
+        <div class="ua-list-row" id="module-{{ module.id }}">
             <div>
                 <span class="ua-cell-title">{% blocktrans with n=module.order t=module.title %}Module {{ n }} · {{ t }}{% endblocktrans %}</span>
                 <span class="ua-cell-sub block">{% blocktrans with h=module.planned_hours c=module.lessons.all|length %}{{ h }} h prévues · {{ c }} leçon(s){% endblocktrans %}</span>
                 {% for lesson in module.lessons.all %}
-                <span class="ua-cell-sub block">— {{ lesson.order }}. {{ lesson.title }} ({{ lesson.planned_hours }} h)</span>
+                <span class="ua-cell-sub block">
+                    — {{ lesson.order }}. {{ lesson.title }} ({{ lesson.planned_hours }} h)
+                    {% if can_manage and course.active %}
+                    <a class="ua-inline-link" href="{% url 'core:dashboard:lesson-edit' lesson.id %}">{% translate "Modifier" %}</a>
+                    {% endif %}
+                </span>
                 {% endfor %}
             </div>
-            {% if can_manage %}
+            {% if can_manage and course.active %}
             <div class="flex gap-2">
-                <a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:module-edit' module.id %}">{% translate "Module" %}</a>
-                <a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:lesson-create' %}?module={{ module.id }}">{% translate "Leçon" %}</a>
+                <a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:module-edit' module.id %}">{% translate "Modifier le module" %}</a>
             </div>
             {% endif %}
         </div>
+        {% if can_manage and course.active %}
+        <details class="ua-inline-form mb-3">
+            <summary class="ua-btn ua-btn-ghost ua-btn-sm">{% icon "file-text" %} {% translate "Nouvelle leçon" %}</summary>
+            <form method="post" action="{% url 'core:dashboard:lesson-create' %}" class="ua-form mt-3">
+                {% csrf_token %}
+                <input type="hidden" name="module" value="{{ module.id }}">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label for="lesson-title-{{ module.id }}">{% translate "Titre" %}</label>
+                        <input id="lesson-title-{{ module.id }}" type="text" name="title" maxlength="200" required>
+                    </div>
+                    <div>
+                        <label for="lesson-hours-{{ module.id }}">{% translate "Heures prévues" %}</label>
+                        <input id="lesson-hours-{{ module.id }}" type="number" name="planned_hours" min="0" value="0">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label for="lesson-objectives-{{ module.id }}">{% translate "Objectifs" %}</label>
+                    <textarea id="lesson-objectives-{{ module.id }}" name="objectives" rows="2"></textarea>
+                </div>
+                <button type="submit" class="ua-btn ua-btn-primary ua-btn-sm mt-3">{% icon "check-circle" %} {% translate "Enregistrer" %}</button>
+            </form>
+        </details>
+        {% endif %}
         {% empty %}
         <p class="ua-empty">{% translate "Aucun module pour cette formation." %}</p>
         {% endfor %}
+
+        {% if can_manage and course.active %}
+        <details class="ua-inline-form">
+            <summary class="ua-btn ua-btn-ghost ua-btn-sm">{% icon "book-open" %} {% translate "Ajouter un module" %}</summary>
+            <form method="post" action="{% url 'core:dashboard:module-create' %}" class="ua-form mt-3">
+                {% csrf_token %}
+                <input type="hidden" name="course" value="{{ course.id }}">
+                <div class="grid gap-3 sm:grid-cols-2">
+                    <div>
+                        <label for="module-title-{{ course.id }}">{% translate "Titre" %}</label>
+                        <input id="module-title-{{ course.id }}" type="text" name="title" maxlength="200" required>
+                    </div>
+                    <div>
+                        <label for="module-hours-{{ course.id }}">{% translate "Heures prévues" %}</label>
+                        <input id="module-hours-{{ course.id }}" type="number" name="planned_hours" min="0" value="0">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label for="module-description-{{ course.id }}">{% translate "Description" %}</label>
+                    <textarea id="module-description-{{ course.id }}" name="description" rows="2"></textarea>
+                </div>
+                <button type="submit" class="ua-btn ua-btn-primary ua-btn-sm mt-3">{% icon "check-circle" %} {% translate "Enregistrer" %}</button>
+            </form>
+        </details>
+        {% endif %}
     </section>
     {% empty %}
-    <section class="ua-card ua-card-pad"><p class="ua-empty">{% translate "Aucune formation accessible." %}</p></section>
+    <section class="ua-card ua-card-pad"><p class="ua-empty">{% if show_archived %}{% translate "Aucune formation archivée." %}{% else %}{% translate "Aucune formation accessible." %}{% endif %}</p></section>
     {% endfor %}
 </div>
 {% endblock %}

@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui core_tags i18n %}
 
-{% block title %}{% translate "Supervision financière — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Supervision financière" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
 
@@ -24,15 +24,15 @@
 </div>
 
 {% translate "Entrées validées" as lbl_entrees %}
-{% translate "FCFA — selon filtres" as hint_fcfa %}
+{% translate "Selon filtres" as hint_selon_filtres %}
 {% translate "Sorties validées" as lbl_sorties %}
 {% translate "Solde net (filtre)" as lbl_solde %}
 {% translate "Entrées − sorties validées" as hint_solde %}
 {% translate "Opérations affichées" as lbl_opérations %}
 {% translate "Toutes origines confondues" as hint_opérations %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-4">
-    {% include "dashboard/_stat.html" with label=lbl_entrees value=totals.incoming|default:0 icon="trending-up" tone="green" hint=hint_fcfa %}
-    {% include "dashboard/_stat.html" with label=lbl_sorties value=totals.outgoing|default:0 icon="wallet" tone="rose" hint=hint_fcfa %}
+    {% include "dashboard/_stat.html" with label=lbl_entrees value=totals.incoming|default:0 icon="trending-up" tone="green" unite=plateforme.devise hint=hint_selon_filtres %}
+    {% include "dashboard/_stat.html" with label=lbl_sorties value=totals.outgoing|default:0 icon="wallet" tone="rose" unite=plateforme.devise hint=hint_selon_filtres %}
     {% include "dashboard/_stat.html" with label=lbl_solde value=net_total icon="chart" tone="indigo" hint=hint_solde %}
     {% include "dashboard/_stat.html" with label=lbl_opérations value=page.paginator.count icon="file-text" tone="sky" hint=hint_opérations %}
 </div>
@@ -219,7 +219,7 @@
             {% endfor %}
             <div class="mt-4 flex items-center justify-between text-sm">
                 <span class="ua-muted">{% translate "Total" %}</span>
-                <span class="font-bold">{{ balance_total }} FCFA</span>
+                <span class="font-bold">{{ balance_total }} {{ plateforme.devise }}</span>
             </div>
         </section>
 
@@ -233,7 +233,7 @@
                     <p class="text-sm font-semibold truncate">{{ row.category__name|default:var_non_categorise }}</p>
                     <p class="text-xs ua-muted">{% blocktrans with n=row.rows %}{{ n }} opération(s){% endblocktrans %}</p>
                 </div>
-                <span class="text-sm font-semibold text-rose-700">{{ row.total|floatformat:0 }} FCFA</span>
+                <span class="text-sm font-semibold text-rose-700">{{ row.total|floatformat:0 }} {{ plateforme.devise }}</span>
             </a>
             {% empty %}
             <p class="ua-empty">{% translate "Aucune sortie validée pour ces critères." %}</p>

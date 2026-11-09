@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static i18n %}
 
-{% block title %}{% translate "Demande d'accès — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Demande d'accès" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block body %}
 <div class="min-h-screen bg-slate-50 px-4 py-10">
@@ -9,11 +9,11 @@
         <div class="mb-8 text-center">
             <a href="{% url 'core:home' %}" class="inline-block">
                 <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full shadow-sm ring-1 ring-slate-200">
-                    <img src="{% static 'img/logo-univers.jpg' %}" alt="Univers Academy" class="h-14 w-14 object-cover">
+                    <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}" class="h-14 w-14 object-cover">
                 </div>
             </a>
-            <h1 class="text-2xl font-semibold text-slate-900">Univers Academy</h1>
-            <p class="mt-1 text-sm text-slate-500">{% translate "Centre de Formation en Langues — Brazzaville" %}</p>
+            <h1 class="text-2xl font-semibold text-slate-900">{{ plateforme.nom }}</h1>
+            <p class="mt-1 text-sm text-slate-500">{{ plateforme.signature }}</p>
         </div>
 
         <div class="rounded-2xl bg-white shadow-xl shadow-slate-200/60 ring-1 ring-slate-200">

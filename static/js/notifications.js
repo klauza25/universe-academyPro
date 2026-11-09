@@ -1,7 +1,7 @@
 /* Notifications flottantes du tableau de bord.
 
    Le gabarit pose les cartes déjà traduites : ce fichier n'invente aucun texte, il
-   les fait glisser, les efface après un délai et joue un son court. Le son reste
+   les fait glisser, les efface après un délai et signale les nouveaux événements. Le son reste
    une intention du navigateur — aucun bruit n'est autorisé avant le premier geste
    sur la page. La notification d'une page fraîchement chargée est donc mise en
    attente et jouée au premier clic ou à la première touche, sans s'empiler. */
@@ -11,9 +11,9 @@
     const CLE_SON = 'ua-son';
     const MAXI = 5;
     const DUREE = {
-        success: 7000,
-        info: 8000,
-        warning: 10000,
+        success: 12000,
+        info: 12000,
+        warning: 12000,
         error: 12000,
         danger: 12000,
     };
@@ -40,6 +40,8 @@
     // -- Le son ------------------------------------------------------------
     let contexte = null;
     let enAttente = null;
+    let sonnerieTimer = null;
+    let sonnerieFin = 0;
 
     function contexteAudio() {
         const Fabrique = window.AudioContext || window.webkitAudioContext;
@@ -58,7 +60,7 @@
             oscillateur.type = 'sine';
             oscillateur.frequency.value = note[0];
             volume.gain.setValueAtTime(0.0001, depart);
-            volume.gain.exponentialRampToValueAtTime(0.14, depart + 0.02);
+            volume.gain.exponentialRampToValueAtTime(0.36, depart + 0.02);
             volume.gain.exponentialRampToValueAtTime(0.0001, depart + 0.16);
             oscillateur.connect(volume);
             volume.connect(ctx.destination);
@@ -67,24 +69,62 @@
         });
     }
 
-    function viderAttente() {
-        if (enAttente === null || !contexte || contexte.state !== 'running') { return; }
-        const niveau = enAttente;
-        enAttente = null;
-        if (sonSouhaite()) { emboiter(contexte, niveau, 0); }
+    function arreterSonnerie() {
+        if (sonnerieTimer !== null) { window.clearTimeout(sonnerieTimer); }
+        sonnerieTimer = null;
+        sonnerieFin = 0;
     }
 
-    function jouer(niveau) {
+    function sonner(niveau, duree) {
+        arreterSonnerie();
+        sonnerieFin = Date.now() + duree;
+
+        function repeter() {
+            if (!sonSouhaite() || Date.now() >= sonnerieFin) {
+                arreterSonnerie();
+                return;
+            }
+            emboiter(contexte, niveau, 0);
+            sonnerieTimer = window.setTimeout(repeter, 700);
+        }
+
+        repeter();
+    }
+
+    function viderAttente() {
+        if (enAttente === null || !contexte || contexte.state !== 'running') { return; }
+        const demande = enAttente;
+        enAttente = null;
+        if (!sonSouhaite()) { return; }
+        if (demande.duree) { sonner(demande.niveau, demande.duree); }
+        else { emboiter(contexte, demande.niveau, 0); }
+    }
+
+    function activerAudio() {
+        if (!sonSouhaite()) { return; }
+        const ctx = contexteAudio();
+        if (!ctx || ctx.state === 'running') {
+            viderAttente();
+            return;
+        }
+        ctx.resume().then(viderAttente, function () { /* le navigateur peut bloquer l'audio */ });
+    }
+
+    function jouer(niveau, duree) {
         if (!sonSouhaite()) { return; }
         const ctx = contexteAudio();
         if (!ctx) { return; }
-        if (ctx.state === 'running') { emboiter(ctx, niveau, 0); return; }
-        enAttente = niveau;
+        if (ctx.state === 'running') {
+            if (duree) { sonner(niveau, duree); }
+            else { emboiter(ctx, niveau, 0); }
+            return;
+        }
+        enAttente = { niveau: niveau, duree: duree || 0 };
         ctx.resume().then(viderAttente, function () { /* le geste suffira */ });
     }
 
     ['pointerdown', 'keydown'].forEach(function (evenement) {
-        window.addEventListener(evenement, viderAttente, { passive: true });
+        window.addEventListener(evenement, activerAudio, { passive: true });
     });
 
     // -- Les cartes --------------------------------------------------------
@@ -113,6 +153,10 @@
         const actif = !sonSouhaite();
         memoriserSon(actif);
         document.documentElement.dataset.son = actif ? 'on' : 'off';
+        if (!actif) {
+            arreterSonnerie();
+            enAttente = null;
+        }
         const bouton = document.getElementById('ua-son-btn');
         if (bouton) { bouton.setAttribute('aria-pressed', actif ? 'true' : 'false'); }
         if (actif) { jouer('info'); }
@@ -128,15 +172,51 @@
         }
 
         pile = pile || armerPile();
-        if (!pile) { return; }
-        while (pile.children.length > MAXI) { pile.firstElementChild.remove(); }
-        const toasts = Array.prototype.slice.call(pile.children);
-        toasts.forEach(montrer);
-        if (toasts.length) { jouer(niveauDe(toasts[toasts.length - 1])); }
+        if (pile) {
+            while (pile.children.length > MAXI) { pile.firstElementChild.remove(); }
+            const toasts = Array.prototype.slice.call(pile.children);
+            toasts.forEach(montrer);
+            if (toasts.length) { jouer(niveauDe(toasts[toasts.length - 1]), 12000); }
+        }
+
+        const cloche = document.getElementById('ua-cloche');
+        if (cloche) {
+            let curseur = cloche.dataset.eventCursor;
+            const url = cloche.dataset.pollUrl;
+
+            function actualiserCloche() {
+                if (document.visibilityState !== 'visible') { return; }
+                fetch(url, { credentials: 'same-origin', cache: 'no-store' })
+                    .then(function (reponse) {
+                        if (!reponse.ok) { throw new Error('HTTP ' + reponse.status); }
+                        return reponse.json();
+                    })
+                    .then(function (etat) {
+                        if (etat.event_cursor !== curseur) {
+                            curseur = etat.event_cursor;
+                            jouer('info', 12000);
+                        }
+                        const pastille = cloche.querySelector('.ua-cloche-pastille');
+                        if (pastille) {
+                            pastille.textContent = etat.total;
+                            pastille.hidden = !etat.total;
+                        } else if (etat.total) {
+                            const nouvellePastille = document.createElement('span');
+                            nouvellePastille.className = 'ua-cloche-pastille';
+                            nouvellePastille.textContent = etat.total;
+                            cloche.querySelector('.ua-cloche-btn').appendChild(nouvellePastille);
+                        }
+                    })
+                    .catch(function (erreur) {
+                        console.error('Impossible de vérifier les notifications.', erreur);
+                    });
+            }
+
+            window.setInterval(actualiserCloche, 8000);
+        }
 
         // Le panneau de rappel se ferme au clic dehors ou à l'Échap, comme le
         // menu latéral ; son ouverture reste possible sans JavaScript.
-        const cloche = document.getElementById('ua-cloche');
         if (cloche) {
             document.addEventListener('click', function (event) {
                 if (cloche.open && !cloche.contains(event.target)) cloche.open = false;

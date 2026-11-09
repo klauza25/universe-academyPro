@@ -1,9 +1,11 @@
 # Validation métier — Univers Academy
 
 Document de suivi des fonctionnalités implémentées et des tests automatisés.
-Dernière exécution : **03/11/2026** — `python manage.py test core.tests` :
-**468 tests, 0 échec** (26 s sur la base de test créée par Django ; `db.sqlite3`
-de production jamais touché).
+Dernière exécution : **06/11/2026** — `python manage.py test core.tests` :
+**632 tests** (36 s sur la base de test créée par Django ; `db.sqlite3`
+de production jamais touché), **0 échec**. L'intégration Clerk a été retirée :
+la connexion passe uniquement par le formulaire local (e-mail ou code interne
+et mot de passe).
 
 ## 1. Comment lancer les tests
 
@@ -22,6 +24,28 @@ créés par le jeu de données de test, comme le fait `manage.py seed_roles` en
 production.
 
 ## 2. Fonctionnalités livrées par module
+
+### Tableaux de bord (tous les rôles)
+- **Une bande de trois compteurs ouvre chaque tableau de bord** : tous les
+  comptes, les étudiants, le staff. Le calcul vit dans
+  `core.utils.platform_counts()` et le rendu dans la balise `{% compteurs %}`
+  (`core/templatetags/ui.py`, gabarit `dashboard/_compteurs.html`) : une seule
+  définition à corriger si le périmètre change.
+- Le compte des étudiants se prend dans `core.utils.students_count()`, que la
+  bande appelle sans restriction et les cartes « Étudiants actifs » avec
+  `only_active=True` : les vues n'écrivent plus chacune leur requête, et le
+  `distinct()` qui empêche un double rôle d'être compté deux fois est garanti
+  par le service. Cette bande reste la seule à afficher ces trois nombres ; les
+  cartes qui les répétaient ont été retirées.
+- « Utilisateurs » compte tous les comptes, y compris ceux en attente
+  d'approbation. « Étudiants » ne retient que les comptes portant le rôle
+  étudiant. « Staff » retient tout compte portant au moins un autre rôle : un
+  compte sans rôle n'est donc ni étudiant ni staff, et une personne qui cumule
+  un rôle étudiant et un rôle d'encadrement apparaît dans les deux.
+- La bande est présente sur les neuf tableaux de bord de rôle (super
+  administrateur, administrateur, direction, caisse, secrétariat, responsable
+  pédagogique, formateur, étudiant, accueil) et n'est pas chargée sur les pages
+  publiques ni sur les écrans de travail : aucune requête de comptage inutile.
 
 ### Profil utilisateur
 - Consultation et modification des informations personnelles.
@@ -55,13 +79,11 @@ production.
   ouverte sur un autre appareil n'est pas révoquée : la déconnexion générale
   suppose un suivi des sessions que le projet n'a pas.
 - **Le mot de passe actuel n'est exigé que si le compte en possède un.** Une
-  fiche ouverte depuis les classeurs, ou un compte arrivé par Clerk, arrive sans
-  mot de passe local : pour ces comptes, l'écran sert à en poser un. Le champ
-  reste obligatoire dès qu'un mot de passe existe, et un champ vide est refusé.
+  fiche ouverte depuis les classeurs arrive sans mot de passe local : pour ces
+  comptes, l'écran sert à en poser un. Le champ reste obligatoire dès qu'un mot
+  de passe existe, et un champ vide est refusé.
 - Le journal d'audit consigne le changement (`PROFILE_PASSWORD`) avec l'auteur
   et « mot de passe défini avant / après », jamais la valeur du mot de passe.
-- Un compte lié à Clerk peut poser un mot de passe local : cela ajoute la voie
-  e-mail/code interne + mot de passe, cela ne remplace pas la connexion Clerk.
 - Changement d'adresse e-mail avec confirmation par lien signé valable 24 h.
 - L'adresse n'est appliquée qu'après validation du lien ; un échec d'envoi
   affiche une erreur et ne modifie rien.
@@ -75,9 +97,9 @@ production.
   personne concernée.
 
 ### Authentification, approbation et attribution des rôles
-- Clerk sert uniquement à authentifier (Google ou e-mail/mot de passe). Ses
-  métadonnées publiques ne sont jamais lues pour accorder un rôle.
-- Toute inscription (locale ou Clerk) crée un compte `PENDING_APPROVAL` sans
+- La connexion est locale : e-mail ou code interne et mot de passe, vérifiés
+  côté serveur. Aucun fournisseur d'identité externe n'intervient.
+- Toute inscription crée un compte `PENDING_APPROVAL` sans
   aucun `UserRole`. L'utilisateur choisit un **rôle demandé** lors de
   l'inscription ou sur `/demande-acces/` ; ce rôle est stocké dans
   `AccessRequest.requested_role` et ne donne aucun droit.
@@ -143,7 +165,7 @@ production.
   du profil.
 - Initialisation contrôlée : `manage.py create_superadmin` exige
   `SUPERADMIN_SETUP_SECRET` et des identifiants fournis par l'environnement ;
-  aucun SUPER_ADMIN ne peut naître d'une inscription ou d'une connexion Clerk.
+  aucun SUPER_ADMIN ne peut naître d'une inscription publique.
   `manage.py audit_privileges` (lecture seule) signale les combinaisons
   suspectes sans modifier les données.
 
@@ -186,6 +208,23 @@ production.
   création / modification est auditée (`COURSE_SESSION_CREATE` /
   `COURSE_SESSION_EDIT`). C'est l'écran qui manquait pour affecter un formateur
   à un groupe sans passer par l'admin Django.
+- **Un groupe qui doit enseigner a un formateur.** La règle vit une seule fois,
+  dans `core/groupes.py`, et l'écran Groupes comme l'administration Django
+  (`FormuleGroupeAdmin`) l'appliquent : un groupe `Planifiée` ou `En cours`
+  enregistré sans aucun formateur est refusé, message posé sur le champ
+  « Formateurs », et rien n'est écrit. Un groupe `Terminée` ou `Annulée` y
+  échappe : ce sont des archives, souvent reprises des classeurs, et leur
+  demander un formateur ferait échouer une simple correction de date. La raison
+  est métier : l'étudiant reçoit le contenu du groupe où son inscription le
+  place, donc sans formateur personne ne peut y publier une séance ni une
+  ressource, et son espace reste vide.
+- Les écritures par lot (imports de classeurs) passent par l'ORM et ne peuvent
+  pas être tenues par un formulaire : c'est le contrôle `GROUPE_SANS_FORMATEUR`
+  de `verifier_relations` qui les montre. Sur la base réelle du 06/11/2026, il
+  signale **9 groupes** (8 en cours, 1 planifiée) pour 70 dossiers d'inscription
+  actifs, et les deux seuls comptes FORMATEUR portent 2 groupes, tous deux à zéro
+  inscrit. Ce tableau de travail se vide en affectant un formateur à chaque
+  groupe depuis l'écran Groupes.
 - Séances : compte rendu (horaires prévus/réels, contenu, prochain contenu),
   statut, validation des incohérences horaires.
 - Feuille de présences par séance (présent, absent, retard, excusé), motif
@@ -321,6 +360,97 @@ production.
   étudiants apparaissent dès la validation de leur compte, code interne
   `UA-ETU-xxxx` généré automatiquement).
 
+### Année académique (direction)
+- Une année académique est une **fenêtre de dates** avec un libellé unique
+  (« 2026-2027 ») : la direction la pose elle-même dans `Années académiques`
+  (`/dashboard/reglages/annees-academiques/`), avec case « Année en cours ».
+  Rien n'est calculé ni inventé par l'application.
+- **Une seule année est en cours** : cocher la case décoche la précédente dans
+  la même écriture, et la base refuse un second cochage
+  (`une_seule_annee_en_cours`) même si on passe devant l'écran. Une fenêtre
+  incohérente (dernier jour avant le premier) est refusée par le modèle, donc
+  par le formulaire et par la base.
+- **Aucune année posée = aucune liste vidée** : les écrans montrent toutes les
+  années et un bandeau l'annonce (« Aucune année académique définie : toutes
+  les années s'affichent. »). La direction n'a rien coché ? le poste de caisse
+  ne reste pas aveugle.
+- L'année se juge sur la **date de début du groupe** : un étudiant appartient à
+  l'année où son groupe a commencé, une inscription suit la fenêtre de son
+  groupe, un dossier annulé ne place personne dans une année. Un compte sans
+  inscription n'est d'aucune année : il ne reparaît que sous « Toutes les
+  années ».
+- Quatre écrans portent le **même sélecteur** et le même mot : liste des
+  étudiants (secrétariat), écran d'encaissement simple, grille des douze mois,
+  liste des groupes (pédagogie). « Toutes les années » rouvre la liste
+  complète ; le filtre survit à une saisie refusée et à la redirection après
+  encaissement.
+- Un seul chemin d'écriture : l'écran de la direction, **Django Admin en
+  consultation seule** (`ConsultationSeule`). Création et réglage sont audités
+  (`ACADEMIC_YEAR_CREATE`, `ACADEMIC_YEAR_EDIT`) avec l'année décochée en
+  conséquence.
+
+### Paramètres généraux (direction)
+- Une **seule ligne de réglages** (`PlatformSetting`, migration `0016`) porte le
+  nom de l'établissement, la signature, l'adresse, le téléphone, l'e-mail, les
+  trois identifiants légaux (RCCM, NIU, CNSS), le **libellé de devise** et le
+  **seuil d'alerte de caisse**. La base refuse toute seconde ligne
+  (`parametres_generaux_ligne_unique`) : trois orthographes du nom ne peuvent
+  plus coexister sur deux documents officiels.
+- **Portée validée par la direction** (arbitrage du 05/11/2026) : nom officiel
+  « Universe Academy », coordonnées reprises des documents officiels, et **rien
+  de plus** que le seuil et la devise. Aucun tarif, aucun calendrier, aucune
+  conversion monétaire.
+- Le libellé de devise change **ce qui s'écrit à côté des montants** ; il ne
+  convertit rien. Un paiement déjà enregistré garde la devise où il est entré
+  (`Payment.currency`, `CashTransaction.currency` ne bougent pas).
+- Le seuil d'alerte (1 à 100 %) est la part du solde disponible consommée par
+  une sortie qui réclame une confirmation ; il est lu par `core.caisse`, plus
+  recopié nulle part. Une valeur hors bornes est refusée à l'écran et en base.
+- **Un seul chemin d'écriture** : l'écran `/dashboard/reglages/etablissement/`
+  (`PLATFORM_SETTINGS_EDIT`, valeurs avant/après dans l'audit). Django Admin est
+  en **consultation seule** sur cette table. Le secrétariat reçoit un 403 ; la
+  direction et l'administrateur transversal règlent.
+- **Lire n'écrit jamais** : `core.parametres.ligne()` rend une instance non
+  sauvée portant les défauts si la direction n'a rien enregistré — une page
+  d'accueil ne crée pas la ligne de réglages.
+- Les gabarits ne connaissent plus ces mots : ils passent par le contexte
+  `plateforme` (`{{ plateforme.nom }}`, `{{ plateforme.devise }}`,
+  `plateforme.contacts`). Le mot « FCFA » codé en dur a été balayé des gabarits
+  (0 occurrence), des libellés Python et du JavaScript des graphiques, qui lit
+  la devise dans `<meta name="devise">` posé par `base.html`.
+- Les coordonnées imprimées sortent d'une seule méthode du modèle
+  (`PlatformSetting.contacts()`) : le reçu et les trois documents imprimés
+  portent désormais la même signature.
+- **Garde de rendu** : l'écran des réglages est peint en anglais par
+  `test_sans_melange` et ne montre aucune chrome française ; le portique
+  `verifier_i18n --maxi 0` est à zéro (1568 messages balisés, 0 sans traduction)
+  et les 107 gabarits du projet se compilent tous.
+- **Piège mesuré pendant la tranche** : une variable à points dans un
+  `{% blocktrans %}` (`{{ plateforme.nom }}`) ne lève aucune erreur et rend
+  **vide**. Le titre des fiches de cours avait donc perdu le nom de
+  l'établissement sans jamais se plaindre. La correction est un `with n=…` ; un
+  test interdit désormais cette écriture dans tous les gabarits.
+
+### Compteurs de la plateforme (bande commune aux neuf tableaux de bord)
+- La bande « Utilisateurs / Étudiants / Staff », rendue par `{% compteurs %}` en
+  tête de chaque tableau de bord, est **l'unique affiche de ces trois nombres**.
+  Les cartes qui les répétaient sont retirées : « Total utilisateurs » et
+  « Comptes au total » côté super administrateur, « Étudiants au fichier » côté
+  secrétariat — les grilles passent de quatre à trois cartes ; l'accroche du
+  secrétariat ne redit plus le nombre d'étudiants, elle garde les dossiers.
+- Deux cartes « Étudiants actifs » restent, parce qu'elles ne mesurent pas la
+  même chose : la bande compte le rôle étudiant **tous statuts**, la carte
+  compte le rôle étudiant **et** le compte approuvé. Le mot « actifs » le dit.
+- `core.utils.students_count()` est désormais la seule source de ce compte.
+  Avant, quatre vues comptaient chacune de leur côté et trois oubliaient
+  `distinct()` : une personne cumulant étudiant et encadrement était comptée
+  deux fois. La mesure du jour ne change pas (aucun double rôle en base :
+  73 étudiants actifs dans les deux écritures), mais le nombre reste juste quand
+  un double rôle arrivera.
+- **Garde** : `test_compteurs.py` (5 tests) vérifie la bande sur les neuf
+  tableaux et interdit, gabarit en main, qu'une carte ou une carte d'en-tête
+  reprenne `total_users`, `total_students` ou `total_staff`.
+
 ### Direction / super administrateur
 - Tableaux de bord par rôle et routage automatique selon le rôle principal.
 - Journal comptable accessible à la direction.
@@ -388,7 +518,36 @@ production.
   total restant. Option `--fail-on-issue` pour un code de sortie 1 en
   supervision automatisée.
 - `manage.py audit_privileges` signale les attributions de rôles à vérifier
-  (SUPER_ADMIN lié à Clerk, compte inactif avec rôle administratif, etc.).
+  (compte inactif avec rôle administratif, etc.).
+- `manage.py verifier_relations` (**16 contrôles des relations entre tables**,
+  module `core/relations.py`) juge ce qui est sorti en base, quelle qu'ait été
+  la porte d'entrée : écran, Django Admin, import ou script. Paiements sans
+  écriture de caisse, recettes d'étudiant sans paiement, paiement en attente
+  déjà en caisse, transferts sans destination ou sur leur propre caisse,
+  écritures sans compte, net ≠ tarif − remise, remise supérieure au tarif,
+  trop-perçus, dossiers doubles, dates futures, mensualités sans mois réglé,
+  soldes sous le découvert autorisé, comptes étudiants actifs sans dossier,
+  présences orphelines, groupes qui doivent enseigner sans formateur, et traces
+  du journal d'audit pointant une entité disparue.
+- La commande est **strictement en lecture** (prouvée par test : rien ne bouge
+  pendant la mesure) et sert de **portique** : `--maxi 0` par défaut, elle échoue
+  dès le premier écart en nommant les codes fautifs. Options `--code` (un seul
+  contrôle), `--lignes` (détail borné) et `--json` (compte rendu sur une ligne,
+  pour une supervision automatisée).
+- Deux points sont des **signalements comptés à part**, et non des refus : les
+  traces d'audit d'une entité supprimée (le journal garde l'histoire de la base,
+  cela ne la rend pas fausse) et les groupes qui doivent enseigner sans
+  formateur (la garde d'écriture ne s'applique qu'aux saisies futures ; les
+  groupes sortis des classeurs restent mesurés, pas bloqués).
+- Mesure sur la base réelle du 06/11/2026 : **177 écarts et 39 signalements** —
+  158 recettes « Paiements des étudiants » sans paiement correspondant
+  (2 986 000 FCFA), 3 trop-perçus, 8 dossiers doubles, 2 mensualités sans mois
+  réglé, 6 comptes étudiants actifs sans dossier ; en signalements, 30 traces du
+  journal et 9 groupes sans formateur (70 dossiers d'inscription actifs). Plus
+  aucune écriture datée après aujourd'hui depuis la régularisation des dates de
+  caisse (section 4). Aucun écart de solde, de transfert, d'écriture sans caisse,
+  de net ou de remise. Ces chiffres ouvrent l'arbitrage de la direction
+  (section 5) ; rien n'a été corrigé automatiquement.
 - Le « reste à recouvrer » des tableaux de bord est calculé dossier par dossier
   (`core.utils.outstanding_receivables`) : un trop-perçu sur un dossier ne
   masque plus la dette d'un autre. Idem pour le solde affiché sur les fiches
@@ -470,10 +629,11 @@ production.
 
 | Fichier | Tests | Périmètre |
 |---|---:|---|
-| `core/tests/test_public.py` | 16 | Landing, login local prioritaire devant Clerk, code interne, inscription avec rôle demandé, refus d'un rôle élevé, comptes en attente/suspendus, déconnexion |
-| `core/tests/test_auth_roles.py` | 31 | Clerk sans privilège malgré les métadonnées, onboarding du rôle demandé, approbation/refus par SUPER_ADMIN et ADMIN (rôle suggéré présélectionné, modifiable ; rôles élevés refusés), étudiant validé automatiquement inscrit au groupe choisi (groupe obligatoire à la validation, jamais de doublon, apparu dans le formulaire de paiement), étudiant approuvé listé dans les inscrits côté comptable, auto-examen et auto-attribution bloqués, comptes suspendus exclus |
+| `core/tests/test_public.py` | 16 | Landing, connexion locale (aucun widget externe), code interne, inscription avec rôle demandé, refus d'un rôle élevé, comptes en attente/suspendus, déconnexion |
+| `core/tests/test_auth_roles.py` | 29 | Onboarding du rôle demandé, approbation/refus par SUPER_ADMIN et ADMIN (rôle suggéré présélectionné, modifiable ; rôles élevés refusés), étudiant validé automatiquement inscrit au groupe choisi (groupe obligatoire à la validation, jamais de doublon, apparu dans le formulaire de paiement), étudiant approuvé listé dans les inscrits côté comptable, auto-examen et auto-attribution bloqués, comptes suspendus exclus |
 | `core/tests/test_profile.py` | 22 | Profil, avatar (upload, suppression, service protégé, fichier absent), mot de passe (nouveau valable et session conservée, mot de passe actuel incorrect ou vide, confirmation différente, mot de passe faible, audit sans le secret, compte sans mot de passe local), e-mail signé (succès, échec d'envoi, jeton invalide/expiré/autre compte, changement sans mot de passe local) |
 | `core/tests/test_photo_profil.py` | 12 | Photo de profil : vignette partout (initiales sans photo, `<img>` et texte alternatif avec photo, liste des étudiants), pose par le secrétariat sur la fiche étudiant (dépôt + audit, aucun changement de statut, fichier remplacé effacé du disque, POST sans fichier laissant la photo en place, retrait, 403 pour un rôle non autorisé), pose par le super administrateur sur la fiche d'un autre compte et absence de la carte photo sur sa propre fiche |
+| `core/tests/test_compteurs.py` | 5 | Compteurs communs : total des comptes, des étudiants et du staff, compte sans rôle compté seulement comme utilisateur, personne à double rôle présente dans les deux groupes, bande affichée sur les neuf tableaux de bord de rôle, aucune carte d'un gabarit ne reprend `total_users`, `total_students` ou `total_staff` |
 | `core/tests/test_accueil.py` | 16 | Visites, contacts réutilisés, départ, conversion, prospects, relances, motifs, recherche ; « Convertir en étudiant » proposé au secrétariat et masqué à l'accueil |
 | `core/tests/test_secretariat.py` | 15 | Étudiants, conversion prospect, inscriptions, remises, doublons, documents |
 | `core/tests/test_pedagogie.py` | 58 | Modules/leçons (création et modification par formateur, resp. pédagogique et direction ; rôles élevés en lecture), groupes de formation (création/édition réservées au resp. pédagogique et à la direction, formateur et rôles élevés en lecture, périmètre limité aux groupes du formateur, validation des dates, audit), séances (raccourci « Planifier une séance » réservé aux rôles gestionnaires, masqué au secrétariat et aux rôles élevés), validations, présences, non-écrasement, ressources, accès étudiant, retour étudiant sur ressource (soumission, mise à jour sans doublon, validation, lecture par formateur/admin, refus formateur et rôles élevés en écriture), fiche de cours de l'apprenant (saisie, validation horaire, accès personnel), feuille de suivi imprimable et cahier de texte imprimable du formateur |
@@ -485,14 +645,18 @@ production.
 | `core/tests/test_user_access.py` | 30 | Fiche utilisateur : présence/absence des contrôles selon le rôle et la cible, ajout/retrait de rôle, génération automatique du code interne à l'attribution, avertissement quand un compte étudiant reste sans inscription (attribution de rôle, édition du compte, réactivation par changement de statut — un étudiant déjà inscrit ne reçoit pas l'avertissement), rôle et action inconnus, auto-modification bloquée, changement de statut (suspension, réactivation, `disabled_at`, perte d'accès), statut invalide, absence d'audit sans changement, garde-fou du dernier super administrateur actif, compte étudiant créé directement inscrit au groupe choisi (groupe exigé, créé sinon) |
 | `core/tests/test_statut_etudiant.py` | 12 | Statut par défaut d'un étudiant, approbation à la validation de l'inscription, comptes sortis des classeurs, `mettre_en_attente` en aperçu puis à l'écriture, aucune révocabilité automatique |
 | `core/tests/test_import_eleves.py` | 37 | Vague 2 : ce que le classeur d'élèves devient en base et ce qui ne le devient pas (comptes, groupes, inscriptions, paiements, doublons ignorés et signalés, aucune retouche d'un tarif payé, case de mois d'un mois non encore commencé signalée sans encaissement) |
-| `core/tests/test_feuille_import.py` | 16 | Rapprochement du journal de caisse « Contrôles Mensuels » avec les écritures de la base (différentiel en lecture seule, écritures manquantes, écarts de montant, solde projeté de la caisse avant écriture du lot) |
+| `core/tests/test_feuille_import.py` | 19 | Rapprochement du journal de caisse « Contrôles Mensuels » avec les écritures de la base (différentiel en lecture seule, écritures manquantes, écarts de montant, solde projeté de la caisse avant écriture du lot, instant d'écriture jamais postérieur au jour de l'import) |
+| `core/tests/test_dates_caisse.py` | 6 | Dates de caisse : aperçu qui ne modifie rien, correction d'un paiement et de son écriture au jour de saisie, mois réglé conservé, trace d'audit `PAYMENT_DATE_FIX`, écriture sans paiement corrigée et auditée, seconde passe sans effet |
 | `core/tests/test_importer_formations.py` | 15 | Tarif lu dans les classeurs et portique de la vague 1 (catalogue des formations, mensualités, aucune écriture en base) |
 | `core/tests/test_data_tools.py` | 9 | Lecteurs de classeurs : ce sont eux qui décident de ce qui sera importé (en-têtes, dates, montants, lignes vides) |
 | `core/tests/test_editeur_permissions.py` | 10 | Éditeur de permissions du super admin : la matrice postes × droits et son effet réel à l'écran (un droit coché ouvre l'écran, décoché le ferme) |
 | `core/tests/test_graphiques.py` | 19 | Séries numériques des graphiques de tableau de bord (bornes de période, buckets mensuels, totaux cachés derrière une courbe) |
 | `core/tests/test_i18n_theme.py` | 17 | Coquille bilingue : la langue choisie est suivie, le thème reste neutre, les notifications s'empilent hors du fil de la page |
-| `core/tests/test_sans_melange.py` | 4 | Aucun mélange de langue au rendu, page par page (complément du portique `verifier_i18n`) |
-| **Total** | **519** | Exécuté le 04/11/2026, `python manage.py test core.tests`, 0 échec |
+| `core/tests/test_annee_academique.py` | 40 | Année académique : garde du modèle (une seule « en cours », fenêtre incohérente, libellé unique), service de résolution et de filtrage (groupes, inscrits, étudiants, compte sans inscription), écran des années (création, réglage, bandeau, rôles refusés, Django Admin en consultation), les quatre écrans filtrés et le contrôle de non-mélange du calendrier |
+| `core/tests/test_sans_melange.py` | 8 | Aucun mélange de langue au rendu, page par page (complément du portique `verifier_i18n`), calendrier, sélecteur d'année et paramètres généraux inclus ; tous les gabarits du projet se compilent et aucun `{% blocktrans %}` ne garde une variable à points (qui rend vide sans erreur) |
+| `core/tests/test_parametres.py` | 19 | Paramètres généraux : ligne née avec la migration et seconde ligne refusée en base, service qui ne crée jamais la ligne, bloc légal filtrant les vides, nom obligatoire ; seuil hors bornes refusé puis lu par l'avertissement de caisse (60 % annoncé, 90 % muet) et devise nommée dans l'alerte ; écran (formulaire, POST audité avec son avant, seuil absurde refusé sans écriture, 403 du secrétariat, historique affiché) ; affichage (nom sur les tableaux de bord, `<meta name="devise">` et devise dans le journal, coordonnées sur l'accueil public, reçu portant nom, RCCM et téléphone) ; Django Admin en consultation seule sur les tables financières, la caisse et les réglages |
+| `core/tests/test_relations.py` | 34 | Cohérence des relations entre tables : base saine muette sur les 16 contrôles et preuve que mesurer n'écrit rien ; chaque écart semé est nommé par son code (recette d'étudiant sans paiement, recette d'une autre catégorie hors jeu, paiement sans écriture, paiement en attente déjà en caisse, transfert sans destination, net incohérent, remise démesurée, trop-perçu, dossier double, dossier terminé non compté double, date future, mensualité sans mois, solde sous le découvert autorisé et découvert accordé, compte actif sans dossier, présence orpheline) ; signalements du journal (entité disparue, clé de format inconnu, réglage d'écran) et des groupes à combler (nommés avec leurs inscrits, terminés ignorés, effacés par l'affectation) ; portique de la commande (passe, refuse en nommant le code fautif, seuil accepté, `--code` isolé, `--json` sur une ligne, `--lignes` borné) et indifférence aux réglages posés |
+| **Total** | **632** | Exécuté le 06/11/2026, `python manage.py test core.tests`, 0 échec |
 
 Points explicitement vérifiés :
 
@@ -548,13 +712,12 @@ Points explicitement vérifiés :
   sur les identifiants non-UUID (exports), pagination conservant les filtres ;
 - fiche opération : historique d'audit et informations du paiement ou de la
   dépense liés ;
-- authentification : une connexion Clerk (même avec des métadonnées
-  revendiquant SUPER_ADMIN) ne crée aucun rôle et redirige vers la complétion
-  du rôle demandé ;
+- authentification : un compte en attente est bloqué et redirigé vers la
+  complétion de son rôle demandé ;
 - inscription : le rôle demandé est enregistré sans être attribué ; une
   demande de rôle élevé (SUPER_ADMIN/ADMIN) est refusée ;
 - approbation : le formulaire ne propose pas SUPER_ADMIN/ADMIN, présélectionne
-  le rôle demandé, affiche l'identifiant Clerk ; l'approbation attribue
+  le rôle demandé ; l'approbation attribue
   uniquement le rôle choisi, génère le code interne, notifie et écrit l'audit
   (demandeur, rôle demandé, rôle attribué, statut avant/après, décideur) ;
 - refus : le compte passe en `REJECTED`, l'accès est bloqué et la note est
@@ -612,7 +775,7 @@ Points explicitement vérifiés :
   serveur `REQUESTABLE_ROLES` (hors SUPER_ADMIN/ADMIN/DIRECTION), option
   vide par défaut, présélection du rôle demandé, contrôle strict à
   l'approbation et enregistrement de `assigned_role`.
-- Inscription et Clerk : aucun rôle demandé n'était recueilli ; le compte
+- Inscription : aucun rôle demandé n'était recueilli ; le compte
   restait sans demande exploitable. Le formulaire d'inscription, l'écran
   `/demande-acces/` et le routage post-connexion enregistrent maintenant le
   rôle demandé dans `AccessRequest` sans l'attribuer.
@@ -648,6 +811,47 @@ Points explicitement vérifiés :
   auteur.
 - Nouvelle commande `manage.py audit_finances` (lecture seule) : trop-perçus,
   paiements sans mouvement de caisse, montants divergents, soldes négatifs.
+- Nouvelle commande `manage.py verifier_relations` : les seize relations promises
+  par les modèles sont mesurées en lecture seule et servent de portique (voir
+  section 2).
+- Reçu et documents imprimés **sans coordonnées** : quatre gabarits appelaient
+  `plateforme.contacts` alors que `PlatformSetting` n'avait pas cette méthode —
+  Django rend vide au lieu de se plaindre. La méthode est écrite sur le modèle
+  (les lignes vides sont filtrées) et le service `core.parametres.contacts()`
+  lui délègue, pour qu'une seule règle serve l'écran et l'impression.
+- Audit des réglages **sans état d'avant** : `BaseModelForm.is_valid()` écrit déjà
+  les nouvelles valeurs sur l'instance ; relevé après la validation, le `before`
+  de l'audit était identique à l'`after`. Il se relève désormais avant la
+  construction du formulaire.
+- Extraction i18n **qui avalait des gabarits** : le motif de recherche ne
+  reconnaissait pas `{% endblocktranslate %}` et cherchait la fermeture
+  `endblocktrans` plus loin, produisant un msgid géant et faisant disparaître le
+  vrai. Les deux orthographes sont admises à l'ouverture comme à la fermeture.
+- Titre de la fiche de cours de l'étudiant **amputé du nom** :
+  `{% blocktrans %}… {{ plateforme.nom }}{% endblocktrans %}` — Django rend une
+  variable à points vide dans un `blocktrans`, sans erreur ni compilation
+  refusée. Passage à `with n=plateforme.nom`, et la garde de rendu refuse
+  désormais toute variable non résolue dans un msgid.
+- « FCFA » en dur : dix-neuf lignes de gabarits, les deux libellés du JavaScript
+  des graphiques (qui lit maintenant `<meta name="devise">`) et les labels,
+  aide et messages Python portent la devise lue dans les réglages ; le portique
+  balaie `core/parametres.py` comme les autres services qui écrivent des mots
+  donnés à voir.
+- Listes filtrées : cinq index composites (`0018_index_listes_filtrees`) posés
+  sur la date de début des groupes, le statut des dossiers, les paiements validés
+  par date, le journal par entité et les écritures par compte.
+- Django Admin : `Payment`, `Enrollment`, `Attendance`, `Expense`, `Certificate`
+  et `PlatformSetting` passent en `ConsultationSeule` (addition, modification et
+  suppression refusées) ; la consultation des écritures reste le comportement
+  Django.
+- Dates de caisse **dans l'avenir** : l'import du journal recopiait le mois
+  pré-rempli du classeur (mensualités datées de décembre 2026 à avril 2027 alors
+  que l'argent était reçu en novembre). L'instant d'écriture passe désormais par
+  `core.feuille_import.instant_de()`, qui ramène toute ligne au jour de l'import
+  à midi sans toucher au mois réglé (`period_year` / `period_month`) ; la
+  commande signale les lignes concernées. Les douze lignes déjà fautives ont été
+  corrigées par `manage.py regulariser_dates_caisse --ecrire` (aperçu par défaut,
+  audits `PAYMENT_DATE_FIX` / `CASH_DATE_FIX`, réexécutable sans effet).
 
 ## 5. Éléments volontairement non couverts / restants
 
@@ -678,11 +882,6 @@ Ces points ne sont pas déclarés terminés :
 - **Notifications** : le changement d'e-mail gère correctement l'échec
   d'envoi ; les autres notifications métier ne sont pas branchées à un envoi
   réel.
-- **Authentification Clerk** : le parcours local et le backend Clerk
-  (`sync_clerk_user`, `POST /clerk/session/`) sont testés avec un client Clerk
-  simulé (métadonnées ignorées, compte en attente, onboarding) ; l'échange réel
-  avec Clerk dépend de clés externes et n'est pas couvert par les tests
-  automatisés.
 - **Tests navigateur / end-to-end** : vérification manuelle effectuée le
   29/10/2026 dans un navigateur (parcours ADMIN : dashboard, journal, caisses,
   étudiants, reçu, demandes d'accès, utilisateurs, refus 403, export CSV, page
@@ -702,6 +901,23 @@ Ces points ne sont pas déclarés terminés :
   encaissements proviennent d'une saisie antérieure au garde-fou. Aucune
   correction automatique n'a été faite : à régulariser manuellement
   (remboursement ou annulation tracée). `manage.py audit_finances` le signale.
+- **Cohérence mesurée le 06/11/2026, à arbitrer par la direction** :
+  `manage.py verifier_relations` rend **177 écarts et 39 signalements** sur la
+  base réelle, tous antérieurs aux garde-fous aujourd'hui posés, et **rien n'a
+  été corrigé automatiquement** (règle : rien ne se supprime ni ne s'écrit sans
+  accord).
+  158 recettes classées « Paiements des étudiants » sans paiement d'étudiant
+  correspondant (2 986 000 FCFA — l'import du journal de caisse encaissait sans
+  remplir un dossier) ; 8 dossiers doubles (même étudiant, même formation, deux
+  inscriptions actives) ;
+  3 trop-perçus (le pire, `UA-ETU-0116`, à +250 000 FCFA) ; 2 mensualités réglées
+  sans mois soldé ; 6 comptes étudiants actifs sans aucun dossier. Les douze
+  écritures datées après aujourd'hui relevées le 05/11 ont depuis été ramenées au
+  jour de saisie par `manage.py regulariser_dates_caisse --ecrire` (section 4) :
+  le contrôle est muet au 06/11. S'y ajoutent 39
+  **signalements** comptés à part et non bloquants : 30 lignes du journal
+  d'audit citant une entité disparue (traces légitimes d'une suppression) et 9
+  groupes sans formateur, qui portent 70 dossiers d'inscription actifs.
 - **Solde de caisse négatif constaté le 01/11/2026, régularisé le 04/11/2026** :
   la caisse « Mobile Money » affichait un creux car deux sorties « mois
   d'octobre » du 30/10/2026 (100 000 et 100 FCFA) y avaient été enregistrées
@@ -720,9 +936,6 @@ Ces points ne sont pas déclarés terminés :
   défini. Les comptes de démonstration (`admin@univers.academy`, superuser,
   `secretaire@…`, `comptable@…`, etc.) ont encore leurs mots de passe par
   défaut actifs : à désactiver ou renouveler avant toute exposition publique.
-- **Compte Clerk privilégié** : `japhetsamba52@gmail.com` possède le rôle
-  SUPER_ADMIN tout en étant lié à Clerk ; `manage.py audit_privileges` demande
-  de vérifier que cette attribution était volontaire.
 
 ## 6. Livrable documentaire
 
@@ -735,11 +948,12 @@ env\Scripts\python.exe docs\generate_architecture_docx.py
 
 - Fichier produit : `docs/Architecture_metier_Univers_Academy.docx`.
 - Générateur : `docs/generate_architecture_docx.py` (`python-docx` 1.2.0).
-- Contenu : 14 chapitres et 6 annexes, 107 tableaux, 35 modèles décrits champ
-  par champ, 96 routes nommées, 59 actions d'audit.
+- Contenu : 14 chapitres et 6 annexes, 125 tableaux, 108 règles de gestion,
+  37 modèles décrits champ par champ, 112 routes nommées, 69 actions d'audit.
 - Les tableaux des annexes B (routes) et D (modèles) sont introspectés depuis
   Django à chaque génération ; le catalogue d'audit a été confronté aux appels
-  `log_audit` du code (59 codes dans le code, 59 dans le document).
+  `log_audit` du code (69 codes dans le document, 69 dans le code : 62 appels
+  directs et 7 codes acheminés par `_tracer` ou par une expression conditionnelle).
 - Contrôles effectués sur le fichier généré : aucun champ « None », titres
   d'annexes non redondants, dates et compteurs de tests cohérents avec la
   présente validation.
@@ -748,4 +962,3 @@ env\Scripts\python.exe docs\generate_architecture_docx.py
   utilisateurs, journal d'audit et supervision répondent en 200 ; l'étudiant
   reçoit 403 sur le cahier de texte, l'ADMIN 403 sur les écritures du cahier de
   texte, et un visiteur anonyme est redirigé vers la connexion.
-

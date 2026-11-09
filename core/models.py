@@ -1,6 +1,6 @@
 import uuid
 import os
-from django.db import models
+from django.db import models, transaction
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import (
@@ -158,10 +158,6 @@ class User(AbstractUser):
     address = models.TextField(blank=True)
     birth_date = models.DateField(null=True, blank=True)
     disabled_at = models.DateTimeField(null=True, blank=True)
-    clerk_user_id = models.CharField(
-        max_length=64, unique=True, null=True, blank=True, db_index=True,
-        help_text=_("Identifiant utilisateur Clerk (user_...) lié à ce compte")
-    )
     display_name = models.CharField(
         max_length=150, blank=True,
         help_text=_("Nom affiché dans l'interface (facultatif)")
@@ -371,6 +367,185 @@ class AccessRequest(models.Model):
         ordering = ['-created_at']
 
 
+class AcademicYear(models.Model):
+    """Une année académique, posée par la direction.
+
+    L'application n'avait aucune notion d'année : elle ne vivait que dans les
+    dates des groupes. Cette table donne un repère unique aux filtres « année en
+    cours ». Tant qu'elle reste vide, les listes affichent toutes les années.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    label = models.CharField(
+        max_length=30, unique=True,
+        verbose_name=_("Libellé"),
+        help_text=_("Ex : 2026-2027"),
+    )
+    start_date = models.DateField(verbose_name=_("Premier jour"))
+    end_date = models.DateField(verbose_name=_("Dernier jour"))
+    is_current = models.BooleanField(
+        default=False,
+        verbose_name=_("Année en cours"),
+        help_text=_("Une seule année est en cours à la fois."),
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = 'academic_years'
+        ordering = ['-start_date']
+        verbose_name = _("Année académique")
+        verbose_name_plural = _("Années académiques")
+        constraints = [
+            models.CheckConstraint(
+                name='academic_year_dates_coherentes',
+                check=models.Q(end_date__gt=models.F('start_date')),
+            ),
+            models.UniqueConstraint(
+                fields=['is_current'],
+                condition=models.Q(is_current=True),
+                name='une_seule_annee_en_cours',
+            ),
+        ]
+
+    def __str__(self):
+        return self.label
+
+    def clean(self):
+        super().clean()
+        if self.start_date and self.end_date and self.end_date <= self.start_date:
+            raise ValidationError({
+                'end_date': _("Le dernier jour doit suivre le premier jour."),
+            })
+
+    def save(self, *args, **kwargs):
+        """Poser « en cours » ici décoche les autres, dans la même écriture.
+
+        Le désordre des deux gestes n'est pas un détail : l'index unique partiel
+        refuse une seconde année en cours dès l'insertion, la place doit donc être
+        libérée avant que la ligne ne soit écrite.
+        """
+        with transaction.atomic():
+            if self.is_current:
+                AcademicYear.objects.exclude(pk=self.pk).filter(
+                    is_current=True
+                ).update(is_current=False)
+            super().save(*args, **kwargs)
+
+    def couvre(self, date):
+        return date is not None and self.start_date <= date <= self.end_date
+
+    def validate_constraints(self, exclude=None):
+        """La garde « une seule année en cours » se tient à l'écriture.
+
+        `save()` décoche les autres dans le même élan : refuser devant
+        l'enregistrement la seconde année cochée reviendrait à interdire le
+        geste que l'écran demande. Le refus réel reste celui de la base, index
+        unique à l'appui — un `update()` qui ferait deux places cocher se
+        brise dessus.
+        """
+        exclude = set(exclude or ())
+        exclude.add('is_current')
+        super().validate_constraints(exclude)
+
+
+class PlatformSetting(models.Model):
+    """Les réglages de l'établissement, posés par la direction.
+
+    Le nom, les coordonnées et les deux gardes monétaires vivaient en dur dans
+    soixante gabarits et dans le service de caisse. Trois orthographes du nom et
+    deux numéros de téléphone pouvaient ainsi se contredire sur deux documents
+    officiels. Cette table est la seule source de ces mots ; l'écran des réglages
+    en est la seule main qui écrit.
+    """
+
+    SEUIL_DEFAUT = 80  # part du disponible consommée par une sortie qui prévient, en %
+
+    id = models.BigAutoField(primary_key=True)
+    nom = models.CharField(
+        max_length=120, default='Universe Academy',
+        verbose_name=_("Nom de l'établissement"),
+        help_text=_("Le mot qui signe les écrans, les reçus et les documents imprimés."),
+    )
+    signature = models.CharField(
+        max_length=160, blank=True,
+        default='Centre de Formation en Langues — Brazzaville',  # i18n-exempt: valeur semée en base, choisie par la direction
+        verbose_name=_("Signature"),
+        help_text=_("La ligne sous le nom, sur les portails et les en-têtes."),
+    )
+    adresse = models.CharField(
+        max_length=200, blank=True,
+        default='Immeuble Monte Cristo, Rond-point la Gare — Brazzaville',  # i18n-exempt: adresse semée en base, choisie par la direction
+        verbose_name=_("Adresse"),
+    )
+    telephone = models.CharField(
+        max_length=40, blank=True, default='+242-06-851-7179',
+        verbose_name=_("Téléphone"),
+    )
+    email = models.EmailField(
+        blank=True, default='universacademy70@gmail.com',
+        verbose_name=_("E-mail de contact"),
+        help_text=_("La boîte affichée sur les documents et dans les messages envoyés."),
+    )
+    rccm = models.CharField(
+        max_length=40, blank=True, default='CG-BZV-01-2025-A10-02201',
+        verbose_name="RCCM",
+    )
+    niu = models.CharField(
+        max_length=40, blank=True, default='P23000000257459H',
+        verbose_name="NIU",
+    )
+    cnss = models.CharField(
+        max_length=40, blank=True, default='12052348/65',
+        verbose_name="CNSS",
+    )
+    devise = models.CharField(
+        max_length=8, default='FCFA',
+        verbose_name=_("Libellé de devise"),
+        help_text=_("Le mot écrit à côté des montants. Les montants déjà enregistrés gardent la devise où ils sont entrés."),
+    )
+    seuil_alerte = models.PositiveSmallIntegerField(
+        default=SEUIL_DEFAUT,
+        validators=[MinValueValidator(1), MaxValueValidator(100)],
+        verbose_name=_("Seuil d'alerte de caisse (%)"),
+        help_text=_("Une sortie qui consomme au moins cette part du solde disponible demande une confirmation."),
+    )
+    mise_a_jour_le = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'platform_settings'
+        ordering = ['id']
+        verbose_name = _("Paramètres généraux")
+        verbose_name_plural = _("Paramètres généraux")
+        constraints = [
+            models.CheckConstraint(
+                name='parametres_generaux_ligne_unique',
+                check=models.Q(id=1),
+                violation_error_message=_("Les réglages de l'établissement tiennent sur une seule ligne."),
+            ),
+        ]
+
+    def __str__(self):
+        return self.nom
+
+    def clean(self):
+        super().clean()
+        self.nom = (self.nom or '').strip()
+        if not self.nom:
+            raise ValidationError({'nom': _("Le nom de l'établissement est obligatoire.")})
+
+    def bloc_legal(self):
+        """Les identifiants officiels, dans l'ordre d'impression, vides sautés."""
+        return [f'{nom} : {valeur}' for nom, valeur in (
+            ('RCCM', self.rccm), ('NIU', self.niu), ('CNSS', self.cnss),
+        ) if valeur]
+
+    def contacts(self):
+        """Le bloc de coordonnées tel qu'il s'imprime, ligne par ligne."""
+        return [valeur for valeur in (
+            self.adresse, self.telephone, self.email
+        ) if valeur]
+
+
 class Course(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     title = models.CharField(max_length=200)
@@ -378,8 +553,13 @@ class Course(models.Model):
     description = models.TextField(blank=True)
     duration_months = models.PositiveIntegerField(default=3)
     fee_amount = models.PositiveIntegerField(
-        help_text=_("Montant en FCFA"),
+        help_text=_("Montant exprimé dans la devise de l'établissement"),
         validators=[MinValueValidator(0)]
+    )
+    monthly_fee_amount = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text=_("Tarif mensuel de référence; le tarif des inscriptions existantes reste figé."),
+        validators=[MinValueValidator(0)],
     )
     currency = models.CharField(max_length=5, default='XAF')
     certificate_eligible = models.BooleanField(default=False)
@@ -402,6 +582,7 @@ class CourseSession(models.Model):
         CANCELLED = 'CANCELLED', _("Annulée")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=100, blank=True)
     course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='sessions')
     starts_at = models.DateField()
     ends_at = models.DateField()
@@ -422,9 +603,32 @@ class CourseSession(models.Model):
     class Meta:
         db_table = 'course_sessions'
         ordering = ['-starts_at']
+        indexes = [
+            models.Index(fields=['starts_at'], name='idx_sessions_date_debut'),
+        ]
 
     def __str__(self):
-        return f"{self.course.title} — {self.starts_at}"
+        return f"{self.display_name} — {self.starts_at}"
+
+    @property
+    def display_name(self):
+        return self.name or self.course.title
+
+    def billing_periods(self, starts_at=None, ends_at=None):
+        start = max(starts_at or self.starts_at, self.starts_at)
+        end = min(ends_at or self.ends_at, self.ends_at)
+        if end < start:
+            return []
+
+        periods = []
+        year, month = start.year, start.month
+        while (year, month) <= (end.year, end.month):
+            periods.append((year, month))
+            if month == 12:
+                year, month = year + 1, 1
+            else:
+                month += 1
+        return periods
 
     @property
     def enrolled_count(self):
@@ -451,7 +655,7 @@ class Enrollment(models.Model):
         limit_choices_to={'roles__key': 'ETUDIANT'}
     )
     session = models.ForeignKey(
-        CourseSession, on_delete=models.CASCADE, related_name='enrollments'
+        CourseSession, on_delete=models.PROTECT, related_name='enrollments'
     )
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.PENDING
@@ -461,14 +665,23 @@ class Enrollment(models.Model):
 
     # --- Dossier administratif et financier (secrétariat) -------------------
     start_date = models.DateField(null=True, blank=True)
+    ended_at = models.DateField(
+        null=True, blank=True,
+        help_text=_("Dernier jour d'accès et de facturation de cette inscription."),
+    )
+    monthly_tariff_amount = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text=_("Tarif mensuel figé au moment de l'inscription."),
+        validators=[MinValueValidator(0)],
+    )
     tariff_amount = models.PositiveIntegerField(
-        default=0, help_text=_("Tarif catalogue appliqué (FCFA)")
+        default=0, help_text=_("Tarif catalogue appliqué")
     )
     discount_amount = models.PositiveIntegerField(
-        default=0, help_text=_("Remise autorisée (FCFA)")
+        default=0, help_text=_("Remise autorisée")
     )
     net_amount = models.PositiveIntegerField(
-        default=0, help_text=_("Montant net dû (FCFA)")
+        default=0, help_text=_("Montant net dû")
     )
     payment_plan = models.CharField(
         max_length=200, blank=True,
@@ -484,29 +697,100 @@ class Enrollment(models.Model):
     class Meta:
         db_table = 'enrollments'
         unique_together = ('student', 'session')
+        indexes = [
+            models.Index(fields=['status'], name='idx_inscriptions_statut'),
+        ]
 
     def __str__(self):
         return f"{self.student} → {self.session}"
 
+    def billing_periods(self):
+        """Mois civils couverts par l'inscription, bornés par le groupe."""
+        return self.session.billing_periods(
+            starts_at=self.start_date,
+            ends_at=self.ended_at,
+        )
+
+    def monthly_amount_due(self, year, month):
+        """Échéance d'un mois, avec remise répartie sur les mois concernés."""
+        periods = self.billing_periods()
+        period = (int(year), int(month))
+        if period not in periods:
+            return 0
+        if self.monthly_tariff_amount is None:
+            if self.net_amount <= 0:
+                return 0
+            duration = max(self.session.course.duration_months or 0, 1)
+            return round(self.net_amount / duration)
+
+        discount = min(
+            self.discount_amount or 0,
+            self.monthly_tariff_amount * len(periods),
+        )
+        base_discount, remainder = divmod(discount, len(periods))
+        index = periods.index(period)
+        return max(
+            self.monthly_tariff_amount - base_discount
+            - (1 if index < remainder else 0),
+            0,
+        )
+
+    @property
+    def total_due(self):
+        if self.monthly_tariff_amount is None:
+            return self.net_amount
+        return sum(
+            self.monthly_amount_due(year, month)
+            for year, month in self.billing_periods()
+        )
+
     @property
     def total_paid(self):
         return self.payments.filter(
-            status=Payment.Status.COMPLETED
+            status=Payment.Status.COMPLETED,
         ).aggregate(total=models.Sum('amount'))['total'] or 0
 
     @property
     def balance_due(self):
-        return max(self.net_amount - self.total_paid, 0)
+        return max(self.total_due - self.total_paid, 0)
 
     @property
     def payment_state(self):
-        if self.net_amount <= 0:
+        if self.total_due <= 0:
             return 'NON_DEFINI'
         if self.total_paid <= 0:
             return 'IMPAYE'
-        if self.total_paid >= self.net_amount:
+        if self.total_paid >= self.total_due:
             return 'SOLDE'
         return 'PARTIEL'
+
+    def save(self, *args, **kwargs):
+        update_fields = kwargs.get('update_fields')
+        previous_status = None
+        if self.pk:
+            previous_status = type(self).objects.filter(
+                pk=self.pk
+            ).values_list('status', flat=True).first()
+
+        changed_fields = set(update_fields or ())
+        if self.status == self.Status.ACTIVE:
+            if previous_status and previous_status != self.Status.ACTIVE:
+                self.ended_at = None
+                changed_fields.add('ended_at')
+        elif (
+            previous_status == self.Status.ACTIVE
+            or self.status not in (self.Status.PENDING,)
+        ) and not self.ended_at:
+            self.ended_at = timezone.localdate()
+            changed_fields.add('ended_at')
+
+        if self.status == self.Status.COMPLETED and not self.completed_at:
+            self.completed_at = timezone.now()
+            changed_fields.add('completed_at')
+
+        if update_fields is not None and changed_fields:
+            kwargs['update_fields'] = changed_fields
+        super().save(*args, **kwargs)
 
 
 class Attendance(models.Model):
@@ -618,6 +902,9 @@ class Payment(models.Model):
     amount = models.PositiveIntegerField(validators=[MinValueValidator(1)])
     currency = models.CharField(max_length=5, default='XAF')
     method = models.CharField(max_length=20, choices=Method.choices)
+    submission_key = models.CharField(
+        max_length=100, unique=True, null=True, blank=True,
+    )
     reference = models.CharField(max_length=50, unique=True, blank=True)
     status = models.CharField(
         max_length=20, choices=Status.choices, default=Status.COMPLETED
@@ -646,12 +933,12 @@ class Payment(models.Model):
     class Meta:
         db_table = 'payments'
         ordering = ['-paid_at']
-        constraints = [
-            models.UniqueConstraint(
+        indexes = [
+            models.Index(fields=['status', 'paid_at'],
+                         name='idx_paiements_valides_par_date'),
+            models.Index(
                 fields=('enrollment', 'period_year', 'period_month'),
-                condition=~models.Q(status__in=['CANCELLED', 'REFUNDED'])
-                          & models.Q(period_month__isnull=False),
-                name='payment_month_once_per_enrollment',
+                name='idx_payment_enrollment_period',
             ),
         ]
 
@@ -861,6 +1148,10 @@ class AuditLog(models.Model):
     class Meta:
         db_table = 'audit_log'
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['entity_type', 'entity_id'],
+                         name='idx_journal_par_entite'),
+        ]
 
     def __str__(self):
         return f"{self.action} on {self.entity_type}:{self.entity_id}"  # i18n-exempt: contenu technique du journal d'audit
@@ -1337,7 +1628,7 @@ class Resource(models.Model):
         related_name='resources'
     )
     session = models.ForeignKey(
-        CourseSession, on_delete=models.SET_NULL, null=True, blank=True,
+        CourseSession, on_delete=models.PROTECT, null=True, blank=True,
         related_name='resources',
         help_text=_("Groupe destinataire (facultatif)")
     )
@@ -1371,6 +1662,15 @@ class Resource(models.Model):
 
     def __str__(self):
         return self.title
+
+    def save(self, *args, **kwargs):
+        if self.status == self.Status.PUBLISHED and not self.published_at:
+            self.published_at = timezone.now()
+            if kwargs.get('update_fields') is not None:
+                kwargs['update_fields'] = set(kwargs['update_fields']) | {
+                    'published_at',
+                }
+        super().save(*args, **kwargs)
 
     @property
     def is_published(self):
@@ -1669,6 +1969,10 @@ class CashTransaction(models.Model):
     class Meta:
         db_table = 'cash_transactions'
         ordering = ['-occurred_at', '-created_at']
+        indexes = [
+            models.Index(fields=['account', 'status', 'occurred_at'],
+                         name='idx_ecritures_par_compte'),
+        ]
 
     def __str__(self):
         return f"{self.reference} — {self.label}"
@@ -1774,6 +2078,3 @@ class CashClosure(models.Model):
 
     def __str__(self):
         return f"{self.account} — {self.date}"  # i18n-exempt: interpolation de données seule, aucun texte à traduire
-
-
-

@@ -372,6 +372,10 @@ class ElevatedBusinessAccessTests(BusinessTestBase):
             ('lesson-edit', [self.lesson.id]),
             ('resource-create', []),
             ('resource-edit', [self.resource.id]),
+            ('course-create', []),
+            ('course-edit', [self.course.id]),
+            ('course-archive', [self.course.id]),
+            ('course-restore', [self.course.id]),
             ('session-record-create', [self.session.id]),
         )
         for user in (self.super_admin, self.admin):
@@ -909,12 +913,68 @@ class ResponsablePedaPerimetreAccesTests(BusinessTestBase):
         self.assertEqual(self.demande_assistant.status,
                          AccessRequest.Status.APPROVED)
 
-    def test_le_secretaire_rest_extérieur_à_l_écran(self):
-        self.assertEqual(
-            self.client_for(self.secretaire).get(
-                reverse('core:dashboard:access-requests')).status_code,
-            403,
+    def test_les_roles_administratifs_voient_les_demandes_etudiantes(self):
+        for user in (self.direction, self.assistant, self.secretaire):
+            with self.subTest(role=user.primary_role):
+                response = self.client_for(user).get(
+                    reverse('core:dashboard:access-requests'))
+                self.assertEqual(response.status_code, 200)
+                self.assertContains(response, self.demande_etudiante.user.email)
+                self.assertNotContains(
+                    response, self.demande_formateur.user.email)
+                self.assertNotContains(
+                    response, self.demande_assistant.user.email)
+                self.assertEqual(
+                    {choice[0] for choice in response.context['role_choices']},
+                    {'ETUDIANT'},
+                )
+                self.assertContains(
+                    response,
+                    reverse('core:dashboard:access-requests'),
+                )
+                tasks, _notifications, _total = tableau_des_files(user)
+                access_task = next(
+                    task for task in tasks
+                    if task['nom'] == "Demandes d'accès à approuver"
+                )
+                self.assertEqual(access_task['nombre'], 1)
+
+    def test_les_roles_administratifs_peuvent_approuver_les_etudiants(self):
+        for user in (self.direction, self.assistant, self.secretaire):
+            with self.subTest(role=user.primary_role):
+                demande = self._demande(
+                    RoleKey.ETUDIANT,
+                    f'etudiant-{user.primary_role.lower()}@test.local',
+                )
+                response = self.client_for(user).post(
+                    reverse('core:dashboard:access-request-review',
+                            args=[demande.id]),
+                    {'decision': 'approve', 'role_key': RoleKey.ETUDIANT,
+                     'session': self.session.pk},
+                )
+                self.assertRedirects(
+                    response, reverse('core:dashboard:access-requests'),
+                    fetch_redirect_response=False,
+                )
+                demande.refresh_from_db()
+                self.assertEqual(demande.status, AccessRequest.Status.APPROVED)
+                self.assertEqual(demande.reviewed_by, user)
+                self.assertTrue(demande.user.has_role(RoleKey.ETUDIANT))
+
+    def test_les_roles_administratifs_ne_peuvent_pas_valider_un_role_staff(self):
+        response = self.client_for(self.secretaire).post(
+            reverse('core:dashboard:access-request-review',
+                    args=[self.demande_formateur.id]),
+            {'decision': 'approve', 'role_key': RoleKey.FORMATEUR},
         )
+        self.assertRedirects(
+            response, reverse('core:dashboard:access-requests'),
+            fetch_redirect_response=False,
+        )
+        self.demande_formateur.refresh_from_db()
+        self.assertEqual(
+            self.demande_formateur.status, AccessRequest.Status.PENDING)
+        self.assertIsNone(self.demande_formateur.reviewed_by)
 
     def test_la_navivation_pédagogique_mène_aux_demandes(self):
         self.assertContains(

@@ -1,0 +1,56 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load ui i18n %}
+
+{% block title %}{% translate "Années académiques" %} — {{ plateforme.nom }}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="ua-page-head">
+    <div>
+        <h1 class="ua-page-title">{% translate "Années académiques" %}</h1>
+        <p class="ua-page-sub">{% translate "La direction pose les dates de chaque année et coche celle qui est en cours. Les listes d'étudiants, d'inscrits et de groupes s'y règlent." %}</p>
+    </div>
+</div>
+
+{% if not en_cours %}
+<div class="ua-card ua-card-pad mb-5 text-sm">
+    {% translate "Aucune année académique définie : toutes les années s'affichent pour l'instant dans les listes." %}
+</div>
+{% endif %}
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <section class="ua-card ua-card-pad">
+        <h2 class="ua-section-title mb-4">{% translate "Nouvelle année" %}</h2>
+        <form method="post" class="ua-form">
+            {% csrf_token %}
+            {% include "dashboard/_form.html" with form=form %}
+            <button type="submit" class="ua-btn ua-btn-primary mt-3">{% icon "check-circle" %} {% translate "Créer" %}</button>
+        </form>
+        <p class="text-xs ua-muted mt-3">{% translate "Cocher « Année en cours » décoche la précédente : une seule année tient le filtre à la fois." %}</p>
+    </section>
+
+    <section class="ua-card overflow-hidden xl:col-span-2">
+        <div class="ua-table-wrap">
+            <table class="ua-table">
+                <thead><tr><th>{% translate "Année" %}</th><th>{% translate "Fenêtre" %}</th><th>{% translate "Groupes" %}</th><th>{% translate "Inscriptions" %}</th><th>{% translate "État" %}</th><th>{% translate "Administrer" %}</th></tr></thead>
+                <tbody>
+                    {% for ligne in lignes %}
+                    <tr>
+                        <td class="ua-cell-title">{{ ligne.annee.label }}</td>
+                        <td>{{ ligne.annee.start_date }} → {{ ligne.annee.end_date }}</td>
+                        <td>{{ ligne.groupes }}</td>
+                        <td>{{ ligne.inscriptions }}</td>
+                        <td>{% if ligne.annee.is_current %}{% translate "En cours" %}{% else %}{% translate "Révolue ou à venir" %}{% endif %}</td>
+                        <td><a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:academic-year-update' ligne.annee.id %}">{% translate "Régler" %}</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="6" class="ua-empty">{% translate "Aucune année posée." %}</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

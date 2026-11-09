@@ -38,6 +38,7 @@
             notation: 'compact', maximumFractionDigits: 1,
         });
         const fcfa = donnees.unite === 'fcfa';
+        const devise = (document.querySelector('meta[name="devise"]') || {}).content || '';
         const horizontal = donnees.horizontal === true;
         const axeCategorie = horizontal ? 'y' : 'x';
         const axeValeur = horizontal ? 'x' : 'y';
@@ -127,7 +128,7 @@
                                 const valeur = horizontal
                                     ? contexte.parsed.x : contexte.parsed.y;
                                 const suite = contexte.dataset._unite === 'fcfa'
-                                    ? ' FCFA'
+                                    ? (devise ? ' ' + devise : '')
                                     : (contexte.dataset._unite === 'pourcent' ? ' %' : '');
                                 return ' ' + contexte.dataset.label + ' : ' +
                                     pleine.format(valeur) + suite;

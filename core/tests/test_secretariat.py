@@ -173,8 +173,63 @@ class StudentManagementTests(SecretariatTestBase):
         self.assertEqual(response.context['total_paid'], 30000)
         self.assertEqual(response.context['balance'], 60000)
 
+    def test_student_detail_shows_monthly_amount_paid_and_remaining(self):
+        Payment.objects.create(
+            enrollment=self.enrollment,
+            amount=10000,
+            method=Payment.Method.CASH,
+            motif=Payment.Motif.MONTHLY,
+            period_year=self.today.year,
+            period_month=self.today.month,
+            status=Payment.Status.COMPLETED,
+            recorded_by=self.assistant,
+        )
+        response = self.client.get(
+            reverse('core:dashboard:student-detail', args=[self.etudiant.pk]))
+        row = next(
+            line for line in response.context['monthly_tracking']
+            if line['enrollment'].pk == self.enrollment.pk
+            and line['number'] == self.today.month
+        )
+        self.assertEqual(row['expected'], 30000)
+        self.assertEqual(row['paid'], 10000)
+        self.assertEqual(row['remaining'], 20000)
+
 
 class EnrollmentManagementTests(SecretariatTestBase):
+    def test_enrollment_detail_shows_twelve_months_and_partial_payment(self):
+        response = self.client.get(
+            reverse('core:dashboard:enrollment-detail',
+                    args=[self.enrollment.pk]),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.context['monthly_rows']), 12)
+
+        payload = {
+            'action': 'monthly-payment',
+            'month': str(self.today.month),
+            'year': str(self.today.year),
+            'amount': '10000',
+            'method': Payment.Method.CASH,
+            'account': self.cash.pk,
+            'paid_at': self.local_datetime(),
+            'submission_key': 'enrollment-detail-partial-payment',
+        }
+        response = self.client_for(self.assistant).post(
+            reverse('core:dashboard:enrollment-detail',
+                    args=[self.enrollment.pk]),
+            payload,
+        )
+        payment = Payment.objects.get(enrollment=self.enrollment)
+        self.assertRedirects(
+            response,
+            reverse('core:dashboard:payment-receipt', args=[payment.pk]),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(payment.amount, 10000)
+        self.assertEqual(payment.motif, Payment.Motif.MONTHLY)
+        self.assertEqual(self.enrollment.balance_due, 80000)
+
     def test_enrollment_create_computes_net_amount(self):
         student = self.make_user(RoleKey.ETUDIANT, 'etudiant3@test.local')
         response = self.client.post(

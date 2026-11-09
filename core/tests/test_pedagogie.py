@@ -3,11 +3,16 @@ from datetime import time as dt_time, timedelta
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from django.utils import timezone
 
-from core.forms import SessionRecordForm
+from core.admin import FormuleGroupeAdmin
+from core.forms import (
+    EnrollmentForm, NewEnrollmentForm, SessionRecordForm, enrollable_sessions,
+)
 from core.models import (
     Attendance, Course, CourseSession, Enrollment, Lesson, Module, Resource,
-    ResourceFeedback, RoleKey, SessionRecord, StudentSessionNote,
+    MOIS, Payment, ResourceFeedback, RoleKey, SessionRecord,
+    StudentSessionNote,
 )
 
 from .base import BusinessTestBase
@@ -69,6 +74,150 @@ class PedagogyTestBase(BusinessTestBase):
 
 
 class ProgramTests(PedagogyTestBase):
+    def test_manager_can_add_a_course_from_the_program_page(self):
+        response = self.manager_client.post(
+            reverse('core:dashboard:course-create'),
+            {
+                'title': 'Anglais',
+                'domain': 'Langues',
+                'description': 'Anglais général',
+                'duration_months': 6,
+                'fee_amount': 120000,
+                'monthly_fee_amount': 20000,
+                'certificate_eligible': True,
+            },
+        )
+        course = Course.objects.get(title='Anglais')
+        self.assertRedirects(
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{course.pk}',
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(course.domain, 'Langues')
+        self.assertTrue(course.active)
+        self.assert_audited('COURSE_CREATE', course.pk)
+
+    def test_manager_can_edit_a_course_without_changing_existing_tariffs(self):
+        response = self.manager_client.post(
+            reverse('core:dashboard:course-edit', args=[self.course.pk]),
+            {
+                'title': 'Informatique générale',
+                'domain': 'Informatique',
+                'description': 'Bureautique et bases',
+                'duration_months': 4,
+                'fee_amount': 160000,
+                'monthly_fee_amount': 40000,
+                'certificate_eligible': False,
+            },
+        )
+        self.assertRedirects(
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
+            fetch_redirect_response=False,
+        )
+        self.course.refresh_from_db()
+        self.enrollment.refresh_from_db()
+        self.assertEqual(self.course.title, 'Informatique générale')
+        self.assertEqual(self.course.monthly_fee_amount, 40000)
+        self.assertEqual(self.enrollment.tariff_amount, 100000)
+        self.assert_audited('COURSE_EDIT', self.course.pk)
+
+    def test_manager_archives_and_restores_course_without_deleting_history(self):
+        archive_url = reverse(
+            'core:dashboard:course-archive', args=[self.course.pk])
+        restore_url = reverse(
+            'core:dashboard:course-restore', args=[self.course.pk])
+        response = self.manager_client.post(archive_url)
+        self.assertRedirects(
+            response,
+            f'{reverse("core:dashboard:programs")}?archives=1'
+            f'#formation-{self.course.pk}',
+            fetch_redirect_response=False,
+        )
+        self.course.refresh_from_db()
+        self.assertFalse(self.course.active)
+        self.assertTrue(CourseSession.objects.filter(pk=self.session.pk).exists())
+        self.assertTrue(Enrollment.objects.filter(pk=self.enrollment.pk).exists())
+        self.assertNotIn(
+            self.session.pk,
+            enrollable_sessions().values_list('pk', flat=True),
+        )
+        self.assertNotIn(
+            self.session.pk,
+            EnrollmentForm().fields['session'].queryset.values_list(
+                'pk', flat=True),
+        )
+        self.assertNotIn(
+            self.session.pk,
+            NewEnrollmentForm().fields['session'].queryset.values_list(
+                'pk', flat=True),
+        )
+        self.assertIn(
+            self.session.pk,
+            EnrollmentForm(instance=self.enrollment).fields[
+                'session'
+            ].queryset.values_list('pk', flat=True),
+        )
+        self.assertNotContains(
+            self.manager_client.get(reverse('core:dashboard:programs')),
+            'Développement Web',
+        )
+        self.assertContains(
+            self.manager_client.get(
+                reverse('core:dashboard:programs'), {'archives': '1'}),
+            'Développement Web',
+        )
+        self.assert_audited('COURSE_ARCHIVE', self.course.pk)
+
+        response = self.manager_client.post(restore_url)
+        self.assertRedirects(
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
+            fetch_redirect_response=False,
+        )
+        self.course.refresh_from_db()
+        self.assertTrue(self.course.active)
+        self.assert_audited('COURSE_RESTORE', self.course.pk)
+
+    def test_only_academic_managers_can_manage_courses(self):
+        self.assertEqual(
+            self.trainer_client.get(
+                reverse('core:dashboard:course-create')).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.client_for(self.secretaire).post(
+                reverse('core:dashboard:course-edit', args=[self.course.pk]),
+                {},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
+            self.manager_client.get(
+                reverse('core:dashboard:course-archive',
+                        args=[self.course.pk])).status_code,
+            405,
+        )
+
+    def test_program_page_shows_course_management_actions_to_managers(self):
+        response = self.manager_client.get(
+            reverse('core:dashboard:programs'))
+        self.assertContains(
+            response, reverse('core:dashboard:course-create'))
+        self.assertContains(
+            response,
+            reverse('core:dashboard:course-edit', args=[self.course.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse('core:dashboard:course-archive', args=[self.course.pk]),
+        )
+        self.assertEqual(
+            self.manager_client.get(
+                reverse('core:dashboard:course-create')).status_code,
+            200,
+        )
+
     def test_manager_can_create_module_and_lesson(self):
         response = self.manager_client.post(
             reverse('core:dashboard:module-create'),
@@ -81,7 +230,8 @@ class ProgramTests(PedagogyTestBase):
             },
         )
         self.assertRedirects(
-            response, reverse('core:dashboard:programs'),
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
             fetch_redirect_response=False,
         )
         module = Module.objects.get(title='Module CSS')
@@ -98,7 +248,8 @@ class ProgramTests(PedagogyTestBase):
             },
         )
         self.assertRedirects(
-            response, reverse('core:dashboard:programs'),
+            response,
+            f'{reverse("core:dashboard:programs")}#module-{module.pk}',
             fetch_redirect_response=False,
         )
         lesson = Lesson.objects.get(title='Sélecteurs CSS')
@@ -116,7 +267,8 @@ class ProgramTests(PedagogyTestBase):
             },
         )
         self.assertRedirects(
-            response, reverse('core:dashboard:programs'),
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
             fetch_redirect_response=False,
         )
         module = Module.objects.get(title='Module JavaScript')
@@ -138,7 +290,8 @@ class ProgramTests(PedagogyTestBase):
             },
         )
         self.assertRedirects(
-            response, reverse('core:dashboard:programs'),
+            response,
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
             fetch_redirect_response=False,
         )
         module.refresh_from_db()
@@ -151,6 +304,61 @@ class ProgramTests(PedagogyTestBase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(
             response, reverse('core:dashboard:module-create'))
+
+    def test_formulaires_de_creation_sont_sur_la_page_programmes(self):
+        """Le responsable pédagogique crée module et leçon sans quitter la page."""
+        response = self.manager_client.get(reverse('core:dashboard:programs'))
+        self.assertContains(
+            response, f'action="{reverse("core:dashboard:module-create")}"')
+        self.assertContains(
+            response, f'action="{reverse("core:dashboard:lesson-create")}"')
+
+    def test_formulaire_module_preselectionne_la_formation(self):
+        response = self.manager_client.get(
+            reverse('core:dashboard:module-create'),
+            {'course': self.course.pk},
+        )
+        self.assertEqual(
+            str(response.context['form']['course'].value()),
+            str(self.course.pk),
+        )
+
+    def test_module_cree_sans_ordre_prend_la_suite(self):
+        response = self.manager_client.post(
+            reverse('core:dashboard:module-create'),
+            {
+                'course': self.course.pk,
+                'title': 'Module sans ordre',
+                'description': '',
+                'order': '',
+                'planned_hours': '',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        module = Module.objects.get(title='Module sans ordre')
+        self.assertEqual(module.order, self.module.order + 1)
+        self.assertEqual(module.planned_hours, 0)
+        self.assertEqual(
+            response['Location'],
+            f'{reverse("core:dashboard:programs")}#formation-{self.course.pk}',
+        )
+
+    def test_lecon_creee_sans_ordre_prend_la_suite(self):
+        response = self.manager_client.post(
+            reverse('core:dashboard:lesson-create'),
+            {
+                'module': self.module.pk,
+                'title': 'Leçon sans ordre',
+                'objectives': '',
+                'order': '',
+                'planned_hours': '',
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        lesson = Lesson.objects.get(title='Leçon sans ordre')
+        self.assertEqual(lesson.order, self.lesson.order + 1)
+        self.assertEqual(lesson.planned_hours, 0)
+        self.assertIn(f'#module-{self.module.pk}', response['Location'])
 
 
 class SessionRecordTests(PedagogyTestBase):
@@ -252,7 +460,6 @@ class SessionRecordTests(PedagogyTestBase):
         self.assertEqual(record.status, SessionRecord.Status.COMPLETED)
         self.assertEqual(record.topic, 'Séance réalisée')
         self.assert_audited('SESSION_UPDATE', record.pk)
-
 
     def test_trainer_sees_the_planning_shortcut(self):
         response = self.trainer_client.get(
@@ -468,6 +675,42 @@ class ResourceTests(PedagogyTestBase):
             [published.pk],
         )
 
+    def test_student_parti_garde_les_anciennes_ressources_pas_les_nouvelles(self):
+        date_depart = self.today - timedelta(days=1)
+        self.enrollment.status = Enrollment.Status.COMPLETED
+        self.enrollment.ended_at = date_depart
+        self.enrollment.save(update_fields=['status', 'ended_at'])
+        ancienne = self.make_resource(
+            title='Publié avant le départ',
+            session=self.session,
+            published_at=timezone.now() - timedelta(days=2),
+        )
+        nouvelle = self.make_resource(
+            title='Publié après le départ',
+            session=self.session,
+            published_at=timezone.now(),
+        )
+
+        client = self.client_for(self.etudiant)
+        page = client.get(reverse('core:dashboard:student-resources'))
+        self.assertEqual(page.status_code, 200)
+        self.assertEqual(
+            [resource.pk for resource in page.context['page'].object_list],
+            [ancienne.pk],
+        )
+        self.assertEqual(
+            client.get(reverse(
+                'core:dashboard:resource-view', args=[ancienne.pk]
+            )).status_code,
+            200,
+        )
+        self.assertEqual(
+            client.get(reverse(
+                'core:dashboard:resource-view', args=[nouvelle.pk]
+            )).status_code,
+            404,
+        )
+
     def test_student_can_download_published_resource(self):
         resource = self.make_resource(
             title='Support PDF',
@@ -547,6 +790,34 @@ class ResourceTests(PedagogyTestBase):
             [self.enrollment.pk],
         )
         self.assertEqual(response.context['totals']['total'], 1)
+
+
+class StudentDashboardTests(PedagogyTestBase):
+    def test_dashboard_affiche_le_reste_par_mensualite(self):
+        Payment.objects.create(
+            enrollment=self.enrollment,
+            amount=10000,
+            method=Payment.Method.CASH,
+            motif=Payment.Motif.MONTHLY,
+            period_year=self.today.year,
+            period_month=self.today.month,
+            status=Payment.Status.COMPLETED,
+            recorded_by=self.assistant,
+        )
+
+        response = self.client_for(self.etudiant).get(
+            reverse('core:dashboard:etudiant-dashboard'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_due'], self.enrollment.total_due)
+        ligne = next(
+            ligne for ligne in response.context['monthly_situation']
+            if ligne['year'] == self.today.year
+            and ligne['month'] == dict(MOIS)[self.today.month]
+        )
+        self.assertEqual(ligne['due'], 30000)
+        self.assertEqual(ligne['paid'], 10000)
+        self.assertEqual(ligne['remaining'], 20000)
 
 
 class StudentNotebookTests(PedagogyTestBase):
@@ -682,6 +953,7 @@ class CourseSessionGroupTests(PedagogyTestBase):
 
     def group_payload(self, **overrides):
         payload = {
+            'name': 'Groupe Web du matin',
             'course': self.course.id,
             'starts_at': self.local_date(1),
             'ends_at': self.local_date(30),
@@ -719,23 +991,22 @@ class CourseSessionGroupTests(PedagogyTestBase):
             reverse('core:dashboard:course-session-create'))
         self.assertEqual(response.status_code, 403)
 
-    def test_elevated_roles_cannot_create_group(self):
+    def test_admin_roles_can_create_group(self):
         for user in (self.super_admin, self.admin):
             with self.subTest(role=user.primary_role):
                 client = self.client_for(user)
-                self.assertEqual(
-                    client.get(
-                        reverse('core:dashboard:course-session-create')
-                    ).status_code,
-                    403,
+                response = client.post(
+                    reverse('core:dashboard:course-session-create'),
+                    self.group_payload(name=f"Groupe {user.primary_role}"),
                 )
-                self.assertEqual(
-                    client.post(
-                        reverse('core:dashboard:course-session-create'),
-                        self.group_payload(),
-                    ).status_code,
-                    403,
+                self.assertRedirects(
+                    response,
+                    reverse('core:dashboard:course-sessions'),
+                    fetch_redirect_response=False,
                 )
+                group = CourseSession.objects.get(
+                    name=f"Groupe {user.primary_role}")
+                self.assertIn(self.formateur, group.formateurs.all())
 
     def test_end_before_start_is_rejected(self):
         before = CourseSession.objects.count()
@@ -802,6 +1073,60 @@ class CourseSessionGroupTests(PedagogyTestBase):
         self.assertEqual(self.session.capacity, 42)
         self.assertEqual(self.session.status, CourseSession.Status.ACTIVE)
         self.assert_audited('COURSE_SESSION_EDIT', self.session.pk)
+
+    def test_group_without_trainer_is_refused(self):
+        """Un groupe qui va enseigner sans formateur ne se crée pas."""
+        before = CourseSession.objects.count()
+        response = self.manager_client.post(
+            reverse('core:dashboard:course-session-create'),
+            self.group_payload(formateurs=[]),
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(CourseSession.objects.count(), before)
+        self.assertContains(response, "au moins un formateur")
+
+    def test_removing_the_last_trainer_is_refused(self):
+        """Retirer le seul formateur d'un groupe en cours est le même vide."""
+        url = reverse(
+            'core:dashboard:course-session-edit', args=[self.session.id])
+        response = self.manager_client.post(url, self.group_payload(
+            status=CourseSession.Status.ACTIVE, formateurs=[],
+        ))
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "au moins un formateur")
+        self.session.refresh_from_db()
+        self.assertIn(self.formateur, self.session.formateurs.all())
+
+    def test_completed_group_may_stay_without_trainer(self):
+        """Une archive reprise des classeurs reste modifiable sans affectation."""
+        url = reverse(
+            'core:dashboard:course-session-edit', args=[self.session.id])
+        response = self.manager_client.post(url, self.group_payload(
+            status=CourseSession.Status.COMPLETED, formateurs=[],
+        ))
+        self.assertRedirects(
+            response,
+            reverse('core:dashboard:course-sessions'),
+            fetch_redirect_response=False,
+        )
+        self.session.refresh_from_db()
+        self.assertEqual(self.session.status, CourseSession.Status.COMPLETED)
+        self.assertEqual(self.session.formateurs.count(), 0)
+
+    def test_admin_form_applies_the_same_rule(self):
+        """La porte Django Admin ne crée pas ce que l'écran Groupes refuse."""
+        form = FormuleGroupeAdmin(data={
+            'name': 'Groupe sans formateur',
+            'course': self.course.pk,
+            'starts_at': self.local_date(1),
+            'ends_at': self.local_date(30),
+            'schedule': 'Lun-Ven 13h-15h',
+            'capacity': 25,
+            'status': CourseSession.Status.PLANNED,
+            'formateurs': [],
+        })
+        self.assertFalse(form.is_valid())
+        self.assertIn('formateurs', form.errors)
 
 
 class ResourceFeedbackTests(PedagogyTestBase):

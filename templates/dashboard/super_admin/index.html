@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Super Admin — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Super Admin" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
 
@@ -17,26 +17,18 @@
     {% icon "users" %} {% translate "Gérer les utilisateurs" %}
 </a>
 {% endblock %}
-{% block hero_aside %}
-<div class="ua-hero-card">
-    <p class="ua-hero-card-value">{{ total_users }}</p>
-    <p class="ua-hero-card-label">{% translate "Comptes au total" %}</p>
-</div>
-{% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Système" as var_systeme %}
 {% translate "Non catégorisé" as var_non_categorise %}
-{% translate "Total utilisateurs" as lbl_total_users %}
-{% translate "Tous rôles confondus" as hint_total_users %}
 {% translate "Demandes en attente" as lbl_demandes %}
 {% translate "À valider par vos soins" as hint_demandes %}
 {% translate "Étudiants actifs" as lbl_etudiants %}
 {% translate "Comptes étudiants ouverts" as hint_etudiants %}
 {% translate "Bourses en attente" as lbl_bourses %}
 {% translate "Candidatures à instruire" as hint_bourses %}
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-    {% include "dashboard/_stat.html" with label=lbl_total_users value=total_users icon="users" tone="indigo" hint=hint_total_users %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-6">
     {% include "dashboard/_stat.html" with label=lbl_demandes value=pending_requests icon="clipboard" tone="amber" hint=hint_demandes %}
     {% include "dashboard/_stat.html" with label=lbl_etudiants value=active_students icon="graduation" tone="green" hint=hint_etudiants %}
     {% include "dashboard/_stat.html" with label=lbl_bourses value=scholarship_pending icon="file-text" tone="violet" hint=hint_bourses %}
@@ -50,24 +42,24 @@
     </a>
 </div>
 {% translate "Entrées du mois" as lbl_entrees %}
-{% translate "FCFA validés" as hint_valides %}
+{% translate "Validés" as hint_valides %}
 {% translate "Sorties du mois" as lbl_sorties %}
 {% translate "Paiements étudiants" as lbl_paiements %}
-{% translate "FCFA encaissés ce mois" as hint_encaisses %}
+{% translate "Encaissés ce mois" as hint_encaisses %}
 {% translate "Salaires & formateurs" as lbl_salaires %}
-{% translate "FCFA versés ce mois" as hint_verses %}
+{% translate "Versés ce mois" as hint_verses %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
     <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=IN" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_entrees value=month_income|floatformat:0 icon="trending-up" tone="green" hint=hint_valides %}
+        {% include "dashboard/_stat.html" with label=lbl_entrees value=month_income|floatformat:0 icon="trending-up" tone="green" unite=plateforme.devise hint=hint_valides %}
     </a>
     <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=OUT" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_sorties value=month_expense|floatformat:0 icon="wallet" tone="rose" hint=hint_valides %}
+        {% include "dashboard/_stat.html" with label=lbl_sorties value=month_expense|floatformat:0 icon="wallet" tone="rose" unite=plateforme.devise hint=hint_valides %}
     </a>
     <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Paiement+étudiant" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_paiements value=month_payment_total|floatformat:0 icon="credit-card" tone="sky" hint=hint_encaisses %}
+        {% include "dashboard/_stat.html" with label=lbl_paiements value=month_payment_total|floatformat:0 icon="credit-card" tone="sky" unite=plateforme.devise hint=hint_encaisses %}
     </a>
     <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Salaires&type=OUT" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_salaires value=month_salaries|floatformat:0 icon="users" tone="amber" hint=hint_verses %}
+        {% include "dashboard/_stat.html" with label=lbl_salaires value=month_salaries|floatformat:0 icon="users" tone="amber" unite=plateforme.devise hint=hint_verses %}
     </a>
 </div>
 
@@ -143,7 +135,7 @@
         {% endfor %}
         <div class="mt-3 flex items-center justify-between text-sm">
             <span class="ua-muted">{% translate "Solde total" %}</span>
-            <span class="font-bold">{{ cash_total }} FCFA</span>
+            <span class="font-bold">{{ cash_total }} {{ plateforme.devise }}</span>
         </div>
 
         <div class="mt-4 pt-4 space-y-2 border-t" style="border-color:#ececf8;">
@@ -157,7 +149,7 @@
             </a>
             <div class="ua-list-row">
                 <span class="text-xs ua-muted">{% translate "Reste à recouvrer" %}</span>
-                <span class="text-sm font-semibold">{{ outstanding_amount|floatformat:0 }} FCFA</span>
+                <span class="text-sm font-semibold">{{ outstanding_amount|floatformat:0 }} {{ plateforme.devise }}</span>
             </div>
             <a class="ua-list-row" href="{% url 'core:dashboard:closures' %}">
                 <span class="text-xs ua-muted">{% translate "Écarts de caisse constatés" %}</span>

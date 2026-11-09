@@ -15,6 +15,7 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_POST
 from django.views.static import serve
 
+from . import parametres
 from .decorators import active_account_required
 from .forms import (
     AvatarForm, EmailChangeForm, PasswordChangeForm, ProfileForm,
@@ -102,10 +103,11 @@ def profile_view(request):
                 confirm_url = request.build_absolute_uri(
                     reverse('core:dashboard:profile-email-confirm', args=[token])
                 )
-                subject = _("Confirmation de votre nouvelle adresse — Univers Academy")
+                subject = _("Confirmation de votre nouvelle adresse — %(nom)s") % {
+                    'nom': parametres.nom()}
                 body = (
                     _("Bonjour,") + "\n\n"
-                    + _("Vous avez demandé à utiliser cette adresse pour votre compte Univers Academy.") + "\n"
+                    + _("Vous avez demandé à utiliser cette adresse pour votre compte %(nom)s.") % {'nom': parametres.nom()} + "\n"
                     + _("Confirmez le changement en ouvrant ce lien :") + f"\n{confirm_url}\n\n"
                     + _("Ce lien expire dans 24 heures. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.") + "\n"
                 )

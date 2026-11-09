@@ -68,12 +68,6 @@ msgstr "No role"
 msgid "Code interne"
 msgstr "Internal code"
 
-msgid "Compte Clerk"
-msgstr "Clerk account"
-
-msgid "Non lié — liaison automatique à la première connexion"
-msgstr "Not linked — automatic linking at first sign-in"
-
 msgid "Historique d'audit"
 msgstr "Audit history"
 

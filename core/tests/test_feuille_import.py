@@ -11,6 +11,8 @@ from pathlib import Path
 
 import openpyxl
 
+from django.utils import timezone
+
 from core import feuille_import
 from core.feuille_import import Ligne, MARQUE_FEUILLE, lignes_deja_ecrites, lire, reconcilier
 from core.models import CashAccount, CashTransaction, Payment, TransactionCategory
@@ -192,6 +194,33 @@ class ReconciliationTests(BusinessTestBase):
         self.assertIn(412, lignes_deja_ecrites())
         self.assertEqual(reconcilier([exemple]).operations, [],
                          'la ligne déjà écrite du journal ne se rejoue pas')
+
+
+class InstantEcritureTests(BusinessTestBase):
+    """Une ligne du classeur ne date jamais une écriture dans l'avenir.
+
+    Le classeur pré-remplit les mois à venir ; l'argent, lui, ne peut pas être
+    en caisse avant d'être reçu. Le jour de la ligne est donc ramené au jour de
+    l'import, et le mois couvert reste porté par la période du paiement.
+    """
+
+    def test_une_ligne_ancienne_garde_sa_date(self):
+        instant = feuille_import.instant_de(
+            ligne(date=dt.datetime(2026, 3, 4)), aujourd_hui=dt.date(2026, 11, 5))
+        self.assertEqual(instant.date(), dt.date(2026, 3, 4))
+        self.assertEqual((instant.hour, instant.minute), (12, 0))
+
+    def test_une_ligne_pointee_dans_le_futur_est_datee_du_jour(self):
+        instant = feuille_import.instant_de(
+            ligne(date=dt.datetime(2027, 4, 1)), aujourd_hui=dt.date(2026, 11, 5))
+        self.assertEqual(instant.date(), dt.date(2026, 11, 5))
+        self.assertEqual((instant.hour, instant.minute), (12, 0))
+
+    def test_sans_date_la_ligne_prend_le_jour_de_l_import(self):
+        instant = feuille_import.instant_de(
+            ligne(date=None), aujourd_hui=dt.date(2026, 11, 5))
+        self.assertEqual(instant.date(), dt.date(2026, 11, 5))
+        self.assertEqual(timezone.localtime(instant).date(), dt.date(2026, 11, 5))
 
 
 class SoldeApresImportTests(BusinessTestBase):

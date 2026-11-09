@@ -1,0 +1,41 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load ui i18n %}
+
+{% block title %}{{ annee.label }} — {% translate "Année académique" %}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
+{% block hero %}{% endblock %}
+
+{% block dashboard_content %}
+<div class="ua-page-head">
+    <div>
+        <h1 class="ua-page-title">{{ annee.label }}</h1>
+        <p class="ua-page-sub">{{ annee.start_date }} → {{ annee.end_date }} · {% if annee.is_current %}{% translate "Année en cours" %}{% else %}{% translate "Non cochée" %}{% endif %}</p>
+    </div>
+    <a href="{% url 'core:dashboard:academic-years' %}" class="ua-btn ua-btn-ghost">{% translate "Retour aux années" %}</a>
+</div>
+
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-5">
+    <section class="ua-card ua-card-pad xl:col-span-2">
+        <h2 class="ua-section-title mb-4">{% translate "Régler l'année" %}</h2>
+        <form method="post" class="ua-form">
+            {% csrf_token %}
+            {% include "dashboard/_form.html" with form=form %}
+            <button type="submit" class="ua-btn ua-btn-primary mt-3">{% icon "check-circle" %} {% translate "Enregistrer" %}</button>
+        </form>
+        <p class="text-xs ua-muted mt-3">{% translate "Déplacer la fenêtre change ce que les listes montrent, sans rien effacer : les étudiants et les groupes restent en base, seuls les filtres se déplacent." %}</p>
+    </section>
+
+    <section class="ua-card ua-card-pad">
+        <h2 class="ua-section-title mb-4">{% translate "Ce que couvre cette année" %}</h2>
+        <dl class="space-y-3 text-sm">
+            <div><dt class="text-xs ua-muted">{% translate "Groupes démarrés dans la fenêtre" %}</dt><dd>{{ groupes }}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "Inscriptions suivies dans la fenêtre" %}</dt><dd>{{ inscriptions }}</dd></div>
+        </dl>
+    </section>
+</div>
+
+{% translate "Créations et réglages de l'année enregistrés dans le journal d'audit." as audit_sous_titre_annee %}
+{% translate "Aucun événement d'audit pour cette année." as audit_vide_annee %}
+{% include "dashboard/_audit_trail.html" with audit_entries=historique audit_subtitle=audit_sous_titre_annee audit_empty=audit_vide_annee %}
+{% endblock %}

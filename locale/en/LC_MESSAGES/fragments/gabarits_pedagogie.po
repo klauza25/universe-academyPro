@@ -235,6 +235,9 @@ msgstr "Modules and lessons per program."
 msgid "Ajouter un module"
 msgstr "Add a module"
 
+msgid "Objectifs"
+msgstr "Objectives"
+
 msgid "Module"
 msgstr "Module"
 
@@ -479,6 +482,9 @@ msgstr "Sessions and reports"
 msgid "Séances planifiées, réalisées, annulées ou reportées."
 msgstr "Scheduled, delivered, cancelled or postponed sessions."
 
+msgid "Comptes rendus des séances réalisées et présences."
+msgstr "Reports for completed sessions and attendance."
+
 msgid "Sujet, formation, contenu…"
 msgstr "Topic, program, content…"
 
@@ -610,6 +616,9 @@ msgstr "%(n)s enrolled student(s)"
 msgid "Mes sessions"
 msgstr "My sessions"
 
+msgid "Groupes de formation attribués"
+msgstr "Assigned training groups"
+
 msgid "Retour aux sessions"
 msgstr "Back to the sessions"
 
@@ -635,8 +644,8 @@ msgid "Aucun étudiant inscrit à cette session"
 msgstr "No student enrolled in this session"
 
 # templates/dashboard/formateur/index.html
-msgid "%(s)s session(s) à animer et %(n)s étudiant(s) inscrit(s)."
-msgstr "%(s)s training session(s) to run and %(n)s enrolled student(s)."
+msgid "%(n)s étudiant(s) inscrit(s) dans vos groupes."
+msgstr "%(n)s student(s) enrolled in your groups."
 
 msgid "%(a)s / %(b)s inscrits"
 msgstr "%(a)s of %(b)s enrolled"
@@ -647,8 +656,8 @@ msgstr "%(n)s seats taken"
 msgid "Formateur — Univers Academy"
 msgstr "Trainer — Univers Academy"
 
-msgid "Vos sessions de formation"
-msgstr "Your training sessions"
+msgid "Vos groupes de formation"
+msgstr "Your training groups"
 
 msgid "Mes ressources"
 msgstr "My resources"

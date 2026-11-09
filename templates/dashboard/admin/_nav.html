@@ -68,12 +68,20 @@
 </a>
 <a href="{% url 'core:dashboard:access-requests' %}"
    class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
-    {% icon "user-check" %}<span>{% translate "Demandes d'accès" %}</span>
+    {% icon "user-check" %}<span>{% if 'DIRECTION' in user_roles %}{% translate "Demandes d'accès étudiant" %}{% else %}{% translate "Demandes d'accès" %}{% endif %}</span>
     {% if pending_requests %}<span class="ua-nav-count">{{ pending_requests }}</span>{% endif %}
 </a>
 <a href="{% url 'core:dashboard:scholarship-review-list' %}"
    class="ua-nav-link {% if request.resolver_match.url_name == 'scholarship-review-list' or request.resolver_match.url_name == 'scholarship-review-detail' %}is-active{% endif %}">
     {% icon "mail" %}<span>{% translate "Bourses" %}</span>
+</a>
+<a href="{% url 'core:dashboard:platform-settings' %}"
+   class="ua-nav-link {% if request.resolver_match.url_name == 'platform-settings' %}is-active{% endif %}">
+    {% icon "settings" %}<span>{% translate "Paramètres généraux" %}</span>
+</a>
+<a href="{% url 'core:dashboard:academic-years' %}"
+   class="ua-nav-link {% if request.resolver_match.url_name == 'academic-years' or request.resolver_match.url_name == 'academic-year-update' %}is-active{% endif %}">
+    {% icon "calendar" %}<span>{% translate "Années académiques" %}</span>
 </a>
 {% if 'SUPER_ADMIN' in user_roles %}
 <a href="{% url 'core:dashboard:role-permissions' %}"

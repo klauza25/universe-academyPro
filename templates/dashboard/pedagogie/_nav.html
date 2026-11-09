@@ -20,11 +20,11 @@
 <a href="{% url 'core:dashboard:progression' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'progression' %}is-active{% endif %}">
     {% icon "chart" %}<span>{% translate "Progression" %}</span>
 </a>
-<a href="{% url 'core:dashboard:programs' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'programs' or request.resolver_match.url_name == 'module-create' or request.resolver_match.url_name == 'lesson-create' %}is-active{% endif %}">
+<a href="{% url 'core:dashboard:programs' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'programs' or request.resolver_match.url_name == 'course-create' or request.resolver_match.url_name == 'course-edit' or request.resolver_match.url_name == 'course-archive' or request.resolver_match.url_name == 'course-restore' or request.resolver_match.url_name == 'module-create' or request.resolver_match.url_name == 'module-edit' or request.resolver_match.url_name == 'lesson-create' or request.resolver_match.url_name == 'lesson-edit' %}is-active{% endif %}">
     {% icon "book-open" %}<span>{% translate "Programmes" %}</span>
 </a>
-{% if 'RESP_PEDA' in user_roles %}
+{% if 'RESP_PEDA' in user_roles or 'DIRECTION' in user_roles %}
 <a href="{% url 'core:dashboard:access-requests' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
-    {% icon "user-check" %}<span>{% translate "Demandes d'accès" %}</span>
+    {% icon "user-check" %}<span>{% if 'RESP_PEDA' in user_roles %}{% translate "Demandes d'accès" %}{% else %}{% translate "Demandes d'accès étudiant" %}{% endif %}</span>
 </a>
 {% endif %}

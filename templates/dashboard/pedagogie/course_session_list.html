@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Groupes — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Groupes" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/pedagogie/_nav.html" %}{% endblock %}
 {% block hero %}{% endblock %}
@@ -17,13 +17,18 @@
     {% endif %}
 </div>
 
+{% if drapeau %}
+<p class="ua-page-sub mb-4 text-sm">{{ drapeau }}</p>
+{% endif %}
+
 <section class="ua-card ua-card-pad mb-5">
-    <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+    <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
         <div class="md:col-span-2">
             <label class="text-xs ua-muted block mb-1">{% translate "Recherche" %}</label>
             <input type="search" name="q" value="{{ query }}" placeholder="{% translate 'Formation, horaires…' %}"
                    class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
         </div>
+        {% include "dashboard/_year_select.html" %}
         <div>
             <label class="text-xs ua-muted block mb-1">{% translate "Statut" %}</label>
             <select name="status" class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
@@ -54,7 +59,8 @@
             <tbody>
                 {% for session in page %}
                 <tr>
-                    <td><span class="ua-cell-title">{{ session.course.title }}</span>
+                    <td><span class="ua-cell-title">{{ session.display_name }}</span>
+                        {% if session.name %}<span class="ua-cell-sub block">{{ session.course.title }}</span>{% endif %}
                         <span class="ua-cell-sub block">{{ session.course.domain }}</span></td>
                     <td>{{ session.starts_at|date:"d/m/Y" }} → {{ session.ends_at|date:"d/m/Y" }}</td>
                     <td>{{ session.schedule|default:"—" }}</td>

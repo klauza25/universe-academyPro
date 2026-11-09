@@ -1,0 +1,28 @@
+{% load ui i18n %}
+{% translate "Chiffres de la plateforme" as aria_compteurs %}
+{% translate "Utilisateurs" as lbl_utilisateurs %}
+{% translate "Étudiants" as lbl_etudiants %}
+{% translate "Staff" as lbl_staff %}
+<section class="ua-card ua-compteurs" aria-label="{{ aria_compteurs }}">
+    <div class="ua-compteur">
+        <span class="ua-compteur-icon ua-tone-indigo">{% icon "users" %}</span>
+        <div class="min-w-0">
+            <p class="ua-compteur-value">{{ total_users }}</p>
+            <p class="ua-compteur-label">{{ lbl_utilisateurs }}</p>
+        </div>
+    </div>
+    <div class="ua-compteur">
+        <span class="ua-compteur-icon ua-tone-green">{% icon "graduation" %}</span>
+        <div class="min-w-0">
+            <p class="ua-compteur-value">{{ total_students }}</p>
+            <p class="ua-compteur-label">{{ lbl_etudiants }}</p>
+        </div>
+    </div>
+    <div class="ua-compteur">
+        <span class="ua-compteur-icon ua-tone-sky">{% icon "presentation" %}</span>
+        <div class="min-w-0">
+            <p class="ua-compteur-value">{{ total_staff }}</p>
+            <p class="ua-compteur-label">{{ lbl_staff }}</p>
+        </div>
+    </div>
+</section>

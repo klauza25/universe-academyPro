@@ -19,21 +19,36 @@ from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
 
-from .models import (AuditLog, CashAccount, CashClosure, CashTransaction,
-                     TransactionCategory)
+from . import parametres
+from .models import (
+    AuditLog, CashAccount, CashClosure, CashTransaction, Payment,
+    TransactionCategory,
+)
 
 CATEGORIE_AJUSTEMENT = 'Ajustements de solde'  # i18n-exempt: nom stocké en base, clé de get_or_create
-LIMITE_ALERTE = 80  # part du disponible consommée par une sortie déclenchant un avertissement, en %
+DEVISE_PLATEFORME = ('XAF', 'FCFA')  # i18n-exempt: codes de devise stockés en base
 
 
-def _tracer(requete, action, entity_id, before=None, after=None, agent=None):
+def _devise_affichee(caisse):
+    """Le mot qui signe un montant de cette caisse.
+
+    Le libellé vient des réglages de l'établissement, pas d'une chaîne recopiée :
+    l'avertissement de caisse disait « XAF » alors que tous les autres écrans
+    disaient « FCFA ». Une caisse tenue dans une autre devise garde son code.
+    """
+    code = (caisse.currency or '').strip().upper()
+    return parametres.devise() if code in DEVISE_PLATEFORME else (code or parametres.devise())
+
+
+def _tracer(requete, action, entity_id, before=None, after=None, agent=None,
+            entity_type='CashTransaction'):
     """Une ligne d'audit, que l'appelant vienne d'un écran ou d'une commande."""
     acteur = agent
     utilisateur = getattr(requete, 'user', None) if requete else None
     if utilisateur is not None and utilisateur.is_authenticated:
         acteur = utilisateur
     AuditLog.objects.create(
-        actor=acteur, action=action, entity_type='CashTransaction',
+        actor=acteur, action=action, entity_type=entity_type,
         entity_id=str(entity_id), before_summary=before, after_summary=after,
         ip_address=requete.META.get('REMOTE_ADDR') if requete else None,
     )
@@ -111,10 +126,12 @@ def avertissement(caisse, *, sortie):
     disponible = caisse.disponible()
     if not sortie or sortie > disponible:
         return None
-    if sortie * 100 >= disponible * LIMITE_ALERTE:
-        return _("Cette sortie consomme %(pourcent)s %% du solde disponible de « %(caisse)s » (%(disponible)s %(devise)s).") % {
+    seuil = parametres.seuil_alerte()
+    if sortie * 100 >= disponible * seuil:
+        return _("Cette sortie consomme %(pourcent)s %% du solde disponible de « %(caisse)s » (%(disponible)s %(devise)s), seuil %(seuil)s %%.") % {
             'pourcent': round(sortie * 100 / disponible), 'caisse': caisse.name,
-            'disponible': _chiffre(disponible), 'devise': caisse.currency}
+            'disponible': _chiffre(disponible), 'devise': _devise_affichee(caisse),
+            'seuil': seuil}
     return None
 
 
@@ -192,6 +209,19 @@ def annuler(tx, *, motif, requete=None, agent=None):
     tx.save(update_fields=['status', 'note', 'updated_at'])
     _tracer(requete, 'CASH_TRANSACTION_CANCEL', tx.pk, before=avant,
             after={'status': tx.status, 'reason': motif}, agent=agent)
+    payment = Payment.objects.select_for_update().filter(
+        transaction=tx
+    ).first()
+    if payment and payment.status == Payment.Status.COMPLETED:
+        payment_before = {'status': payment.status}
+        payment.status = Payment.Status.CANCELLED
+        payment.save(update_fields=['status'])
+        _tracer(
+            requete, 'PAYMENT_CANCEL', payment.pk,
+            before=payment_before,
+            after={'status': payment.status, 'reason': motif},
+            agent=agent, entity_type='Payment',
+        )
     return tx
 
 

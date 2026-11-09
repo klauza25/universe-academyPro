@@ -1,16 +1,11 @@
 """Tests de l'inscription, de l'approbation et de l'attribution des rôles.
 
-Scénarios de la spécification : aucun compte créé via Clerk ou via le
-formulaire public ne reçoit de rôle effectif, et les rôles d'administration ne
-peuvent être obtenus ni par défaut ni par manipulation de requête.
+Scénarios de la spécification : aucun compte créé via le formulaire public ne
+reçoit de rôle effectif, et les rôles d'administration ne peuvent être obtenus
+ni par défaut ni par manipulation de requête.
 """
-from types import SimpleNamespace
-from unittest.mock import patch
-
-from django.test import override_settings
 from django.urls import reverse
 
-from core.clerk import sync_clerk_user
 from core.models import (
     AccessRequest, AccountStatus, AuditLog, CourseSession, Enrollment,
     Notification, RoleKey, User,
@@ -19,77 +14,19 @@ from core.models import (
 from .base import BusinessTestBase, TEST_PASSWORD
 
 
-def fake_clerk_user(email, *, verified=True, first='Clerk', last='Signup'):
-    status = SimpleNamespace(value='verified' if verified else 'unverified')
-    email_obj = SimpleNamespace(
-        id='email_primary', email_address=email,
-        verification=SimpleNamespace(status=status),
-    )
-    return SimpleNamespace(
-        id='user_fake',
-        email_addresses=[email_obj],
-        primary_email_address_id='email_primary',
-        first_name=first,
-        last_name=last,
-        full_name=f'{first} {last}',
-        username='',
-    )
+class PendingAccountCompletionTests(BusinessTestBase):
+    """Un compte en attente complète son dossier, sans gagner de rôle."""
 
-
-class ClerkSignupTests(BusinessTestBase):
-    def test_clerk_signup_creates_pending_account_without_role(self):
-        payload = {
-            'sub': 'user_clerk_1',
-            'email': 'clerk1@test.local',
-            # Des métadonnées de rôle ne doivent jamais faire autorité.
-            'role': 'SUPER_ADMIN',
-            'metadata': {'role': 'SUPER_ADMIN'},
-            'unsafe_metadata': {'role': 'SUPER_ADMIN'},
-        }
-        with patch('core.clerk.get_clerk_client') as get_client:
-            get_client.return_value.users.get.return_value = fake_clerk_user(
-                'clerk1@test.local'
-            )
-            user, created = sync_clerk_user(payload)
-
-        self.assertTrue(created)
-        self.assertEqual(user.account_status, AccountStatus.PENDING_APPROVAL)
-        self.assertFalse(user.roles.exists())
-        self.assertFalse(user.is_superuser)
-        access_request = user.pending_access_request
-        self.assertIsNotNone(access_request)
-        self.assertEqual(access_request.requested_role, '')
-        self.assertEqual(access_request.assigned_role, '')
-
-    @override_settings(CLERK_ENABLED=True)
-    def test_clerk_session_redirects_new_account_to_access_request(self):
-        with patch(
-            'core.views.verify_clerk_token',
-            return_value={'sub': 'user_clerk_2', 'email': 'clerk2@test.local'},
-        ), patch('core.clerk.get_clerk_client') as get_client:
-            get_client.return_value.users.get.return_value = fake_clerk_user(
-                'clerk2@test.local'
-            )
-            response = self.client.post(
-                reverse('core:clerk-session'), {'token': 'session-token'}
-            )
-
-        self.assertRedirects(
-            response, reverse('core:complete-access-request'),
-            fetch_redirect_response=False,
+    def _pending(self, email):
+        user = User.objects.create_user(
+            email=email, password='Pending123!',
+            first_name='Postulant', last_name='Test',
         )
-        user = User.objects.get(email='clerk2@test.local')
-        self.assertFalse(user.roles.exists())
-        self.assertEqual(user.account_status, AccountStatus.PENDING_APPROVAL)
+        AccessRequest.objects.create(user=user)
+        return user
 
-    def test_pending_clerk_account_cannot_open_dashboards(self):
-        with patch('core.clerk.get_clerk_client') as get_client:
-            get_client.return_value.users.get.return_value = fake_clerk_user(
-                'clerk3@test.local'
-            )
-            user, _ = sync_clerk_user(
-                {'sub': 'user_clerk_3', 'email': 'clerk3@test.local'}
-            )
+    def test_pending_account_cannot_open_dashboards(self):
+        user = self._pending('pending3@test.local')
 
         client = self.client_for(user)
         for route in (
@@ -105,13 +42,7 @@ class ClerkSignupTests(BusinessTestBase):
                 )
 
     def test_completion_records_requested_role_without_assigning_it(self):
-        with patch('core.clerk.get_clerk_client') as get_client:
-            get_client.return_value.users.get.return_value = fake_clerk_user(
-                'clerk4@test.local'
-            )
-            user, _ = sync_clerk_user(
-                {'sub': 'user_clerk_4', 'email': 'clerk4@test.local'}
-            )
+        user = self._pending('pending4@test.local')
 
         client = self.client_for(user)
         pending_page = client.get(reverse('core:pending-approval'))
@@ -121,8 +52,8 @@ class ClerkSignupTests(BusinessTestBase):
         )
 
         response = client.post(reverse('core:complete-access-request'), {
-            'first_name': 'Clerk',
-            'last_name': 'Signup',
+            'first_name': 'Postulant',
+            'last_name': 'Test',
             'phone': '+242060000099',
             'requested_role': RoleKey.ASSISTANT_ADMIN,
         })
@@ -142,18 +73,12 @@ class ClerkSignupTests(BusinessTestBase):
         ).exists())
 
     def test_completion_refuses_privileged_role_from_browser(self):
-        with patch('core.clerk.get_clerk_client') as get_client:
-            get_client.return_value.users.get.return_value = fake_clerk_user(
-                'clerk5@test.local'
-            )
-            user, _ = sync_clerk_user(
-                {'sub': 'user_clerk_5', 'email': 'clerk5@test.local'}
-            )
+        user = self._pending('pending5@test.local')
 
         client = self.client_for(user)
         response = client.post(reverse('core:complete-access-request'), {
-            'first_name': 'Clerk',
-            'last_name': 'Signup',
+            'first_name': 'Postulant',
+            'last_name': 'Test',
             'requested_role': RoleKey.SUPER_ADMIN,
         })
         self.assertEqual(response.status_code, 200)
@@ -213,7 +138,6 @@ class AccessApprovalTests(BusinessTestBase):
             password='Postulant123!',
             first_name='Postulant',
             last_name='Test',
-            clerk_user_id='user_pending_123',
         )
         self.access_request = AccessRequest.objects.create(
             user=self.pending, requested_role=RoleKey.FORMATEUR,
@@ -237,7 +161,7 @@ class AccessApprovalTests(BusinessTestBase):
         self.assertNotContains(response, 'value="SUPER_ADMIN"')
         self.assertNotContains(response, 'value="ADMIN"')
         self.assertContains(response, 'value="FORMATEUR" selected')
-        self.assertContains(response, 'user_pending_123')
+        self.assertContains(response, 'postulant@test.local')
 
     def test_approval_assigns_only_the_selected_role(self):
         response = self.approve(RoleKey.FORMATEUR)

@@ -10,7 +10,7 @@
 <div class="ua-page-head">
     <div>
         <h1 class="ua-page-title">{{ tx.reference }}</h1>
-        <p class="ua-page-sub">{{ tx.label }} · {{ tx.amount }} FCFA</p>
+        <p class="ua-page-sub">{{ tx.label }} · {{ tx.amount }} {{ plateforme.devise }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
         {% if 'SUPER_ADMIN' in user_roles or 'ADMIN' in user_roles %}
@@ -18,7 +18,7 @@
             {% icon "shield" %} {% translate "Supervision financière" %}
         </a>
         {% endif %}
-        {% if tx.status != 'CANCELLED' %}
+        {% if tx.status != 'CANCELLED' and not student_payment %}
         <a href="{% url 'core:dashboard:transaction-edit' tx.id %}" class="ua-btn ua-btn-light">
             {% icon "check-circle" %} {% translate "Corriger l'écriture" %}
         </a>
@@ -53,7 +53,7 @@
                     <p class="text-xs ua-muted mt-1">
                         {% blocktrans with e=student_payment.enrollment.student.display_label c=student_payment.enrollment.session.course.title m=student_payment.get_method_display s=student_payment.get_status_display d=student_payment.paid_at|date:"d/m/Y H:i" %}{{ e }} · {{ c }} · {{ m }} · {{ s }} · payé le {{ d }}{% endblocktrans %}
                     </p>
-                    <p class="text-xs ua-muted">{% blocktrans with b=student_payment.enrollment.balance_due %}Reste à payer sur le dossier : {{ b }} FCFA{% endblocktrans %}</p>
+                    <p class="text-xs ua-muted">{% blocktrans with dv=plateforme.devise b=student_payment.enrollment.balance_due %}Reste à payer sur le dossier : {{ b }} {{ dv }}{% endblocktrans %}</p>
                 </dd>
             </div>
             {% endif %}

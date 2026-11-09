@@ -1,5 +1,4 @@
 """Tests des pages publiques, de la connexion locale et de l'inscription."""
-from django.test import override_settings
 from django.urls import reverse
 
 from core.models import (
@@ -19,23 +18,23 @@ class PublicPagesTests(BusinessTestBase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'name="identifier"')
         self.assertContains(response, 'name="password"')
+        self.assertContains(response, 'data-password-toggle')
+        self.assertContains(response, 'js/login.js')
 
-    @override_settings(
-        CLERK_ENABLED=True,
-        CLERK_PUBLISHABLE_KEY='pk_test_univers',
-        CLERK_SECRET_KEY='sk_test_univers',
-        CLERK_FRONTEND_API='univers.clerk.accounts.dev',
-        CLERK_JS_URL='https://univers.clerk.accounts.dev/clerk.browser.js',
-        CLERK_UI_URL='https://univers.clerk.accounts.dev/ui.browser.js',
-    )
-    def test_local_form_precedes_clerk_widget(self):
+    def test_login_page_has_no_external_auth_widget(self):
         response = self.client.get(reverse('core:login'))
         html = response.content.decode()
-        self.assertIn('id="clerk-sign-in"', html)
         self.assertIn('name="identifier"', html)
-        self.assertLess(
-            html.index('name="identifier"'), html.index('id="clerk-sign-in"'),
+        self.assertNotIn('clerk', html.lower())
+
+    def test_le_bouton_de_mot_de_passe_est_traduit_en_anglais(self):
+        self.client.post(
+            reverse('set_language'),
+            {'language': 'en', 'next': reverse('core:login')},
         )
+        response = self.client.get(reverse('core:login'))
+        self.assertContains(response, 'data-show-label="Show"')
+        self.assertContains(response, 'data-hide-label="Hide"')
 
     def test_register_page_contains_local_login_link(self):
         response = self.client.get(reverse('core:register'))

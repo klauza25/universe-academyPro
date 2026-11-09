@@ -56,11 +56,9 @@ msgstr ""
 "validation."
 
 msgid ""
-"%(p)s inscription(s) en attente sur %(t)s dossier(s) au total, %(s)s "
-"étudiant(s) au fichier."
+"%(p)s inscription(s) en attente sur %(t)s dossier(s) au total."
 msgstr ""
-"%(p)s enrollment(s) pending out of %(t)s record(s) in total, %(s)s "
-"student(s) on file."
+"%(p)s enrollment(s) pending out of %(t)s record(s) in total."
 
 msgid "%(pc)s en attente · %(tc)s demande(s) au total"
 msgstr "%(pc)s pending · %(tc)s request(s) in total"
@@ -259,13 +257,6 @@ msgstr "Total accounts"
 
 msgid "Comptes étudiants ouverts"
 msgstr "Student accounts opened"
-
-msgid "Connexion avec votre e-mail ou votre code interne Univers Academy."
-msgstr "Sign in with your e-mail or your Univers Academy internal code."
-
-msgid ""
-"Connexion sécurisée par Clerk — Google, Gmail ou email et mot de passe."
-msgstr "Secure sign-in with Clerk — Google, Gmail or email and password."
 
 msgid "Connexion — Universe Academy"
 msgstr "Sign in — Universe Academy"

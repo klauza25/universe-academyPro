@@ -1,7 +1,7 @@
 {% extends "dashboard/base_dashboard.html" %}
 {% load ui i18n %}
 
-{% block title %}{% translate "Mon espace — Univers Academy" %}{% endblock %}
+{% block title %}{% translate "Mon espace" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}{% include "dashboard/etudiant/_nav.html" %}{% endblock %}
 
@@ -23,6 +23,7 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% compteurs %}
 {% translate "Mes formations" as lbl_formations %}
 {% translate "Solde restant" as lbl_solde %}
 {% translate "Présences" as lbl_presences %}
@@ -33,10 +34,40 @@
 {% translate "Horaires à définir" as horaires_defaut %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
     {% include "dashboard/_stat.html" with label=lbl_formations value=enrollments|length icon="book-open" tone="indigo" hint=hint_parcours %}
-    {% include "dashboard/_stat.html" with label=lbl_solde value=balance icon="wallet" tone="amber" hint="FCFA" %}
+    {% include "dashboard/_stat.html" with label=lbl_solde value=balance icon="wallet" tone="amber" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_presences value=attendance_totals.presents icon="user-check" tone="green" hint=hint_releves %}
     {% include "dashboard/_stat.html" with label=lbl_absences value=attendance_totals.absents icon="close" tone="rose" hint=hint_justifier %}
 </div>
+
+{% if monthly_situation %}
+<section class="ua-card ua-card-pad mb-6">
+    <h2 class="ua-section-title mb-4">{% translate "Situation des mensualités" %}</h2>
+    <div class="ua-table-wrap">
+        <table class="ua-table">
+            <thead>
+                <tr>
+                    <th>{% translate "Formation" %}</th>
+                    <th>{% translate "Mois" %}</th>
+                    <th>{% translate "Dû" %}</th>
+                    <th>{% translate "Réglé" %}</th>
+                    <th>{% translate "Reste" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for ligne in monthly_situation %}
+                <tr>
+                    <td class="ua-cell-title">{{ ligne.course }}</td>
+                    <td>{{ ligne.month }} {{ ligne.year }}</td>
+                    <td>{{ ligne.due|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>{{ ligne.paid|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>{{ ligne.remaining|floatformat:0 }} {{ plateforme.devise }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endif %}
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
     <section class="ua-card xl:col-span-2 overflow-hidden">
@@ -82,7 +113,7 @@
                 </span>
                 <div class="min-w-0 flex-1">
                     <p class="text-sm font-semibold" style="color:#1e2044;">
-                        {{ payment.amount|floatformat:0 }} FCFA
+                        {{ payment.amount|floatformat:0 }} {{ plateforme.devise }}
                     </p>
                     <p class="text-xs ua-muted">{{ payment.paid_at|date:"d/m/Y" }} · {{ payment.get_method_display }}</p>
                     {% if payment.period_month %}
@@ -162,9 +193,13 @@
         {% empty %}
         <p class="ua-empty">{% translate "Aucune séance planifiée." %}</p>
         {% endfor %}
+    </section>
+
+    <section class="ua-card ua-card-pad">
+        <h2 class="ua-section-title mb-4">{% translate "Situation financière" %}</h2>
         <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div><span class="text-xs ua-muted block">{% translate "Net dû" %}</span><strong>{{ total_due }} FCFA</strong></div>
-            <div><span class="text-xs ua-muted block">{% translate "Total payé" %}</span><strong>{{ total_paid }} FCFA</strong></div>
+            <div><span class="text-xs ua-muted block">{% translate "Net dû" %}</span><strong>{{ total_due }} {{ plateforme.devise }}</strong></div>
+            <div><span class="text-xs ua-muted block">{% translate "Total payé" %}</span><strong>{{ total_paid }} {{ plateforme.devise }}</strong></div>
         </div>
     </section>
 </div>

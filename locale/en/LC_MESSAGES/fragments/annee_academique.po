@@ -1,0 +1,115 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+# core/models.py — année académique
+msgid "Ex : 2026-2027"
+msgstr "E.g. 2026-2027"
+
+msgid "Premier jour"
+msgstr "First day"
+
+msgid "Dernier jour"
+msgstr "Last day"
+
+msgid "Année en cours"
+msgstr "Current year"
+
+msgid "Une seule année est en cours à la fois."
+msgstr "Only one year is current at a time."
+
+msgid "Année académique"
+msgstr "Academic year"
+
+msgid "Années académiques"
+msgstr "Academic years"
+
+msgid "Le dernier jour doit suivre le premier jour."
+msgstr "The last day must come after the first day."
+
+# core/annee_academique.py — bandeau des listes filtrées
+msgid "Aucune année académique définie : toutes les années s'affichent."
+msgstr "No academic year set: all years are shown."
+
+msgid "Année académique %(label)s (%(dates)s)."
+msgstr "Academic year %(label)s (%(dates)s)."
+
+# core/views_reglages.py — messages de l'écran des années
+msgid "Année « %(label)s » créée ; elle est désormais l'année en cours."
+msgstr "Academic year “%(label)s” created; it is now the current year."
+
+msgid "Année « %(label)s » créée."
+msgstr "Academic year “%(label)s” created."
+
+msgid "Année « %(label)s » mise à jour."
+msgstr "Academic year “%(label)s” updated."
+
+# core/forms.py — aide de l'écran d'encaissement
+msgid "Aucune inscription encaissable pour cet étudiant dans l'année académique choisie."
+msgstr "No payable enrollment for this student in the chosen academic year."
+
+# templates/dashboard/_year_select.html et _year_band.html
+msgid "Toutes les années"
+msgstr "All years"
+
+msgid "Changer d'année"
+msgstr "Change year"
+
+# templates/dashboard/reglages/academic_years.html
+msgid "Années académiques — Univers Academy"
+msgstr "Academic years — Univers Academy"
+
+msgid "La direction pose les dates de chaque année et coche celle qui est en cours. Les listes d'étudiants, d'inscrits et de groupes s'y règlent."
+msgstr "Management sets the dates of each year and ticks the one in progress. The student, enrollment and group lists are set against it."
+
+msgid "Nouvelle année"
+msgstr "New year"
+
+msgid "Aucune année académique définie : toutes les années s'affichent pour l'instant dans les listes."
+msgstr "No academic year set: the lists currently show every year."
+
+msgid "Fenêtre"
+msgstr "Window"
+
+msgid "Groupes démarrés dans la fenêtre"
+msgstr "Groups started within the window"
+
+msgid "Inscriptions suivies dans la fenêtre"
+msgstr "Enrollments tracked within the window"
+
+msgid "Inscriptions"
+msgstr "Enrollments"
+
+msgid "Révolue ou à venir"
+msgstr "Past or upcoming"
+
+msgid "Aucune année posée."
+msgstr "No year set."
+
+# templates/dashboard/reglages/academic_year_form.html
+msgid "Régler l'année"
+msgstr "Adjust the year"
+
+msgid "Ce que couvre cette année"
+msgstr "What this year covers"
+
+msgid "Cocher « Année en cours » décoche la précédente : une seule année tient le filtre à la fois."
+msgstr "Ticking “Current year” unticks the previous one: only one year drives the filter at a time."
+
+msgid "Déplacer la fenêtre change ce que les listes montrent, sans rien effacer : les étudiants et les groupes restent en base, seuls les filtres se déplacent."
+msgstr "Moving the window changes what the lists show, without erasing anything: students and groups stay in the database, only the filters move."
+
+msgid "Non cochée"
+msgstr "Not ticked"
+
+msgid "Créations et réglages de l'année enregistrés dans le journal d'audit."
+msgstr "Year creations and adjustments recorded in the audit log."
+
+msgid "Aucun événement d'audit pour cette année."
+msgstr "No audit events for this year."
+
+msgid "Retour aux années"
+msgstr "Back to academic years"

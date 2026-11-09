@@ -40,9 +40,9 @@
 </div>
 
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-    {% include "dashboard/_stat.html" with label=lbl_total_du value=total_due icon="wallet" tone="indigo" hint="FCFA" %}
+    {% include "dashboard/_stat.html" with label=lbl_total_du value=total_due icon="wallet" tone="indigo" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_total_paye value=total_paid icon="credit-card" tone="green" hint=hint_payes %}
-    {% include "dashboard/_stat.html" with label=lbl_solde value=balance icon="trending-up" tone="amber" hint="FCFA" %}
+    {% include "dashboard/_stat.html" with label=lbl_solde value=balance icon="trending-up" tone="amber" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_documents value=documents|length icon="file-text" tone="sky" hint=hint_pieces %}
 </div>
 
@@ -78,9 +78,9 @@
                     <tr>
                         <td class="ua-cell-title">{{ enrollment.session.course.title }}</td>
                         <td>{{ enrollment.start_date|date:"d/m/Y"|default:"—" }}</td>
-                        <td>{{ enrollment.net_amount }} FCFA</td>
-                        <td>{{ enrollment.total_paid }} FCFA</td>
-                        <td>{{ enrollment.balance_due }} FCFA</td>
+                        <td>{{ enrollment.net_amount }} {{ plateforme.devise }}</td>
+                        <td>{{ enrollment.total_paid }} {{ plateforme.devise }}</td>
+                        <td>{{ enrollment.balance_due }} {{ plateforme.devise }}</td>
                         <td>
                             {% if enrollment.payment_state == 'SOLDE' %}<span class="ua-badge ua-badge-green">{% translate "Soldé" %}</span>
                             {% elif enrollment.payment_state == 'PARTIEL' %}<span class="ua-badge ua-badge-amber">{% translate "Partiel" %}</span>
@@ -97,13 +97,59 @@
     </section>
 </div>
 
+<section class="ua-card ua-card-pad mt-5">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+            <h2 class="ua-section-title">{% translate "Mensualités" %}</h2>
+            <p class="ua-muted text-sm">{% translate "Situation pour" %} {{ monthly_year }}</p>
+        </div>
+    </div>
+    <div class="ua-table-wrap">
+        <table class="ua-table">
+            <thead>
+                <tr>
+                    <th>{% translate "Formation" %}</th>
+                    <th>{% translate "Mois" %}</th>
+                    <th>{% translate "Attendu" %}</th>
+                    <th>{% translate "Payé" %}</th>
+                    <th>{% translate "État" %}</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in monthly_tracking %}
+                <tr>
+                    <td class="ua-cell-title">{{ row.enrollment.session.course.title }}</td>
+                    <td>{{ row.label|capfirst }} {{ monthly_year }}</td>
+                    <td>{{ row.expected|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>{{ row.paid|floatformat:0 }} {{ plateforme.devise }}</td>
+                    <td>
+                        {% if row.state == 'paid' %}<span class="ua-badge ua-badge-green">{% translate "Payé" %}</span>
+                        {% elif row.state == 'partial' %}<span class="ua-badge ua-badge-amber">{% translate "Partiel" %}</span>
+                        {% elif row.state == 'unpaid' %}<span class="ua-badge ua-badge-rose">{% translate "Impayé" %}</span>
+                        {% else %}<span class="ua-muted">{% translate "Non concerné" %}</span>{% endif %}
+                    </td>
+                    <td>
+                        {% if row.expected %}
+                        <a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:enrollment-detail' row.enrollment.id %}?year={{ monthly_year }}&month={{ row.number }}#monthly-payment">
+                            {% if can_record_payment and row.remaining %}{% translate "Encaisser" %}{% else %}{% translate "Dossier" %}{% endif %}
+                        </a>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mt-5">
     <section class="ua-card ua-card-pad">
         <h2 class="ua-section-title mb-4">{% translate "Paiements" %}</h2>
         {% for payment in payments %}
         <div class="ua-list-row">
             <div>
-                <span class="ua-cell-title">{{ payment.reference }} · {{ payment.amount }} FCFA</span>
+                <span class="ua-cell-title">{{ payment.reference }} · {{ payment.amount }} {{ plateforme.devise }}</span>
                 <span class="ua-cell-sub block">{{ payment.enrollment.session.course.title }} · {{ payment.paid_at|date:"d/m/Y H:i" }}</span>
                 {% if payment.period_month %}
                 <span class="ua-cell-sub block">{{ payment.get_motif_display }} · {{ payment.period_label }} {{ payment.period_year }}</span>
