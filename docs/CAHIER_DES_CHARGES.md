@@ -44,7 +44,7 @@
 
 Univers Academy est une application web de gestion d'un centre de formation. Elle réunit dans une seule base les dossiers étudiants, les inscriptions, le catalogue pédagogique, les groupes, les séances, les présences, les ressources, la caisse, les paiements, les bourses et le journal d'audit. Elle remplace la dispersion entre classeurs Excel/Google Sheets, fichiers locaux et saisies parallèles.
 
-Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit et 713 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
+Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit et 716 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
 
 Le présent document constitue le cahier des charges de référence : il décrit le besoin, le périmètre, les acteurs, les exigences fonctionnelles et non fonctionnelles, les règles de gestion, l'architecture, les intégrations, la sécurité, la recette et les conditions d'exploitation.
 
@@ -1100,7 +1100,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 ### 14.2 État des tests
 
-- **713 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 21/11/2026).
+- **716 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 21/11/2026).
 - `manage.py check` : aucun problème.
 - La base de production n'est jamais touchée par les tests.
 - Les tests couvrent notamment : portail, authentification, rôles, profils, visites, prospects, étudiants, inscriptions, pédagogie, comptabilité, permissions, supervision, bourses, réglages, années académiques, imports, synchronisation, sauvegardes, relations et rendu bilingue.

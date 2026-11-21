@@ -26,6 +26,10 @@ FORMATIONS = {
     'francais': ('Français', 'Langues', 25000),
     'bureautique': ('Bureautique', 'Informatique', 20000),
     'infographie': ('Infographie', 'Informatique', 20000),
+    # Formations du catalogue historique retrouvées dans les classeurs : ce sont
+    # des enseignements distincts de la bureautique (note métier, tarif 20 000/mois).
+    'avance excel': ('Excel avancé', 'Informatique', 20000),
+    'de gestion informatique': ('Informatique de gestion', 'Informatique', 20000),
     'a administratif': ('Assistanat administratif', 'Assistanat', 25000),
     'a comptable': ('Assistanat comptable', 'Assistanat', 25000),
     'a humaines ressources': ('Assistanat ressources humaines', 'Assistanat', 25000),
@@ -37,7 +41,11 @@ FORMATIONS = {
 }
 
 # « RH » est le même enseignement que « A. Ressources Humaines », écrit plus court.
-FUSIONS = {'rh': 'a humaines ressources'}
+# « Anglais/Français » est une écriture combinée du même enseignement qu'Anglais.
+FUSIONS = {
+    'rh': 'a humaines ressources',
+    'anglais francais': 'anglais',
+}
 
 # Un onglet de promotion n'est pas une formation : il renseigne la mensualité de sa parente
 # et devient un groupe (CourseSession) à la vague des inscriptions.

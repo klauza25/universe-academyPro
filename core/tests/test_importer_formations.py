@@ -73,6 +73,14 @@ class DeclarationTests(SimpleTestCase):
         for alias, cible in programme.FUSIONS.items():
             self.assertIn(cible, programme.FORMATIONS, f'« {alias} » fond dans une inconnue')
 
+    def test_les_formations_du_catalogue_historique_sont_declarees(self):
+        self.assertEqual(programme.FORMATIONS['avance excel'][0], 'Excel avancé')
+        self.assertEqual(
+            programme.FORMATIONS['de gestion informatique'][0], 'Informatique de gestion')
+
+    def test_anglais_francais_est_fondu_dans_anglais(self):
+        self.assertEqual(programme.FUSIONS['anglais francais'], 'anglais')
+
     def test_le_portique_refuse_un_intitule_non_declare(self):
         observees = {cle: {'mensualite': Counter()} for cle in programme.FORMATIONS}
         observees['gestion de projet'] = {'mensualite': Counter()}
@@ -91,4 +99,11 @@ class DeclarationTests(SimpleTestCase):
         observees['seminaire blanc'] = {'mensualite': Counter()}
         appariees = {cle: (None, None) for cle in observees}
         appariees['seminaire blanc'] = ('Les langues étrangères', 'exact')
+        Command._controler(appariees, observees)
+
+    def test_le_portique_accepte_les_intitules_de_la_production(self):
+        """Les trois intitules signales par le bouton de synchro sont declares."""
+        observees = {cle: {'mensualite': Counter()} for cle in programme.FORMATIONS}
+        observees.update({alias: {'mensualite': Counter()} for alias in programme.FUSIONS})
+        appariees = {cle: (None, None) for cle in observees}
         Command._controler(appariees, observees)
