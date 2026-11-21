@@ -88,12 +88,18 @@ python manage.py collectstatic --noinput
    - Working directory : `/home/VOTRE-COMPTE/academy`
    - Virtualenv : `/home/VOTRE-COMPTE/.virtualenvs/academy`
 3. **Static files** — en production `DEBUG=False`, Django ne sert plus ses
-   fichiers statiques : PythonAnywhere s'en charge via ces mappings.
+   fichiers statiques : PythonAnywhere s'en charge via ce mapping.
 
 | URL | Directory |
 |---|---|
 | `/static/` | `/home/VOTRE-COMPTE/academy/staticfiles/` |
-| `/media/` | `/home/VOTRE-COMPTE/academy/media/` |
+
+⚠️ **Ne pas ajouter de mapping `/media/`.** Les avatars sont servis par la vue
+Django `/media/avatars/...` (réservée aux comptes actifs) et les pièces
+justificatives sont sous `media/private/`. Un mapping statique `/media/`
+contournerait ces contrôles et rendrait les documents privés accessibles à
+tous. Le dossier `media/` doit exister sur le disque, mais ne doit **pas**
+être exposé comme statique.
 
 4. **Reload** (bouton vert en haut).
 
@@ -172,8 +178,8 @@ cp /home/VOTRE-COMPTE/academy/db.sqlite3 \
 
 - [ ] Dépôt cloné, virtualenv créé, `pip install -r requirements.txt` sans erreur
 - [ ] `.env` présent : `DEBUG=False`, domaine du compte, `SECRET_KEY` ≥ 50 caractères
-- [ ] `migrer` + `seed_roles` + `create_superadmin` exécutés
-- [ ] `collectstatic` exécuté, mappings `/static/` et `/media/` posés
+- [ ] `migrer` + `seed_roles` exécutés (`create_superadmin` seulement si base vide)
+- [ ] `collectstatic` exécuté, mapping `/static/` posé (aucun mapping `/media/`)
 - [ ] WSGI pointant sur `deploy/pythonanywhere_wsgi.py`, virtualenv réglé
 - [ ] Portail public, connexion, admin vérifiés sur le domaine final
 - [ ] Synchronisation manuelle testée depuis le bouton super administrateur
