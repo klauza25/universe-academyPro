@@ -5743,3 +5743,48 @@ msgstr "Validated payments included: %(t)s %(dv)s."
 msgid "Estimation indicative : aucun montant n’est versé ni écrit en caisse."
 msgstr ""
 "Indicative estimate: no amount is paid out or recorded in the cash register."
+
+msgid "Univers Academy — administration"
+msgstr "Univers Academy — Administration"
+
+msgid "Centre de formation — Brazzaville"
+msgstr "Training centre — Brazzaville"
+
+msgid "Univers Academy — administration technique"
+msgstr "Univers Academy — Technical administration"
+
+msgid "Voir le site"
+msgstr "View site"
+
+msgid "Administration technique"
+msgstr "Technical administration"
+
+msgid "Espace d'administration des données, des accès et de la caisse."
+msgstr "Administration area for data, access and cash records."
+
+msgid "Chiffres clés"
+msgstr "Key figures"
+
+msgid "Aucune action récente."
+msgstr "No recent activity."
+
+msgid "Administration Univers Academy"
+msgstr "Univers Academy Administration"
+
+msgid "Espace réservé à l'équipe technique."
+msgstr "Restricted to the technical team."
+
+msgid "Erreur :"
+msgstr "Error:"
+
+msgid "Veuillez corriger les erreurs ci-dessous."
+msgstr "Please correct the errors below."
+
+msgid "Connecté comme %(username)s, mais sans accès à cette page."
+msgstr "Signed in as %(username)s, but not authorised to view this page."
+
+msgid "Mot de passe oublié ?"
+msgstr "Forgotten your password?"
+
+msgid "Retour au site public"
+msgstr "Back to the public site"

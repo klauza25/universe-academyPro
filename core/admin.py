@@ -271,3 +271,9 @@ admin.site.register(ScholarshipDocument)
 admin.site.register(AccessEvent)
 admin.site.register(Notification)
 admin.site.register(ResourceFeedback)
+
+# Identité de l'administration technique : le thème et les gabarits qui l'habillent
+# sont dans templates/admin/ et static/css/admin-univers.css.
+admin.site.site_header = _('Univers Academy — administration')
+admin.site.site_title = _('Univers Academy — administration')
+admin.site.index_title = _('Administration technique')

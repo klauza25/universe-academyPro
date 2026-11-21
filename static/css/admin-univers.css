@@ -1,0 +1,386 @@
+/* Identité Univers Academy pour l'administration Django.
+   Chargé après base.css et dark_mode.css : les variables ci-dessus écrasent
+   celles de Django sans toucher à ses fichiers. */
+
+html[data-theme="light"],
+:root {
+    --primary: #5b5bf6;
+    --secondary: #4646d6;
+    --accent: #ffffff;
+    --primary-fg: #ffffff;
+
+    --body-fg: #1e2044;
+    --body-bg: #e9eafb;
+    --body-quiet-color: #6d719b;
+    --body-medium-color: #41446f;
+    --body-loud-color: #1e2044;
+
+    --header-color: #ffffff;
+    --header-branding-color: #ffffff;
+    --header-bg: #5b5bf6;
+    --header-link-color: #ffffff;
+
+    --breadcrumbs-fg: #ecebfe;
+    --breadcrumbs-link-fg: #ffffff;
+    --breadcrumbs-bg: #4646d6;
+
+    --link-fg: #4646d6;
+    --link-hover-color: #5b5bf6;
+    --link-selected-fg: #4646d6;
+
+    --hairline-color: #e6e7f5;
+    --border-color: #dcdff2;
+    --darkened-bg: #f8f8fe;
+    --selected-bg: #ecebfe;
+    --selected-row: #ecebfe;
+
+    --button-fg: #ffffff;
+    --button-bg: #5b5bf6;
+    --button-hover-bg: #4646d6;
+    --default-button-bg: #5b5bf6;
+    --default-button-hover-bg: #4646d6;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --primary: #8b8bff;
+        --secondary: #6d6de0;
+        --body-fg: #eef0fb;
+        --body-bg: #101127;
+        --body-quiet-color: #a3a8cc;
+        --header-bg: #2b2c56;
+        --link-fg: #a5b4fc;
+        --border-color: #34376a;
+        --darkened-bg: #1a1c38;
+    }
+}
+
+html[data-theme="dark"] {
+    --primary: #8b8bff;
+    --secondary: #6d6de0;
+    --accent: #eef0fb;
+    --primary-fg: #101127;
+
+    --body-fg: #eef0fb;
+    --body-bg: #101127;
+    --body-quiet-color: #a3a8cc;
+    --body-medium-color: #cfd3ec;
+    --body-loud-color: #ffffff;
+
+    --header-color: #eef0fb;
+    --header-branding-color: #eef0fb;
+    --header-bg: #2b2c56;
+    --header-link-color: #eef0fb;
+
+    --breadcrumbs-fg: #cfd3ec;
+    --breadcrumbs-link-fg: #ffffff;
+    --breadcrumbs-bg: #35366a;
+
+    --link-fg: #a5b4fc;
+    --link-hover-color: #c7d2fe;
+    --link-selected-fg: #a5b4fc;
+
+    --hairline-color: #2c2e56;
+    --border-color: #34376a;
+    --darkened-bg: #1a1c38;
+    --selected-bg: #2b2c56;
+    --selected-row: #2b2c56;
+
+    --button-fg: #101127;
+    --button-bg: #8b8bff;
+    --button-hover-bg: #a2a2ff;
+    --default-button-bg: #8b8bff;
+    --default-button-hover-bg: #a2a2ff;
+}
+
+/* Bandeau ------------------------------------------------------------------ */
+#header {
+    padding: 10px 28px;
+    box-shadow: 0 6px 20px rgba(30, 32, 68, 0.14);
+}
+
+#ua-admin-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.ua-admin-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.7);
+    background: #ffffff;
+}
+
+.ua-admin-brand-texte {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.ua-admin-brand-texte strong {
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.ua-admin-brand-texte small {
+    font-size: 0.6875rem;
+    opacity: 0.82;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+}
+
+.ua-admin-liens {
+    display: flex;
+    gap: 18px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+}
+
+.ua-admin-liens a {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.35);
+}
+
+/* Accueil ------------------------------------------------------------------ */
+.ua-admin-dashboard #content-main {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 28px 8px 48px;
+}
+
+.ua-admin-hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 32px;
+    border-radius: 18px;
+    color: #ffffff;
+    background: linear-gradient(120deg, #5b5bf6 0%, #7c83f9 55%, #aab4fc 100%);
+    box-shadow: 0 18px 40px rgba(91, 91, 246, 0.24);
+}
+
+.ua-admin-hero h1 {
+    margin: 6px 0 8px;
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+
+.ua-admin-hero p {
+    margin: 0;
+    max-width: 52ch;
+    opacity: 0.92;
+}
+
+.ua-admin-eyebrow {
+    font-size: 0.6875rem !important;
+    font-weight: 700;
+    letter-spacing: 1.6px;
+    text-transform: uppercase;
+}
+
+.ua-admin-hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.ua-admin-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid rgba(255, 255, 255, 0.7);
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 0.8125rem;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.ua-admin-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.ua-admin-btn-primary {
+    background: #ffffff;
+    color: #4646d6;
+    border-color: #ffffff;
+}
+
+.ua-admin-btn-primary:hover {
+    background: #ecebfe;
+    color: #4646d6;
+}
+
+.ua-admin-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin: 22px 0 28px;
+}
+
+.ua-admin-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 20px 22px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 14px;
+    background: var(--body-bg);
+    box-shadow: 0 10px 25px rgba(70, 75, 170, 0.07);
+}
+
+.ua-admin-stat-valeur {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--primary);
+    line-height: 1;
+}
+
+.ua-admin-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    color: var(--body-quiet-color);
+}
+
+.ua-admin-grille {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(240px, 1fr);
+    gap: 24px;
+    align-items: start;
+}
+
+.ua-admin-grille h2 {
+    margin: 0 0 14px;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--body-loud-color);
+}
+
+.ua-admin-modules .module,
+.ua-admin-recent .module {
+    border: 1px solid var(--hairline-color);
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--body-bg);
+}
+
+.ua-admin-recent {
+    padding: 20px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 14px;
+    background: var(--darkened-bg);
+}
+
+.ua-admin-vide {
+    color: var(--body-quiet-color);
+    font-size: 0.8125rem;
+}
+
+.ua-admin-actionlist {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.ua-admin-actionlist li {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--hairline-color);
+    font-size: 0.8125rem;
+}
+
+.ua-admin-actionlist li:last-child {
+    border-bottom: 0;
+}
+
+.ua-admin-actionlist .mini {
+    display: block;
+    margin-top: 3px;
+    color: var(--body-quiet-color);
+}
+
+/* Connexion ---------------------------------------------------------------- */
+body.login #content-main {
+    width: min(100%, 460px);
+    max-width: none;
+    margin: 6vh auto 0;
+    padding: 0;
+}
+
+.ua-admin-login-carte {
+    padding: 34px;
+    border: 1px solid var(--hairline-color);
+    border-radius: 18px;
+    background: var(--body-bg);
+    box-shadow: 0 22px 50px rgba(30, 32, 68, 0.16);
+    text-align: center;
+}
+
+.ua-admin-login-logo {
+    width: 64px;
+    height: 64px;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 2px solid var(--body-bg);
+    box-shadow: 0 8px 20px rgba(30, 32, 68, 0.14);
+}
+
+.ua-admin-login-carte h1 {
+    margin: 18px 0 6px;
+    font-size: 1.3rem;
+    color: var(--body-loud-color);
+}
+
+.ua-admin-login-intro {
+    margin: 0 0 22px;
+    color: var(--body-quiet-color);
+    font-size: 0.8125rem;
+}
+
+.ua-admin-login-carte .form-row {
+    text-align: left;
+}
+
+.ua-admin-login-carte .submit-row input {
+    width: 100%;
+}
+
+.ua-admin-login-retour {
+    display: inline-block;
+    margin-top: 18px;
+    font-size: 0.75rem;
+}
+
+#footer {
+    padding: 12px 28px 20px;
+    color: var(--body-quiet-color);
+    font-size: 0.6875rem;
+    text-align: center;
+}
+
+#footer p {
+    margin: 0;
+}
+
+@media (max-width: 900px) {
+    .ua-admin-grille {
+        grid-template-columns: 1fr;
+    }
+
+    .ua-admin-liens {
+        display: none;
+    }
+}

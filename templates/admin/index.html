@@ -1,0 +1,89 @@
+{% extends "admin/base_site.html" %}
+{% load i18n static log admin_dashboard %}
+
+{% block extrastyle %}{{ block.super }}
+<link rel="stylesheet" href="{% static 'admin/css/dashboard.css' %}">
+{% endblock %}
+
+{% block coltype %}colM{% endblock %}
+
+{% block bodyclass %}{{ block.super }} dashboard ua-admin-dashboard{% endblock %}
+
+{% block nav-breadcrumbs %}{% endblock %}
+
+{% block nav-sidebar %}{% endblock %}
+
+{% block content %}
+<div id="content-main">
+    {% firstof user.display_label user.get_username as ua_user_name %}
+    <section class="ua-admin-hero">
+        <div>
+            <p class="ua-admin-eyebrow">{% translate "Administration technique" %}</p>
+            <h1>{% translate "Bonjour" %} {{ ua_user_name }}</h1>
+            <p>{% translate "Espace d'administration des données, des accès et de la caisse." %}</p>
+        </div>
+        <div class="ua-admin-hero-actions">
+            <a class="ua-admin-btn ua-admin-btn-primary" href="{% url 'core:dashboard:dashboard-router' %}">
+                {% translate "Tableau de bord" %}
+            </a>
+            {% if user.is_superuser %}
+            <a class="ua-admin-btn" href="{% url 'core:dashboard:synchronisation-page' %}">
+                {% translate "Synchroniser les classeurs" %}
+            </a>
+            {% endif %}
+            <a class="ua-admin-btn" href="/">{% translate "Voir le site" %}</a>
+        </div>
+    </section>
+
+    {% ua_admin_stats as stats %}
+    <section class="ua-admin-stats" aria-label="{% translate "Chiffres clés" %}">
+        <article class="ua-admin-stat">
+            <span class="ua-admin-stat-valeur">{{ stats.utilisateurs|default:"—" }}</span>
+            <span class="ua-admin-stat-label">{% translate "Utilisateurs" %}</span>
+        </article>
+        <article class="ua-admin-stat">
+            <span class="ua-admin-stat-valeur">{{ stats.etudiants|default:"—" }}</span>
+            <span class="ua-admin-stat-label">{% translate "Étudiants" %}</span>
+        </article>
+        <article class="ua-admin-stat">
+            <span class="ua-admin-stat-valeur">{{ stats.formations|default:"—" }}</span>
+            <span class="ua-admin-stat-label">{% translate "Formations" %}</span>
+        </article>
+        <article class="ua-admin-stat">
+            <span class="ua-admin-stat-valeur">{{ stats.paiements|default:"—" }}</span>
+            <span class="ua-admin-stat-label">{% translate "Paiements validés" %}</span>
+        </article>
+    </section>
+
+    <div class="ua-admin-grille">
+        <section class="ua-admin-modules">
+            <h2>{% translate "Modules" %}</h2>
+            {% include "admin/app_list.html" with app_list=app_list show_changelinks=True %}
+        </section>
+
+        <aside class="ua-admin-recent">
+            <h2>{% translate "Activité récente" %}</h2>
+            {% translate "Contenu" as ua_contenu_inconnu %}
+            {% get_admin_log 8 as admin_log for_user user %}
+            {% if not admin_log %}
+                <p class="ua-admin-vide">{% translate "Aucune action récente." %}</p>
+            {% else %}
+                <ul class="ua-admin-actionlist">
+                {% for entry in admin_log %}
+                    <li>
+                        {% if entry.get_admin_url %}
+                            <a href="{{ entry.get_admin_url }}">{{ entry.object_repr }}</a>
+                        {% else %}
+                            {{ entry.object_repr }}
+                        {% endif %}
+                        <span class="mini quiet">{{ entry.content_type.name|default:ua_contenu_inconnu }}</span>
+                    </li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </aside>
+    </div>
+</div>
+{% endblock %}
+
+{% block sidebar %}{% endblock %}

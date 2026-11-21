@@ -1,0 +1,85 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+# templates/admin/ — identité de l'administration Django.
+msgid "Univers Academy — administration"
+msgstr "Univers Academy — Administration"
+
+msgid "Centre de formation — Brazzaville"
+msgstr "Training centre — Brazzaville"
+
+msgid "Univers Academy — administration technique"
+msgstr "Univers Academy — Technical administration"
+
+msgid "Voir le site"
+msgstr "View site"
+
+msgid "Tableau de bord"
+msgstr "Dashboard"
+
+msgid "Administration technique"
+msgstr "Technical administration"
+
+msgid "Bonjour"
+msgstr "Hello"
+
+msgid "Espace d'administration des données, des accès et de la caisse."
+msgstr "Administration area for data, access and cash records."
+
+msgid "Synchroniser les classeurs"
+msgstr "Sync spreadsheets"
+
+msgid "Chiffres clés"
+msgstr "Key figures"
+
+msgid "Utilisateurs"
+msgstr "Users"
+
+msgid "Étudiants"
+msgstr "Students"
+
+msgid "Formations"
+msgstr "Courses"
+
+msgid "Paiements validés"
+msgstr "Completed payments"
+
+msgid "Modules"
+msgstr "Modules"
+
+msgid "Activité récente"
+msgstr "Recent activity"
+
+msgid "Aucune action récente."
+msgstr "No recent activity."
+
+msgid "Contenu"
+msgstr "Content"
+
+msgid "Administration Univers Academy"
+msgstr "Univers Academy Administration"
+
+msgid "Espace réservé à l'équipe technique."
+msgstr "Restricted to the technical team."
+
+msgid "Erreur :"
+msgstr "Error:"
+
+msgid "Veuillez corriger les erreurs ci-dessous."
+msgstr "Please correct the errors below."
+
+msgid "Connecté comme %(username)s, mais sans accès à cette page."
+msgstr "Signed in as %(username)s, but not authorised to view this page."
+
+msgid "Mot de passe oublié ?"
+msgstr "Forgotten your password?"
+
+msgid "Se connecter"
+msgstr "Sign in"
+
+msgid "Retour au site public"
+msgstr "Back to the public site"
