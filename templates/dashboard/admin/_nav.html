@@ -60,6 +60,10 @@
    class="ua-nav-link {% if request.resolver_match.url_name == 'direction-dashboard' %}is-active{% endif %}">
     {% icon "chart" %}<span>{% translate "Vue direction" %}</span>
 </a>
+<a href="{% url 'core:dashboard:trainer-salaries' %}"
+   class="ua-nav-link {% if request.resolver_match.url_name == 'trainer-salaries' %}is-active{% endif %}">
+    {% icon "users" %}<span>{% translate "Salaires des formateurs" %}</span>
+</a>
 
 <p class="ua-nav-label">{% translate "Supervision" %}</p>
 <a href="{% url 'core:dashboard:finance-supervision' %}"

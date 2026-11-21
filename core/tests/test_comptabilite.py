@@ -1585,7 +1585,7 @@ class GrilleDesMoisTests(AccountingTestBase):
         self.assertEqual([p.amount for p in regles], [30000, 25000])
         for paiement in regles:
             self.assertIsNotNone(paiement.transaction)
-            self.assertEqual(paiement.paid_at.date(), self.today)
+            self.assertEqual(timezone.localdate(paiement.paid_at), self.today)
         self.assertEqual(self.enrollment.balance_due, 90000 - 55000)
 
     def test_plusieurs_versements_partiels_soldent_un_meme_mois(self):
@@ -1710,8 +1710,9 @@ class GrilleDesMoisTests(AccountingTestBase):
         self.assertEqual(page.status_code, 302)
         paiement = Payment.objects.get(period_month=2,
                                        period_year=self.today.year + 1)
-        self.assertEqual(paiement.paid_at.date(), self.today)
-        self.assertEqual(paiement.transaction.occurred_at.date(), self.today)
+        self.assertEqual(timezone.localdate(paiement.paid_at), self.today)
+        self.assertEqual(
+            timezone.localdate(paiement.transaction.occurred_at), self.today)
 
     def test_un_mois_deja_regle_ne_se_recoche_pas(self):
         self.client.post(self.url, self.mois_payload(mois=['5'], montant_5='30000'))

@@ -19,9 +19,19 @@ git clone https://github.com/klauza25/universe-academyPro.git academy
 cd academy
 ```
 
-Le dépôt GitHub est **privé** : le clonage exige un forfait payant
-PythonAnywhere (le compte gratuit ne clone que du public). Le forfait payant
-débloque aussi le SMTP sortant et les tâches planifiées horaires.
+Le dépôt GitHub est **privé**, mais le clonage fonctionne aussi avec un
+compte gratuit : PythonAnywhere autorise github.com et le protocole `git`
+dans sa liste d'adresses autorisées. Deux options :
+
+- **HTTPS + jeton** : créez un *personal access token* GitHub (portée `repo`),
+  puis lancez le `git clone` ci-dessus ; saisissez votre identifiant GitHub
+  comme nom d'utilisateur et le jeton comme mot de passe.
+- **SSH + clé** : `ssh-keygen`, copiez `~/.ssh/id_rsa.pub` dans les clés
+  autorisées du compte GitHub, puis
+  `git clone git@github.com:klauza25/universe-academyPro.git academy`.
+
+Le gratuit ne fournit en revanche ni tâches planifiées (comptes créés après
+le 15/01/2026), ni SMTP sortant : voir les sections 3 et 7.
 
 ## 2. Environnement virtuel et dépendances
 
@@ -98,33 +108,39 @@ Le HTTPS est automatique sur `*.pythonanywhere.com` ; le projet pose déjà
 - En cas d'erreur : onglet « Web » → « Error log (latest errors) ». Avec
   `DEBUG=False`, seuls les journaux serveur montrent les exceptions.
 
-## 7. Tâches planifiées (synchronisation Google Sheets)
+## 7. Synchronisation Google Sheets (forfait gratuit)
 
-Sur ce poste Windows, la synchronisation passe par les scripts
-`synchroniser.ps1` / `installer_tache_synchronisation.ps1` (Planificateur de
-tâches). Sur PythonAnywhere, créez dans l'onglet « Tasks » une tâche
-**quotidienne** à l'heure souhaitée avec cette commande :
+Les comptes gratuits créés après le 15/01/2026 n'ont **aucune tâche
+planifiée** (les comptes plus anciens en ont une par jour). La synchronisation
+se fait donc **à la main**, depuis l'interface :
+
+1. Connectez-vous en tant que **super administrateur**.
+2. Tableau de bord super administrateur → **« Synchroniser les classeurs »**.
+3. La page de chargement affiche le téléchargement, l'analyse et l'import ;
+   le compte rendu s'affiche ensuite, avec une trace dans le journal d'audit.
+
+Le bouton est protégé par un verrou : un second clic pendant une synchro en
+cours est refusé. Les feuilles Google restent publiques en lecture : aucun
+compte de service n'est nécessaire.
+
+Sur un **forfait payant**, la tâche quotidienne suivante reste disponible :
 
 ```bash
 /home/VOTRE-COMPTE/.virtualenvs/academy/bin/python \
     /home/VOTRE-COMPTE/academy/deploy/pythonanywhere_sync.py
 ```
 
-- L'ordonnanceur PythonAnywhere ne propose que des tâches quotidiennes ou
-  horaires. Ce point d'entrée quotidien lance réellement la synchronisation
-  (migrations puis import avec sauvegarde) seulement si au moins 72 heures se
-  sont écoulées depuis sa dernière réussite. Un échec n'avance pas l'échéance :
-  la prochaine tâche quotidienne réessaie.
-- La synchronisation est lancée par cette tâche dédiée, pas depuis le fichier
-  WSGI de l'application.
+- Ce point d'entrée lance réellement la synchronisation (migrations puis
+  import avec sauvegarde) seulement si au moins 72 heures se sont écoulées
+  depuis sa dernière réussite. Un échec n'avance pas l'échéance : la prochaine
+  tâche quotidienne réessaie.
 - La date de dernière réussite est conservée hors du dépôt dans
   `~/.local/state/academy/google-sheets-sync-last-success`.
-- Identifiants du compte de service : déposez le JSON **hors du dépôt**,
-  p. ex. `/home/VOTRE-COMPTE/secrets/service-account.json`, désigné par la
-  variable `GOOGLE_APPLICATION_CREDENTIALS` du `.env` (et les feuilles cibles
-  par `CLASSEURS_GOOGLE_IDS`). Diagnostic sans réseau : `etat_google`.
-- **Forfait** : la disponibilité des tâches planifiées dépend du forfait et de
-  la date de création du compte ; consultez l'onglet « Tasks ».
+- Identifiants du compte de service, si les feuilles redeviennent privées :
+  déposez le JSON **hors du dépôt**, p. ex.
+  `/home/VOTRE-COMPTE/secrets/service-account.json`, désigné par la variable
+  `GOOGLE_APPLICATION_CREDENTIALS` du `.env` (et les feuilles cibles par
+  `CLASSEURS_GOOGLE_IDS`). Diagnostic sans réseau : `etat_google`.
 - La fréquence et l'écrasement du miroir restent configurés par les mêmes
   options que sur ce poste (`--feuille`, `--importer`, `--ecrire`…).
 
@@ -144,7 +160,8 @@ Puis **Reload** dans l'onglet « Web » (chaque changement de code l'exige).
 ## 9. Sauvegarde
 
 Copier `/home/VOTRE-COMPTE/academy/db.sqlite3` (et le dossier `media/`)
-suffit à sauvegarder toutes les données. Exemple via une tâche planifiée :
+suffit à sauvegarder toutes les données. Exemple à lancer à la main (ou via
+une tâche quotidienne sur forfait payant) :
 
 ```bash
 cp /home/VOTRE-COMPTE/academy/db.sqlite3 \
@@ -159,4 +176,6 @@ cp /home/VOTRE-COMPTE/academy/db.sqlite3 \
 - [ ] `collectstatic` exécuté, mappings `/static/` et `/media/` posés
 - [ ] WSGI pointant sur `deploy/pythonanywhere_wsgi.py`, virtualenv réglé
 - [ ] Portail public, connexion, admin vérifiés sur le domaine final
-- [ ] (facultatif) tâche planifiée de synchronisation + JSON hors dépôt
+- [ ] Synchronisation manuelle testée depuis le bouton super administrateur
+- [ ] Copie de `db.sqlite3` conservée hors du dépôt
+- [ ] (forfait payant) tâche quotidienne de synchro + JSON hors dépôt

@@ -36,6 +36,23 @@
     {% include "dashboard/_stat.html" with label=lbl_heures_restantes value=minutes_remaining|duree icon="trending-up" tone="amber" hint=hint_seances_planifiees %}
 </div>
 
+<section class="ua-card ua-card-pad mb-5">
+    <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+            <h2 class="ua-section-title">{% translate "Votre part estimée" %}</h2>
+            <p class="ua-page-sub mt-1">{% translate "30 % des paiements validés des étudiants de vos groupes." %}</p>
+        </div>
+        <div class="text-right">
+            <p class="ua-stat-value">{{ salaire.salary|floatformat:0 }}</p>
+            <p class="ua-stat-hint">{{ plateforme.devise }}</p>
+        </div>
+    </div>
+    <p class="ua-muted text-xs mt-3">
+        {% blocktrans with t=salaire.payments_total|floatformat:0 dv=plateforme.devise %}Paiements validés pris en compte : {{ t }} {{ dv }}.{% endblocktrans %}
+    </p>
+    <p class="ua-muted text-xs mt-1">{% translate "Estimation indicative : aucun montant n’est versé ni écrit en caisse." %}</p>
+</section>
+
 <div class="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
     <section class="ua-card ua-card-pad">
         <h2 class="ua-section-title mb-4">{% translate "Planning du jour" %}</h2>

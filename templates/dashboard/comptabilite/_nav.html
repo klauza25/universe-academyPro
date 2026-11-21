@@ -23,6 +23,9 @@
 <a href="{% url 'core:dashboard:student-list' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'student-list' or request.resolver_match.url_name == 'student-detail' or request.resolver_match.url_name == 'enrollment-detail' %}is-active{% endif %}">
     {% icon "graduation" %}<span>{% translate "Suivre les étudiants" %}</span>
 </a>
+<a href="{% url 'core:dashboard:trainer-salaries' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'trainer-salaries' %}is-active{% endif %}">
+    {% icon "users" %}<span>{% translate "Salaires des formateurs" %}</span>
+</a>
 {% if 'ASSISTANT_ADMIN' in user_roles %}
 <a href="{% url 'core:dashboard:access-requests' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
     {% icon "user-check" %}<span>{% translate "Demandes d'accès étudiant" %}</span>

@@ -5685,3 +5685,61 @@ msgstr "Start synchronization"
 
 msgid "Chargement…"
 msgstr "Loading…"
+
+msgid "Salaires des formateurs"
+msgstr "Trainers' salaries"
+
+msgid ""
+"Estimation de la part de 30 % des paiements validés des étudiants de leurs "
+"groupes."
+msgstr ""
+"Estimate of the 30% share of validated payments from students in their class"
+" groups."
+
+msgid "Part estimée"
+msgstr "Estimated share"
+
+msgid "Paiements pris en compte"
+msgstr "Payments included"
+
+msgid "Détail par formateur"
+msgstr "Breakdown by trainer"
+
+msgid ""
+"Chaque formateur d’un même groupe compte la totalité de sa part de 30 % : "
+"aucun montant n’est partagé entre collègues."
+msgstr ""
+"Every trainer of the same group is credited the full 30% share: the amount "
+"is not split between colleagues."
+
+msgid "Lecture seule"
+msgstr "Read only"
+
+msgid "Étudiants payants"
+msgstr "Paying students"
+
+msgid "Salaire (30 %)"
+msgstr "Salary (30%)"
+
+msgid "Aucun formateur n’est enregistré pour le moment."
+msgstr "No trainer has been registered yet."
+
+msgid ""
+"Seuls les paiements effectués sont comptés. Cette estimation ne crée ni "
+"paie, ni écriture comptable, ni virement."
+msgstr ""
+"Only completed payments are counted. This estimate creates no payroll entry,"
+" accounting entry or transfer."
+
+msgid "Votre part estimée"
+msgstr "Your estimated share"
+
+msgid "30 % des paiements validés des étudiants de vos groupes."
+msgstr "30% of validated payments from students in your class groups."
+
+msgid "Paiements validés pris en compte : %(t)s %(dv)s."
+msgstr "Validated payments included: %(t)s %(dv)s."
+
+msgid "Estimation indicative : aucun montant n’est versé ni écrit en caisse."
+msgstr ""
+"Indicative estimate: no amount is paid out or recorded in the cash register."

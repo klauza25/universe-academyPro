@@ -40,7 +40,10 @@ from .decorators import (
 )
 from .utils import (
     enrollments_waiting_validation, log_audit, notifier_changement_statut_bourse,
-    outstanding_receivables, students_count,
+    outstanding_receivables,
+    salaire_formateur as calculer_salaire_formateur,
+    salaires_formateurs as calculer_salaires_formateurs,
+    students_count,
 )
 from .taches import marqueur_evenements, tableau_des_files
 from .views_profile import changer_avatar
@@ -1448,6 +1451,18 @@ def formateur_dashboard(request):
             author=request.user,
             status=Resource.Status.PUBLISHED,
         ).count(),
+        'salaire': calculer_salaire_formateur(request.user),
+    })
+
+
+@role_required('DIRECTION', 'ASSISTANT_ADMIN', 'COMPTABLE')
+def salaires_formateurs(request):
+    """Estimation de la part de chaque formateur : 30 % des paiements validés."""
+    salaires = calculer_salaires_formateurs()
+    return render(request, 'dashboard/comptabilite/salaires_formateurs.html', {
+        'salaires': salaires,
+        'total_salaire': sum(ligne['salary'] for ligne in salaires),
+        'total_paiements': sum(ligne['payments_total'] for ligne in salaires),
     })
 
 

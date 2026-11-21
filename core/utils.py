@@ -1,7 +1,8 @@
 import logging
+from decimal import Decimal, ROUND_HALF_UP
 
 from django.core.mail import send_mail
-from django.db.models import IntegerField, OuterRef, Subquery, Sum, Value
+from django.db.models import Count, IntegerField, OuterRef, Subquery, Sum, Value
 from django.db.models.functions import Coalesce
 from django.urls import reverse
 from django.utils import timezone
@@ -9,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 
 from . import parametres
 from .models import (
-    AccountStatus, AuditLog, Enrollment, Notification, Payment,
+    AccountStatus, AuditLog, CourseSession, Enrollment, Notification, Payment,
     RoleKey, ScholarshipApplication, User,
 )
 
@@ -51,6 +52,76 @@ def platform_counts():
             roles__key__in=STAFF_ROLE_KEYS
         ).distinct().count(),
     }
+
+
+# Part conventionnelle du formateur : 30 % des paiements validés des étudiants
+# de ses groupes. Ce sont des indicateurs de pilotage : aucun montant n'est
+# versé, engagé ou écrit en caisse par ce calcul.
+TAUX_SALAIRE_FORMATEUR = Decimal('0.30')
+
+
+def part_salaire_formateur(montant_paye):
+    """La part de 30 %, arrondie à l'unité monétaire la plus proche."""
+    part = Decimal(montant_paye or 0) * TAUX_SALAIRE_FORMATEUR
+    return int(part.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+
+def salaire_formateur(user):
+    """Total encaissé et part estimée pour un seul formateur."""
+    total = Payment.objects.filter(
+        status=Payment.Status.COMPLETED,
+        enrollment__session__formateurs=user,
+    ).aggregate(total=Sum('amount'))['total'] or 0
+    return {
+        'payments_total': total,
+        'salary': part_salaire_formateur(total),
+    }
+
+
+def salaires_formateurs():
+    """Une ligne par formateur avec son périmètre et sa part de 30 %.
+
+    Un groupe confié à plusieurs formateurs compte pour chacun : la part n'est
+    pas divisée entre collègues. Comme dans les autres indicateurs financiers,
+    seuls les paiements validés sont retenus.
+    """
+    par_formateur = {}
+    for ligne in (
+        Payment.objects.filter(
+            status=Payment.Status.COMPLETED,
+            enrollment__session__formateurs__isnull=False,
+        )
+        .values('enrollment__session__formateurs')
+        .annotate(
+            total=Sum('amount'),
+            students=Count('enrollment__student', distinct=True),
+        )
+    ):
+        par_formateur[ligne['enrollment__session__formateurs']] = ligne
+
+    groupes_par_formateur = dict(
+        CourseSession.objects.filter(formateurs__isnull=False)
+        .values('formateurs')
+        .annotate(total=Count('id', distinct=True))
+        .values_list('formateurs', 'total')
+    )
+
+    formateurs = User.objects.filter(
+        roles__key=RoleKey.FORMATEUR
+    ).distinct().order_by('first_name', 'last_name', 'email')
+
+    lignes = []
+    for formateur in formateurs:
+        stats = par_formateur.get(formateur.id, {})
+        total = stats.get('total') or 0
+        lignes.append({
+            'formateur': formateur,
+            'sessions': groupes_par_formateur.get(formateur.id, 0),
+            'students': stats.get('students') or 0,
+            'payments_total': total,
+            'salary': part_salaire_formateur(total),
+        })
+    return lignes
 
 
 def outstanding_receivables():

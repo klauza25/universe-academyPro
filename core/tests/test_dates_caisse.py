@@ -62,7 +62,7 @@ class DatesFuturesTests(BusinessTestBase):
         self.assertEqual(rapport['corriges'], 2)
         paiement.refresh_from_db()
         paiement.transaction.refresh_from_db()
-        self.assertEqual(paiement.paid_at.date(), timezone.localdate())
+        self.assertEqual(timezone.localdate(paiement.paid_at), timezone.localdate())
         self.assertEqual(paiement.transaction.occurred_at, paiement.paid_at)
         self.assertLessEqual(paiement.paid_at, timezone.now())
 
@@ -101,7 +101,8 @@ class DatesFuturesTests(BusinessTestBase):
         dates_futures(ecrire=True)
 
         ecriture.refresh_from_db()
-        self.assertEqual(ecriture.occurred_at.date(), timezone.localdate())
+        self.assertEqual(
+            timezone.localdate(ecriture.occurred_at), timezone.localdate())
         self.assertTrue(AuditLog.objects.filter(
             action='CASH_DATE_FIX', entity_id=str(ecriture.pk)).exists())
 

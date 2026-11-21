@@ -155,6 +155,7 @@ dashboard_urlpatterns = [
     path('comptabilite/paiement/', views_comptabilite.student_payment_create, name='payment-create'),
     path('comptabilite/paiement/mois/', views_comptabilite.student_payment_months, name='payment-months'),
     path('comptabilite/recu/<uuid:payment_id>/', views_comptabilite.payment_receipt, name='payment-receipt'),
+    path('comptabilite/salaires-formateurs/', views.salaires_formateurs, name='trainer-salaries'),
 
     # Responsable pédagogique / formateur / étudiant -------------------------
     path('responsable-pedagogique/', views.responsable_pedagogique_dashboard, name='resp-peda-dashboard'),

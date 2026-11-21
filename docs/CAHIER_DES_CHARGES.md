@@ -44,7 +44,7 @@
 
 Univers Academy est une application web de gestion d'un centre de formation. Elle réunit dans une seule base les dossiers étudiants, les inscriptions, le catalogue pédagogique, les groupes, les séances, les présences, les ressources, la caisse, les paiements, les bourses et le journal d'audit. Elle remplace la dispersion entre classeurs Excel/Google Sheets, fichiers locaux et saisies parallèles.
 
-Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit et 706 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
+Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit et 713 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
 
 Le présent document constitue le cahier des charges de référence : il décrit le besoin, le périmètre, les acteurs, les exigences fonctionnelles et non fonctionnelles, les règles de gestion, l'architecture, les intégrations, la sécurité, la recette et les conditions d'exploitation.
 
@@ -153,7 +153,7 @@ Doter l'établissement d'une source unique, fiable, traçable et sécurisée pou
 | Paiement en ligne | Aucun prestataire de paiement n'est intégré ; les encaissements sont saisis au guichet. |
 | Application mobile native | L'interface est web responsive ; pas de client iOS/Android dédié. |
 | Visioconférence / classe virtuelle | Les ressources et le cahier de texte sont gérés, pas les salles virtuelles. |
-| Gestion de la paie | Les salaires sont suivis par catégorie comptable, sans modèle de paie ni de masse salariale. |
+| Gestion de la paie | Les salaires sont suivis par catégorie comptable, sans modèle de paie ni de masse salariale. Une estimation en lecture seule affiche néanmoins, par formateur, 30 % des paiements validés des étudiants de ses groupes : chaque formateur d’un même groupe compte la totalité de sa part, sans partage entre collègues. Aucun montant n’est versé ni écrit en caisse par ce calcul. |
 | Remboursement complet d'un paiement | L'annulation se fait au niveau de l'écriture de caisse ; le statut du paiement lié n'est pas mis à jour automatiquement. |
 | Exports PDF natifs | Seuls les exports CSV du journal et de la supervision existent ; les reçus et documents sont imprimés depuis le navigateur. |
 | Statistiques analytiques avancées | Les totaux de base existent ; pas de rapports multidimensionnels ni de prévisions. |
@@ -1100,7 +1100,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 ### 14.2 État des tests
 
-- **706 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 20/11/2026).
+- **713 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 21/11/2026).
 - `manage.py check` : aucun problème.
 - La base de production n'est jamais touchée par les tests.
 - Les tests couvrent notamment : portail, authentification, rôles, profils, visites, prospects, étudiants, inscriptions, pédagogie, comptabilité, permissions, supervision, bourses, réglages, années académiques, imports, synchronisation, sauvegardes, relations et rendu bilingue.

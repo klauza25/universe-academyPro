@@ -730,9 +730,14 @@ def _resource_access(user, resource, student=False):
             return True
         if not resource.published_at:
             return False
+        # La date de fin est un jour civil local : la date de publication doit
+        # être convertie dans le même fuseau (le lookup __date de la liste fait
+        # déjà cette conversion). Utiliser .date() conserverait le jour UTC et,
+        # en fin de soirée, rouvrirait l'accès aux ressources publiées après le
+        # départ de l'étudiant.
         return enrollments.filter(
             ended_at__isnull=False,
-            ended_at__gte=resource.published_at.date(),
+            ended_at__gte=timezone.localdate(resource.published_at),
         ).exists()
     return False
 
