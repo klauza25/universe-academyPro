@@ -143,6 +143,8 @@ class Paiement:
     jour: dt.date
     motif: str
     note: str
+    annee: int | None = None
+    mois: int | None = None
 
 
 @dataclass
@@ -372,7 +374,7 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
         if ligne.frais_inscription:
             plan.paiements.append(Paiement(
                 inscription=inscription, montant=ligne.frais_inscription,
-                jour=ligne.date_inscription or groupe.debut, motif='Frais d\'inscription',
+                jour=ligne.date_inscription or groupe.debut, motif="Frais d'inscription",
                 note=f'{MARQUE} — {groupe.onglet} ligne {ligne.ligne}'))
         for numero, libelle, montant, statut_montant, brut in ligne.mois:
             if montant is None:
@@ -397,7 +399,7 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
                 continue
             plan.paiements.append(Paiement(
                 inscription=inscription, montant=montant, jour=jour,
-                motif='Mensualité',
+                motif='Mensualité', annee=annee, mois=numero,
                 note=f'{MARQUE} — {libelle} {annee} — {groupe.onglet} ligne {ligne.ligne}'))
 
         if ligne.mensuel_prevu and not (programme.BORNE_MENSUELLE[0]

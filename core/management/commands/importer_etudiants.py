@@ -299,9 +299,17 @@ class Command(BaseCommand):
                                   note__startswith=MARQUE).exists():
             ecrits['sutes'] += 1
             return
+        motif = (
+            Payment.Motif.MONTHLY if paiement.motif == 'Mensualité'
+            else Payment.Motif.ENROLLMENT if paiement.motif == "Frais d'inscription"
+            else Payment.Motif.OTHER
+        )
+        period_year = paiement.annee if motif == Payment.Motif.MONTHLY else None
+        period_month = paiement.mois if motif == Payment.Motif.MONTHLY else None
         paye = Payment.objects.create(
             enrollment=dossier, amount=paiement.montant, method=Payment.Method.CASH,
             status=Payment.Status.COMPLETED, paid_at=instants, recorded_by=agent,
+            motif=motif, period_year=period_year, period_month=period_month,
             note=f'{paiement.motif} — {paiement.note}',
         )
         cash = CashTransaction.objects.create(
