@@ -44,7 +44,7 @@
 
 Univers Academy est une application web de gestion d'un centre de formation. Elle réunit dans une seule base les dossiers étudiants, les inscriptions, le catalogue pédagogique, les groupes, les séances, les présences, les ressources, la caisse, les paiements, les bourses et le journal d'audit. Elle remplace la dispersion entre classeurs Excel/Google Sheets, fichiers locaux et saisies parallèles.
 
-Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 734 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
+Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 736 tests automatisés. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
 
 Le présent document constitue le cahier des charges de référence : il décrit le besoin, le périmètre, les acteurs, les exigences fonctionnelles et non fonctionnelles, les règles de gestion, l'architecture, les intégrations, la sécurité, la recette et les conditions d'exploitation.
 
@@ -547,7 +547,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | UT-09 | Afficher l'historique d'audit sur les fiches métier (étudiant, inscription, séance, visite, prospect, opération). | S | Réalisé |
 | UT-10 | Notifications : création, marquage lu, compteur, interrogation périodique. | S | Réalisé |
 | UT-11 | Django Admin en consultation seule pour les tables financières et les réglages. | M | Réalisé |
-| UT-12 | Messagerie interne 1:1 entre utilisateurs actifs : un fil unique par paire, texte seul, liste et recherche de destinataire, envoi, notification, compteur de non-lus, consultation lue et audit. Actualisation du fil par sondage HTTP de 7 s (pas de WebSocket sur PythonAnywhere gratuit). | S | Réalisé |
+| UT-12 | Messagerie interne 1:1 entre utilisateurs actifs : un fil unique par paire, texte seul, liste et recherche de destinataire, envoi, notification cliquable vers le fil, compteur de non-lus, consultation lue (qui éteint aussi la notification) et audit. Actualisation du fil par sondage HTTP de 7 s (pas de WebSocket sur PythonAnywhere gratuit). | S | Réalisé |
 
 **Règles d'acceptation**
 
@@ -742,7 +742,7 @@ Le modèle compte **39 modèles Django** (dont le modèle utilisateur personnali
 | `UserRole` | `user`, `role`, `assigned_by`, `assigned_at` | Unique (user, role). |
 | `RolePermission` | `role`, `permission` | Unique (role, permission). |
 | `AccessRequest` | `user`, `requested_role`, `assigned_role`, `status`, `reviewed_by`, `reviewed_at`, `decision_note` | Statuts `PENDING`, `APPROVED`, `REJECTED`. |
-| `Notification` | `user`, `email`, `title`, `message`, `notification_type`, `is_read`, `sent_at` | Types compte, bourse, paiement, général. |
+| `Notification` | `user`, `email`, `title`, `message`, `link`, `notification_type`, `is_read`, `sent_at` | Types compte, bourse, paiement, général ; `link` ouvre directement l'écran concerné (le fil de messagerie pour un nouveau message). |
 | `AuditLog` | `actor`, `action`, `entity_type`, `entity_id`, `before_summary`, `after_summary`, `ip_address`, `created_at` | Index (entity_type, entity_id), created_at. |
 
 #### Messagerie interne
@@ -1109,7 +1109,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 ### 14.2 État des tests
 
-- **734 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
+- **736 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
 - `manage.py check` : aucun problème.
 - La base de production n'est jamais touchée par les tests.
 - Les tests couvrent notamment : portail, authentification, rôles, profils, visites, prospects, étudiants, inscriptions, pédagogie, comptabilité, permissions, supervision, bourses, réglages, années académiques, imports, synchronisation, sauvegardes, relations, messagerie interne et rendu bilingue.

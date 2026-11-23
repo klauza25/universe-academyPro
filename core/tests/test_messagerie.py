@@ -145,6 +145,13 @@ class MessagerieTest(BusinessTestBase):
         envoye = Message.objects.create(
             conversation=conversation, sender=self.etudiant, body='Déjà mien'
         )
+        Notification.objects.create(
+            user=self.etudiant,
+            title='Nouveau message',
+            message='À lire',
+            link=self.detail_url(conversation),
+            notification_type=Notification.Type.GENERAL,
+        )
 
         self.client_for(self.etudiant).get(self.detail_url(conversation))
 
@@ -152,6 +159,44 @@ class MessagerieTest(BusinessTestBase):
         envoye.refresh_from_db()
         self.assertIsNotNone(recu.read_at)
         self.assertIsNone(envoye.read_at)
+        self.assertFalse(Notification.objects.filter(is_read=False).exists())
+
+    def test_ouverture_eteint_uniquement_la_notification_du_fil(self):
+        _, conversation = self.ouvre(self.formateur, self.etudiant)
+        self.client_for(self.formateur).post(
+            self.send_url(conversation), {'body': 'Pour l’étudiant'}
+        )
+        autre, _ = Conversation.pour(self.admin, self.secretaire)
+        Notification.objects.create(
+            user=self.etudiant,
+            title='Autre avis',
+            message='À conserver',
+            link=self.detail_url(autre),
+            notification_type=Notification.Type.GENERAL,
+        )
+
+        self.client_for(self.etudiant).get(self.detail_url(conversation))
+
+        note_fil = Notification.objects.get(link=self.detail_url(conversation))
+        note_autre = Notification.objects.get(link=self.detail_url(autre))
+        self.assertTrue(note_fil.is_read)
+        self.assertFalse(note_autre.is_read)
+
+    def test_poll_des_notifications_expose_le_lien_du_fil(self):
+        _, conversation = self.ouvre(self.formateur, self.etudiant)
+        self.client_for(self.formateur).post(
+            self.send_url(conversation), {'body': 'Regarde ce fil'}
+        )
+
+        response = self.client_for(self.etudiant).get(
+            reverse('core:dashboard:notifications-poll')
+        )
+
+        self.assertEqual(response.status_code, 200)
+        notes = json.loads(response.content)['notifications']
+        self.assertTrue(
+            any(note['link'] == self.detail_url(conversation) for note in notes)
+        )
 
     # ------------------------------------------------------------------
     # Envoi
@@ -175,6 +220,7 @@ class MessagerieTest(BusinessTestBase):
         notification = Notification.objects.get()
         self.assertEqual(notification.user, self.formateur)
         self.assertEqual(notification.notification_type, Notification.Type.GENERAL)
+        self.assertEqual(notification.link, self.detail_url(conversation))
         self.assertIn('Bonjour formateur', notification.message)
 
         journal = AuditLog.objects.get(action='MESSAGE_SEND')

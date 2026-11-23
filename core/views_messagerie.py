@@ -11,6 +11,7 @@ from django.contrib import messages
 from django.db.models import Q
 from django.http import Http404, HttpResponseForbidden, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.cache import never_cache
@@ -100,6 +101,15 @@ def conversation_detail(request, conversation_id):
     conversation.messages.filter(read_at__isnull=True).exclude(
         sender=request.user
     ).update(read_at=timezone.now())
+    # La cloche et le fil disent la même chose : ouvrir la conversation éteint
+    # aussi l'alerte « nouveau message » envoyée à ce fil.
+    Notification.objects.filter(
+        user=request.user,
+        link=reverse(
+            'core:dashboard:messagerie-detail', args=[conversation.id]
+        ),
+        is_read=False,
+    ).update(is_read=True)
 
     return render(request, 'dashboard/messagerie/fil.html', {
         'conversation': conversation,
@@ -146,6 +156,9 @@ def message_create(request, conversation_id):
             'nom': request.user.display_label,
         }),
         message=corps[:200],
+        link=reverse(
+            'core:dashboard:messagerie-detail', args=[conversation.id]
+        ),
         notification_type=Notification.Type.GENERAL,
     )
     log_audit(

@@ -31,7 +31,9 @@
             <ul class="ua-cloche-fils" id="ua-cloche-fils">
             {% for note in notifications %}
             <li>
-                <p class="ua-cloche-note-titre">{{ note.title }}</p>
+                <p class="ua-cloche-note-titre">
+                    {% if note.link %}<a href="{{ note.link }}">{{ note.title }}</a>{% else %}{{ note.title }}{% endif %}
+                </p>
                 <p class="ua-cloche-note-texte">{{ note.message }}</p>
                 <p class="ua-cloche-note-date">{{ note.created_at|date:"d/m/Y H:i" }}</p>
             </li>

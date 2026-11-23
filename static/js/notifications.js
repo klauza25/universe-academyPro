@@ -264,7 +264,10 @@
         vider(listeNotifications);
         etat.notifications.forEach(function (notification) {
             const ligne = document.createElement('li');
-            const titre = document.createElement('p');
+            const titre = notification.link
+                ? document.createElement('a')
+                : document.createElement('p');
+            if (notification.link) { titre.href = notification.link; }
             const message = document.createElement('p');
             const date = document.createElement('p');
             titre.className = 'ua-cloche-note-titre';

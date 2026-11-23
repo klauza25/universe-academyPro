@@ -123,6 +123,7 @@ def notifications_poll(request):
             {
                 'title': notification.title,
                 'message': notification.message,
+                'link': notification.link,
                 'created_at': timezone.localtime(
                     notification.created_at
                 ).strftime('%d/%m/%Y %H:%M'),

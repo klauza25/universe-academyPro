@@ -1122,6 +1122,7 @@ class Notification(models.Model):
     email = models.EmailField(blank=True)
     title = models.CharField(max_length=200)
     message = models.TextField()
+    link = models.CharField(max_length=300, blank=True)
     notification_type = models.CharField(max_length=30, choices=Type.choices)
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
