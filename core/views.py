@@ -654,7 +654,7 @@ def user_role_assign(request, user_id):
     if action == 'add' and role_key in ROLES_DISSOUS:
         messages.error(
             request,
-            _("Ce poste est dissous : attribuez « Assistant administratif », qui reprend l'accueil et la caisse."),
+            _("Ce poste est dissous : attribuez « Assistant administratif », qui reprend l'accueil, la caisse et le secrétariat."),
         )
         return redirect_to_detail
 
@@ -1303,7 +1303,7 @@ def direction_dashboard(request):
     return render(request, 'dashboard/direction/index.html', context)
 
 
-@role_required('SECRETAIRE')
+@role_required('ASSISTANT_ADMIN', 'DIRECTION')
 def secretaire_dashboard(request):
     context = {
         'pending_enrollments': Enrollment.objects.filter(

@@ -188,15 +188,15 @@ Le statut est contrôlé à **chaque requête** par un middleware, sauf pages pu
 
 ### 6.2 Rôles
 
-Huit rôles actifs. Deux anciens postes (`COMPTABLE`, `ACCUEIL`) restent en base pour l'historique mais ne sont **plus attribuables** et n'ont plus de menu.
+Sept rôles actifs. Trois anciens postes (`COMPTABLE`, `ACCUEIL`, `SECRETAIRE`) restent en base pour l'historique mais ne sont **plus attribuables** et n'ont plus de menu.
 
 | Rôle | Mission | Tableau de bord | Préfixe de code |
 |---|---|---|---|
 | `SUPER_ADMIN` | Administration technique, comptes, rôles, audit, supervision, caisse. | `/dashboard/super-admin/` | `UA-ADM` |
 | `ADMIN` | Lecture transversale, caisse, demandes d'accès, bourses. | `/dashboard/admin/` | `UA-ADM` |
 | `DIRECTION` | Pilotage, validation des inscriptions, catalogue, réglages, années. | `/dashboard/direction/` | `UA-DIR` |
-| `ASSISTANT_ADMIN` | Assistance administrative et comptable. | `/dashboard/comptabilite/` | `UA-ASY` |
-| `SECRETAIRE` | Dossiers étudiants, inscriptions au guichet, documents. | `/dashboard/secretaire/` | `UA-SEC` |
+| `ASSISTANT_ADMIN` | Assistance administrative et comptable, dossiers étudiants, inscriptions au guichet, documents, gestion des comptes et des rôles métier (reprend l'accueil, la caisse et le secrétariat). | `/dashboard/comptabilite/` | `UA-ASY` |
+| `SECRETAIRE` | Ancien poste, conservé pour l'historique ; plus attribuable ni proposé dans les menus. | — (rôle historique) | `UA-SEC` |
 | `RESP_PEDA` | Catalogue, modules, leçons, groupes, séances, ressources, validation pédagogique. | `/dashboard/responsable-pedagogique/` | `UA-RPD` |
 | `FORMATEUR` | Groupes affectés, séances, présences, cahier de texte, ressources. | `/dashboard/formateur/` | `UA-FRM` |
 | `ETUDIANT` | Ressources publiées, présences, fiches, espace personnel. | `/dashboard/etudiant/` | `UA-ETU` |
@@ -206,31 +206,31 @@ Huit rôles actifs. Deux anciens postes (`COMPTABLE`, `ACCUEIL`) restent en base
 1. `SUPER_ADMIN` et `ADMIN` lisent tous les modules mais **n'écrivent pas le métier courant** (visites, prospects, étudiants, inscriptions à la création, présences, séances, ressources, modules, leçons).
 2. **Exception caisse et paiements** : les rôles transversaux peuvent opérer la caisse (opération, annulation, correction, paiement étudiant, clôture, compte, catégorie), avec audit.
 3. **Exception groupes** : création et modification d'un groupe ouvertes à `RESP_PEDA`, `DIRECTION`, `SUPER_ADMIN`, `ADMIN` par la route dédiée.
-4. **Exception inscription existante** : modification d'une inscription ouverte à `SECRETAIRE`, `DIRECTION`, `SUPER_ADMIN`, `ADMIN`, avec audit `ENROLLMENT_EDIT`.
-5. **Actes réservés au `SUPER_ADMIN`** : création/modification de compte, attribution ou retrait de rôle, changement de statut, matrice des permissions, décision finale de bourse.
+4. **Exception inscription existante** : modification d'une inscription ouverte à `ASSISTANT_ADMIN`, `DIRECTION`, `SUPER_ADMIN`, `ADMIN`, avec audit `ENROLLMENT_EDIT`.
+5. **Gestion des comptes** : création/modification de compte, attribution ou retrait d'un rôle métier et changement de statut sont ouverts au `SUPER_ADMIN` et à l'`ASSISTANT_ADMIN`. La matrice des permissions, les rôles privilégiés (`SUPER_ADMIN`, `ADMIN`, `DIRECTION`) et la décision finale de bourse restent réservés au `SUPER_ADMIN`.
 6. **Auto-modification interdite** : personne ne modifie ses propres rôles ni son statut (403).
 7. **Dernier super administrateur protégé** : retirer le rôle au dernier `SUPER_ADMIN` actif est refusé.
 8. **Périmètre formateur** : un formateur ne voit que les groupes où il est affecté, leurs séances, présences et cahiers de texte ; il ne peut pas écrire dans les groupes des autres.
 9. **Validation d'inscription** : `DIRECTION`, `ASSISTANT_ADMIN`, `RESP_PEDA`, `SUPER_ADMIN`. `ADMIN` reste en consultation.
-10. **Demandes d'accès** : examen par `SUPER_ADMIN`, `ADMIN`, `RESP_PEDA`, `DIRECTION`, `ASSISTANT_ADMIN`, `SECRETAIRE`. `RESP_PEDA` n'attribue que `FORMATEUR` et `ETUDIANT` ; direction, assistant et secrétariat n'attribuent que `ETUDIANT` ; les rôles transversaux peuvent attribuer tous les rôles demandables (`ETUDIANT`, `FORMATEUR`, `SECRETAIRE`, `ASSISTANT_ADMIN`, `RESP_PEDA`).
+10. **Demandes d'accès** : examen par `SUPER_ADMIN`, `ADMIN`, `RESP_PEDA`, `DIRECTION`, `ASSISTANT_ADMIN`. `RESP_PEDA` n'attribue que `FORMATEUR` et `ETUDIANT` ; direction et assistant n'attribuent que `ETUDIANT` ; les rôles transversaux peuvent attribuer tous les rôles demandables (`ETUDIANT`, `FORMATEUR`, `ASSISTANT_ADMIN`, `RESP_PEDA`).
 
 ### 6.4 Matrice de synthèse des accès
 
-| Module | SUPER_ADMIN | ADMIN | DIRECTION | ASSISTANT_ADMIN | SECRETAIRE | RESP_PEDA | FORMATEUR | ETUDIANT |
-|---|---|---|---|---|---|---|---|---|
-| Visites / prospects | Lecture | Lecture | Écriture | Écriture | Écriture | — | — | — |
-| Dossiers étudiants | Lecture | Lecture | Écriture | Lecture | Écriture | — | — | Son dossier |
-| Inscriptions | Lecture + édition + validation | Lecture + édition | Création + édition + validation | Écriture + validation | Création + édition | Validation | — | — |
-| Paiements | Écriture | Écriture | Écriture | Écriture | Écriture | — | — | — |
-| Caisse, clôtures | Écriture | Écriture | Écriture | Écriture | Écriture | — | — | — |
-| Catalogue, modules, leçons | Lecture | Lecture | Écriture | Lecture | Lecture | Écriture | Écriture | Lecture |
-| Groupes | Écriture | Écriture | Écriture | Lecture | Lecture | Écriture | Ses groupes | — |
-| Séances, présences, cahier de texte | Lecture | Lecture | Écriture | Lecture | Lecture | Écriture | Ses groupes | Ses présences |
-| Ressources | Lecture | Lecture | Écriture | Lecture | Lecture | Écriture | Écriture | Publiées |
-| Bourses | Décision | Lecture | Instruction | Instruction | Instruction | Instruction | — | Sa candidature |
-| Réglages, années | Écriture | Lecture | Écriture | Lecture | Lecture | Lecture | — | — |
-| Comptes, rôles | Écriture | Lecture | Lecture | — | — | — | — | — |
-| Audit, supervision | Lecture | Lecture | Lecture | Lecture | — | Lecture | — | — |
+| Module | SUPER_ADMIN | ADMIN | DIRECTION | ASSISTANT_ADMIN | RESP_PEDA | FORMATEUR | ETUDIANT |
+|---|---|---|---|---|---|---|---|
+| Visites / prospects | Lecture | Lecture | Écriture | Écriture | — | — | — |
+| Dossiers étudiants | Lecture | Lecture | Écriture | Écriture | — | — | Son dossier |
+| Inscriptions | Lecture + édition + validation | Lecture + édition | Création + édition + validation | Création + édition + validation | Validation | — | — |
+| Paiements | Écriture | Écriture | Écriture | Écriture | — | — | — |
+| Caisse, clôtures | Écriture | Écriture | Écriture | Écriture | — | — | — |
+| Catalogue, modules, leçons | Lecture | Lecture | Écriture | Lecture | Écriture | Écriture | Lecture |
+| Groupes | Écriture | Écriture | Écriture | Lecture | Écriture | Ses groupes | — |
+| Séances, présences, cahier de texte | Lecture | Lecture | Écriture | Lecture | Écriture | Ses groupes | Ses présences |
+| Ressources | Lecture | Lecture | Écriture | — | Écriture | Écriture | Publiées |
+| Bourses | Décision | Lecture | Instruction | Instruction | Instruction | — | Sa candidature |
+| Réglages, années | Écriture | Lecture | Écriture | Lecture | Lecture | — | — |
+| Comptes, rôles | Écriture | Lecture | Lecture | Écriture (rôles métier) | — | — | — |
+| Audit, supervision | Lecture | Lecture | Lecture | — | Lecture | — | — |
 
 La matrice fine à 19 droits est éditable par le `SUPER_ADMIN` dans `/dashboard/super-admin/permissions/`.
 
@@ -276,7 +276,7 @@ Les identifiants `PF-`, `SE-`, `PE-`, `PG-`, `PR-`, `CO-`, `BO-`, `RG-`, `UT-` s
 - Prospect : référence `PRO-AAAA-NNNN`, formation visée, domaine, niveau, programme linguistique, contact préféré, statut, prochaine relance.
 - Suivi de prospect : contact, résumé, information donnée, résultat, prochaine action et date.
 - Historique d'audit par visite et par prospect.
-- Conversion prospect → étudiant par le secrétariat.
+- Conversion prospect → étudiant par l'assistant administratif ou la direction.
 
 ### 7.4 Secrétariat : étudiants, inscriptions, documents
 

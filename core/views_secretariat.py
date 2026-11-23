@@ -24,14 +24,14 @@ from .models import (
 from .utils import log_audit
 from .views_profile import changer_avatar
 
-SECRETARIAT_ROLES = ('SECRETAIRE', 'DIRECTION')
+SECRETARIAT_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION')
 
 
 def _students_queryset():
     return User.objects.filter(roles__key=RoleKey.ETUDIANT).distinct()
 
 
-@role_required(*SECRETARIAT_ROLES, 'ASSISTANT_ADMIN')
+@role_required(*SECRETARIAT_ROLES)
 def student_list(request):
     """Les dossiers, posés sur l'année académique en cours par défaut.
 
@@ -246,7 +246,7 @@ def student_detail(request, student_id):
         'avatar_form': AvatarForm(),
         'can_manage_documents': (
             not request.user.is_elevated
-            and request.user.has_any_role('SECRETAIRE', 'DIRECTION')
+            and request.user.has_any_role('ASSISTANT_ADMIN', 'DIRECTION')
         ),
         # La photo se pose aux mêmes conditions que l'écriture sur la fiche.
         'peut_changer_photo': (
@@ -288,7 +288,7 @@ def student_edit(request, student_id):
 
 @business_write_required(*SECRETARIAT_ROLES)
 def student_avatar(request, student_id):
-    """Le secrétariat pose la photo d'un étudiant.
+    """Le service scolaire pose la photo d'un étudiant.
 
     Une fiche sortie des classeurs ne se connecte jamais : sans cet écran, la
     photo d'un élève ne pourrait jamais être prise au centre et les listes
@@ -538,13 +538,13 @@ def student_document_upload(request, student_id):
     return redirect('core:dashboard:student-detail', student_id=student.id)
 
 
-@role_required(*SECRETARIAT_ROLES, 'ASSISTANT_ADMIN', 'ETUDIANT')
+@role_required(*SECRETARIAT_ROLES, 'ETUDIANT')
 def student_document_download(request, doc_id):
     document = get_object_or_404(StudentDocument, id=doc_id)
     user = request.user
     is_owner = document.student_id == user.id
     allowed = is_owner or user.has_any_role(
-        'SECRETAIRE', 'DIRECTION', 'ASSISTANT_ADMIN', 'SUPER_ADMIN', 'ADMIN'
+        'DIRECTION', 'ASSISTANT_ADMIN', 'SUPER_ADMIN', 'ADMIN'
     )
     if not allowed:
         log_audit(request, 'UNAUTHORIZED_FILE_ACCESS', 'StudentDocument',

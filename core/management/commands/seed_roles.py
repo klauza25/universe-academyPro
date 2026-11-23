@@ -24,11 +24,6 @@ ROLE_PERMISSIONS = {
         'finance.read', 'finance.write',
         'access_events.read', 'access_events.write',
     ],
-    'SECRETAIRE': [
-        'students.read', 'students.write',
-        'formations.read', 'attendance.read',
-        'finance.read', 'finance.write',
-    ],
     'RESP_PEDA': [
         'formations.read', 'formations.write',
         'attendance.read', 'attendance.write',

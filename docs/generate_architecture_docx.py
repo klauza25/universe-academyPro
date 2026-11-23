@@ -519,8 +519,8 @@ AUDIT_ACTIONS = [
     ('PROFILE_EMAIL_REQUEST', 'Identité', 'Demande de changement d’e-mail.'),
     ('PROFILE_EMAIL_CONFIRM', 'Identité', 'Confirmation du changement d’e-mail.'),
     ('PROFILE_AVATAR', 'Identité', 'Photo de profil enregistrée — par '
-     'l’intéressé, le secrétariat ou le SUPER_ADMIN ; l’acteur et la personne '
-     'concernée sont journalisés.'),
+     'l’intéressé, l’assistant administratif ou le SUPER_ADMIN ; l’acteur et '
+     'la personne concernée sont journalisés.'),
     ('PROFILE_AVATAR_DELETE', 'Identité', 'Photo de profil retirée, avatar par '
      'défaut (initiales) rétabli.'),
     ('PROFILE_PASSWORD', 'Identité', 'Mot de passe changé par l’intéressé ; '
@@ -607,13 +607,11 @@ ROLE_INFO = [
     ('DIRECTION', 'Direction', 'UA-DIR',
      'Pilotage : lecture des dossiers, formations, présences et finances ; '
      'écriture pédagogique (modules, leçons, groupes) et encaissements.'),
-    ('SECRETAIRE', 'Secrétaire', 'UA-SEC',
-     'Admissions, dossiers étudiants, inscriptions, documents, consultation '
-     'des séances et présences, saisie des paiements étudiants.'),
     ('ASSISTANT_ADMIN', 'Assistant administratif', 'UA-ASY',
-     'Le poste qui reprend l’accueil et la caisse : visites, contacts, '
-     'prospects, journal des entrées/sorties, inscriptions au guichet, '
-     'encaissements, reçus, clôtures.'),
+     'Le poste qui reprend l’accueil, la caisse et le secrétariat : visites, '
+     'contacts, prospects, journal des entrées/sorties, dossiers étudiants, '
+     'inscriptions au guichet, documents, encaissements, reçus, clôtures, '
+     'gestion des comptes et des rôles métier.'),
     ('RESP_PEDA', 'Responsable pédagogique', 'UA-RPD',
      'Programme, groupes, séances, présences, ressources, certificats, '
      'encaissements.'),
@@ -1159,7 +1157,7 @@ add_table(
         ['Admission', 'Prospect ou candidature', 'Compte approuvé + rôle',
          'SUPER_ADMIN / ADMIN'],
         ['Inscription', 'Compte étudiant + groupe', 'Enrollment avec montant net',
-         'SECRETAIRE / ASSISTANT_ADMIN'],
+         'ASSISTANT_ADMIN'],
         ['Formation', 'Groupe + formateur', 'Séances, présences, fiches',
          'FORMATEUR / RESP_PEDA'],
         ['Encaissement', 'Enrollment + montant', 'Payment + opération de caisse',
@@ -1382,33 +1380,34 @@ add_paragraph(
 )
 
 h2('6.3', 'Matrice des accès par module')
-matrix_headers = ['Module', 'SUPER', 'ADMIN', 'DIR.', 'ASY.', 'SECR.',
+matrix_headers = ['Module', 'SUPER', 'ADMIN', 'DIR.', 'ASY.',
                   'PEDA', 'FORM.', 'ÉTUD.']
 matrix_rows = [
-    ['Compte et profil', 'É', 'É', 'É', 'É', 'É', 'É', 'É', 'É'],
-    ['Revue des demandes d’accès', 'A', 'D', '—', '—', '—', '—', '—', '—'],
-    ['Utilisateurs et rôles', 'A', 'L', 'L', '—', '—', '—', '—', '—'],
-    ['Matrice des permissions', 'A', '—', '—', '—', '—', '—', '—', '—'],
-    ['Accueil, visites, prospects', 'L', 'L', 'L', 'É', 'L', '—', '—', '—'],
-    ['Scolarité et inscriptions', 'L', 'L', 'É', 'É', 'É', 'L', 'L', '—'],
-    ['Groupes et programme', 'L', 'L', 'L', 'L', 'L', 'É', 'L', '—'],
-    ['Cahier de texte et présences', 'L', 'L', 'L', 'L', 'L', 'É', 'É', '—'],
-    ['Ressources pédagogiques', 'L', 'L', 'L', 'L', 'L', 'É', 'É', 'L'],
-    ['Fiches de cours étudiant', '—', '—', 'L', 'L', 'L', 'L', 'L', 'É'],
-    ['Paiements étudiants', 'É', 'É', 'É', 'É', 'É', 'É', '—', 'L'],
-    ['Journal, caisses et clôtures', 'É', 'É', 'É', 'É', '—', '—', '—', '—'],
-    ['Bourses', 'A', 'L', '—', '—', '—', '—', '—', 'L'],
-    ['Supervision financière', 'A', 'L', '—', '—', '—', '—', '—', '—'],
-    ['Journal d’audit', 'A', 'L', '—', '—', '—', '—', '—', '—'],
+    ['Compte et profil', 'É', 'É', 'É', 'É', 'É', 'É', 'É'],
+    ['Revue des demandes d’accès', 'A', 'D', 'D', 'D', 'D', '—', '—'],
+    ['Utilisateurs et rôles', 'A', 'L', 'L', 'É', '—', '—', '—'],
+    ['Matrice des permissions', 'A', '—', '—', '—', '—', '—', '—'],
+    ['Accueil, visites, prospects', 'L', 'L', 'L', 'É', '—', '—', '—'],
+    ['Scolarité et inscriptions', 'L', 'L', 'É', 'É', 'L', 'L', '—'],
+    ['Groupes et programme', 'L', 'L', 'L', 'L', 'É', 'L', '—'],
+    ['Cahier de texte et présences', 'L', 'L', 'L', 'L', 'É', 'É', '—'],
+    ['Ressources pédagogiques', 'L', 'L', 'L', '—', 'É', 'É', 'L'],
+    ['Fiches de cours étudiant', '—', '—', 'L', 'L', 'L', 'L', 'É'],
+    ['Paiements étudiants', 'É', 'É', 'É', 'É', 'É', '—', 'L'],
+    ['Journal, caisses et clôtures', 'É', 'É', 'É', 'É', '—', '—', '—'],
+    ['Bourses', 'A', 'L', '—', '—', '—', '—', 'L'],
+    ['Supervision financière', 'A', 'L', '—', '—', '—', '—', '—'],
+    ['Journal d’audit', 'A', 'L', '—', '—', '—', '—', '—'],
 ]
 add_table(matrix_headers, matrix_rows,
-          widths=[5.6, 1.42, 1.42, 1.42, 1.42, 1.42, 1.42, 1.42, 1.42],
-          size=8, header_size=7.5, align_center=set(range(1, 9)),
+          widths=[5.6, 1.62, 1.62, 1.62, 1.62, 1.62, 1.62, 1.62],
+          size=8, header_size=7.5, align_center=set(range(1, 8)),
           first_col_bold=True)
 add_paragraph(
     'Légende : A = administration (écriture de privilège), É = écriture '
     'métier, D = décision d’accès, L = lecture seule, — = aucun accès. '
-    '« ASY. » est l’assistant administratif, qui tient l’accueil et la caisse. '
+    '« ASY. » est l’assistant administratif, qui tient l’accueil, la caisse '
+    'et le secrétariat. '
     '« ÉTUD. » ne voit que ses propres données ; « FORM. » ne voit que ses '
     'groupes et les fiches de ses apprenants.',
     size=8.5, color=GREY, italic=True,
@@ -1435,9 +1434,11 @@ bullets([
      'décision de la direction, en plus des postes listés. Les rôles '
      'transversaux ne rencontrent donc jamais le message « Consultation '
      'seule » devant une écriture d’argent.'),
-    ('Actes sensibles. ', '`super_admin_required` réserve au SUPER_ADMIN la '
-     'création/modification de compte, l’attribution de rôle et le changement '
-     'de statut.'),
+    ('Gestion des comptes. ', '`user_management_required` ouvre la '
+     'création/modification de compte, l’attribution d’un rôle métier et le '
+     'changement de statut au SUPER_ADMIN et à l’ASSISTANT_ADMIN. Les rôles '
+     'privilégiés (SUPER_ADMIN, ADMIN, DIRECTION) et la matrice des '
+     'permissions restent réservés au SUPER_ADMIN.'),
     ('Compte actif. ', '`active_account_required` redirige un compte en '
      'attente vers `/pending-approval/` et un compte suspendu, désactivé ou '
      'rejeté vers `/access-denied/`.'),
@@ -1448,17 +1449,16 @@ bullets([
     ('Droits exécutables. ', 'Les écrans de paiement étudiant exigent le droit '
      '`finance.write` : l’onglet « Permissions » décide donc, en pratique, qui '
      'peut encaisser. Les autres écrans restent gardés par les rôles.'),
-    ('Rôles dissous. ', 'COMPTABLE et ACCUEIL ont fusionné dans ASSISTANT_ADMIN. '
-     'Leurs lignes demeurent en base pour que l’audit, les paiements encaissés '
-     'et les demandes passées gardent leur sens ; ils ne sont plus attribuables '
-     'et n’ont plus de menu.'),
-    ('Rôles demandables. ', 'Seuls ETUDIANT, FORMATEUR, SECRETAIRE, '
-     'ASSISTANT_ADMIN et RESP_PEDA peuvent être demandés ou accordés à '
-     'l’approbation. SUPER_ADMIN, ADMIN et DIRECTION restent hors formulaire '
-     'public.'),
+    ('Rôles dissous. ', 'COMPTABLE, ACCUEIL et SECRETAIRE ont fusionné dans '
+     'ASSISTANT_ADMIN. Leurs lignes demeurent en base pour que l’audit, les '
+     'paiements encaissés et les demandes passées gardent leur sens ; ils ne '
+     'sont plus attribuables et n’ont plus de menu.'),
+    ('Rôles demandables. ', 'Seuls ETUDIANT, FORMATEUR, ASSISTANT_ADMIN et '
+     'RESP_PEDA peuvent être demandés ou accordés à l’approbation. '
+     'SUPER_ADMIN, ADMIN et DIRECTION restent hors formulaire public.'),
     ('Exception d’écriture. ', 'La modification d’une inscription existante '
      'est ouverte aux rôles élevés (correction administrative), mais la '
-     'création reste réservée au secrétariat et à la direction.'),
+     'création reste réservée à l’assistant administratif et à la direction.'),
 ])
 
 h2('6.5', 'Cycle de vie d’un compte')
@@ -1466,7 +1466,7 @@ add_table(
     ['État', 'Origine', 'Accès', 'Transition possible'],
     [
         ['PENDING_APPROVAL', 'Inscription publique, fiche étudiante '
-         'du secrétariat ou import des classeurs', 'Aucun écran métier ; page '
+         'de l’assistant administratif ou import des classeurs', 'Aucun écran métier ; page '
          'd’attente. Le dossier reste lisible du personnel.',
          'ACTIVE (approbation, ou validation d’une inscription) ou REJECTED '
          '(refus)'],
@@ -1484,11 +1484,11 @@ add_table(
 
 add_paragraph(
     'Le code interne est généré à la première attribution d’un rôle : '
-    '`UA-ETU`, `UA-FRM`, `UA-SEC`, `UA-ASY`, `UA-RPD`, `UA-DIR` ou `UA-ADM`, '
+    '`UA-ETU`, `UA-FRM`, `UA-ASY`, `UA-RPD`, `UA-DIR` ou `UA-ADM`, '
     'suivi d’un numéro sur quatre chiffres. Il sert d’identifiant lisible au '
-    'guichet et dans les échanges avec l’établissement. Les racines `UA-CPT` '
-    'et `UA-ACC`, héritées des postes dissous, restent valables sur les '
-    'comptes qui les portent déjà.'
+    'guichet et dans les échanges avec l’établissement. Les racines `UA-CPT`, '
+    '`UA-ACC` et `UA-SEC`, héritées des postes dissous, restent valables sur '
+    'les comptes qui les portent déjà.'
 )
 
 add_paragraph(
@@ -1497,7 +1497,7 @@ add_paragraph(
     'son inscription, ou passer le statut à « Actif » écran « Utilisateurs ». '
     'En attente ne veut pas dire supprimé : les inscriptions, les paiements, '
     'les pièces et l’historique d’un compte non approuvé restent consultables '
-    'par le secrétariat, la direction et la comptabilité ; le compte ne compte '
+    'par l’assistant administratif et la direction ; le compte ne compte '
     'simplement pas dans les effectifs et n’est pas proposé à la caisse. Une '
     'approbation déjà accordée ne se défait ni par une relance d’import, ni par '
     'aucune commande : `manage.py mettre_en_attente` ne reprend que les fiches '
@@ -1528,9 +1528,10 @@ add_table(
          'Compte `PENDING_APPROVAL`, aucun `UserRole`.'],
         ['2', 'Visiteur', 'Choisit un rôle demandé.', 'Rôle limité à la liste '
          '`REQUESTABLE_ROLES` ; enregistré dans `AccessRequest`.'],
-        ['3', 'SUPER_ADMIN / ADMIN', 'Ouvre la demande et vérifie le rôle '
-         'suggéré.', 'Le formulaire présélectionne le rôle demandé ; les rôles '
-         'élevés ne sont pas proposés.'],
+        ['3', 'Réviseur habilité', 'Ouvre la demande et vérifie le rôle '
+         'suggéré.', 'SUPER_ADMIN, ADMIN, DIRECTION, ASSISTANT_ADMIN ou '
+         'RESP_PEDA, chacun dans son périmètre ; le formulaire présélectionne '
+         'le rôle demandé ; les rôles élevés ne sont pas proposés.'],
         ['4', 'Décideur', 'Approuve ou refuse.', 'Décision tracée avec auteur, '
          'date et note.'],
         ['5', 'Système', 'En cas d’approbation : attribue le rôle, active le '
@@ -1556,9 +1557,10 @@ h2('7.2', 'Création administrative d’un compte')
 add_table(
     ['#', 'Acteur', 'Action', 'Contrôle / résultat'],
     [
-        ['1', 'SUPER_ADMIN', 'Ouvre « Créer un compte ».', 'Route protégée par '
-         '`super_admin_required` ; ADMIN reçoit un 403.'],
-        ['2', 'SUPER_ADMIN', 'Saisit identité, rôle et, si étudiant, le groupe.',
+        ['1', 'SUPER_ADMIN / ASSISTANT_ADMIN', 'Ouvre « Créer un compte ».',
+         'Route protégée par `user_management_required` ; ADMIN reçoit un 403. '
+         'Les rôles privilégiés ne sont proposés qu’au SUPER_ADMIN.'],
+        ['2', 'SUPER_ADMIN / ASSISTANT_ADMIN', 'Saisit identité, rôle et, si étudiant, le groupe.',
          'Validation du formulaire ; groupe obligatoire pour un étudiant.'],
         ['3', 'Système', 'Crée l’utilisateur, le rôle et l’inscription.',
          'Transaction atomique ; code interne généré ; audit `USER_CREATE` et '
@@ -1572,16 +1574,16 @@ h2('7.3', 'Dossier étudiant et inscription')
 add_table(
     ['#', 'Acteur', 'Action', 'Contrôle / résultat'],
     [
-        ['1', 'SECRETAIRE', 'Recherche ou crée l’étudiant.', 'Recherche par '
+        ['1', 'ASSISTANT_ADMIN', 'Recherche ou crée l’étudiant.', 'Recherche par '
          'nom, e-mail, code interne, statut, formation.'],
-        ['2', 'SECRETAIRE', 'Crée l’inscription : groupe, tarif, remise.',
+        ['2', 'ASSISTANT_ADMIN', 'Crée l’inscription : groupe, tarif, remise.',
          'Montant net = tarif − remise ; contrôle des doublons ; audit '
          '`ENROLLMENT_CREATE`.'],
-        ['3', 'SECRETAIRE', 'Dépose les pièces du dossier.', 'Types contrôlés, '
+        ['3', 'ASSISTANT_ADMIN', 'Dépose les pièces du dossier.', 'Types contrôlés, '
          'taille limitée, stockage privé, audit `STUDENT_DOCUMENT_UPLOAD`.'],
-        ['4', 'SECRETAIRE / ASSISTANT_ADMIN', 'Consulte le solde et l’historique.',
-         'Lecture seule pour la comptabilité ; soldes recalculés.'],
-        ['5', 'SECRETAIRE / DIRECTION', 'Modifie une inscription existante.',
+        ['4', 'ASSISTANT_ADMIN', 'Consulte le solde et l’historique.',
+         'Soldes recalculés ; historique d’audit du dossier.'],
+        ['5', 'ASSISTANT_ADMIN / DIRECTION', 'Modifie une inscription existante.',
          'Exception : les rôles élevés peuvent aussi corriger une inscription ; '
          'audit `ENROLLMENT_EDIT`.'],
         ['6', 'ASSISTANT_ADMIN', 'Ouvre une inscription au guichet '
@@ -1608,7 +1610,7 @@ add_table(
          'audit `PROSPECT_FROM_VISIT`.'],
         ['4', 'ASSISTANT_ADMIN', 'Planifie et trace les relances.', 'Statut, prochaine '
          'date, résumé ; audit `PROSPECT_FOLLOW_UP`.'],
-        ['5', 'SECRETAIRE', 'Convertit le prospect en étudiant.', 'Compte et '
+        ['5', 'ASSISTANT_ADMIN / DIRECTION', 'Convertit le prospect en étudiant.', 'Compte et '
          'inscription créés ; prospect marqué converti ; audit.'],
     ],
     widths=[0.9, 3.4, 6.4, 6.3], size=8.6, header_size=8.6,
@@ -1721,8 +1723,8 @@ h2('7.8', 'Encaissement et comptabilité')
 add_paragraph(
     'L’écran d’encaissement est ouvert à tout poste portant le droit '
     '`finance.write` — la matrice « Permissions » en décide, pas une liste de '
-    'rôles — et aux rôles transversaux, qui tiennent la caisse comme le '
-    'secrétariat. Chaque paiement porte un motif (mensualité, frais '
+    'rôles — et aux rôles transversaux, qui tiennent la caisse comme '
+    'l’assistant administratif. Chaque paiement porte un motif (mensualité, frais '
     'd’inscription, autre paiement) et, pour une mensualité, le mois et '
     'l’année réglés, distincts de la date d’encaissement. Avant toute sortie, '
     'l’écran montre ce que chaque caisse peut réellement débourser ; une '
@@ -1748,7 +1750,7 @@ add_table(
          'Transaction atomique ; opération validée ; catégorie « Paiements des '
          'étudiants » ; audit `PAYMENT_CREATE`.'],
         ['6', 'Assistant administratif', 'Imprime le reçu.', 'Le reçu mentionne '
-         'le motif et le mois réglé ; accessible au guichet, au secrétariat, à '
+         'le motif et le mois réglé ; accessible au guichet, à '
          'la direction et à l’étudiant propriétaire.'],
         ['7', 'caisse (direction, assistant, rôles transversaux)',
          'Saisit une opération directe (entrée/sortie).',
@@ -1830,8 +1832,10 @@ add_paragraph(
     'sur les seules validées, soldes par caisse et export CSV audité. Il '
     'consulte également le journal d’audit global, filtrable par action, '
     'entité, acteur et période. L’ADMIN partage la lecture de la supervision '
-    'et du journal d’audit, mais les décisions de bourse et les actes '
-    'de gestion des comptes restent réservés au SUPER_ADMIN.'
+    'et du journal d’audit, mais les décisions de bourse, la matrice des '
+    'permissions et les rôles privilégiés restent réservés au SUPER_ADMIN ; '
+    'la gestion courante des comptes et des rôles métier est partagée avec '
+    'l’assistant administratif.'
 )
 add_paragraph(
     'Deux écrans de réglages complètent la supervision. « Paramètres généraux » '
@@ -1874,8 +1878,8 @@ RULES = [
                   'ne porte aucun rôle.'),
         ('RG-02', 'Le rôle demandé est enregistré dans `AccessRequest` mais '
                   'n’est jamais attribué automatiquement.'),
-        ('RG-03', 'Seuls cinq rôles sont demandables : ETUDIANT, FORMATEUR, '
-                  'SECRETAIRE, ASSISTANT_ADMIN, RESP_PEDA.'),
+        ('RG-03', 'Seuls quatre rôles sont demandables : ETUDIANT, FORMATEUR, '
+                  'ASSISTANT_ADMIN, RESP_PEDA.'),
         ('RG-04', 'Un rôle inconnu ou hors liste est refusé sans écriture.'),
         ('RG-05', 'Un compte ne peut pas examiner sa propre demande d’accès.'),
         ('RG-06', 'Nul ne peut modifier ses propres rôles ou son propre statut.'),
@@ -1963,7 +1967,7 @@ RULES = [
     ]),
     ('Vie du compte étudiant', [
         ('RG-46', 'Un compte étudiant naît « en attente d’approbation » — import '
-                  'des classeurs comme écran du secrétariat. Créer d’emblée un '
+                  'des classeurs comme écran de l’assistant administratif. Créer d’emblée un '
                   'dossier « Active » vaut approbation immédiate.'),
         ('RG-47', 'Valider une inscription approuve le compte étudiant tant que '
                   'son approbation est encore en attente.'),
@@ -1992,8 +1996,8 @@ RULES = [
                   'tableaux de bord, utilisateurs et demandes d’accès, en-têtes '
                   'de fiche — par la balise unique `{% vignette %}` ; à défaut '
                   'de photo, la personne garde ses initiales.'),
-        ('RG-56', 'Elle se pose par l’intéressé sur « Mon profil », par le '
-                  'secrétariat sur la fiche étudiant, par le SUPER_ADMIN sur la '
+        ('RG-56', 'Elle se pose par l’intéressé sur « Mon profil », par '
+                  'l’assistant administratif sur la fiche étudiant, par le SUPER_ADMIN sur la '
                   'fiche d’un compte. Le personnel doit pouvoir la poser : une '
                   'fiche sortie des classeurs ne se connecte jamais.'),
         ('RG-57', 'Le dépôt d’une photo ne change ni le statut du compte ni '
@@ -2231,7 +2235,7 @@ RULES = [
         ('RG-106', 'La bande « Utilisateurs / Étudiants / Staff » est la seule '
                    'affiche de ces trois nombres, carte comme phrase '
                    'd’accroche : celles qui les répétaient ont été retirées '
-                   '(super administrateur, secrétariat). Un test, gabarit en '
+                   '(super administrateur, assistant administratif). Un test, gabarit en '
                    'main, interdit qu’une carte ou qu’un encart d’en-tête '
                    'reprenne `total_users`, `total_students` ou `total_staff`.'),
         ('RG-107', 'Une carte peut afficher un nombre voisin à condition de le '
@@ -2439,11 +2443,12 @@ add_table(['Rôle', 'Route', 'Contenu principal'], [
      'accès directs aux modules.'],
     ['DIRECTION', '`/dashboard/direction/`', 'Pilotage académique et '
      'financier.'],
-    ['SECRETAIRE', '`/dashboard/secretaire/`', 'Étudiants, inscriptions, '
-     'documents, séances.'],
     ['ASSISTANT_ADMIN', '`/dashboard/comptabilite/`', 'Journal, caisses, '
      'clôtures, paiements par mois, reçus ; et dans la même barre latérale, '
-     'visites, prospects et entrées/sorties.'],
+     'visites, prospects, entrées/sorties, utilisateurs et rôles métier.'],
+    ['Service scolaire', '`/dashboard/secretaire/`', 'Étudiants, inscriptions, '
+     'documents, séances — module tenu par l’assistant administratif et la '
+     'direction.'],
     ['RESP_PEDA', '`/dashboard/responsable-pedagogique/`', 'Groupes, séances, '
      'progression, ressources.'],
     ['FORMATEUR', '`/dashboard/formateur/`', 'Ses groupes, séances, cahier de '
@@ -2681,8 +2686,8 @@ test_rows = [
      'conservée, refus, compte sans mot de passe local), e-mail signé, échecs '
      'd’envoi.'],
     ['`test_photo_profil.py`', '12', 'Vignette sur les listes (photo ou '
-     'initiales), pose par le secrétariat et par le SUPER_ADMIN, fichier '
-     'remplacé effacé, statut inchangé, refus.'],
+     'initiales), pose par l’assistant administratif et par le SUPER_ADMIN, '
+     'fichier remplacé effacé, statut inchangé, refus.'],
     ['`test_accueil.py`', '16', 'Visites, contacts, prospects, relances, '
      'motifs, recherche.'],
     ['`test_secretariat.py`', '17', 'Étudiants, conversion, inscriptions, '
@@ -2749,7 +2754,7 @@ test_rows = [
      'un `{% blocktrans %}`.'],
     ['`test_parametres.py`', '19', 'Paramètres généraux : ligne unique née avec '
      'la migration, service qui ne crée rien, seuil lu par l’avertissement de '
-     'caisse, écran et son audit (avant/après), 403 du secrétariat, nom et '
+     'caisse, écran et son audit (avant/après), 403 de l’assistant administratif, nom et '
      'devise aux affichages, coordonnées du reçu, Django Admin en consultation '
      'seule.'],
     ['`test_relations.py`', '34', 'Cohérence des 16 relations : base saine muette, '
@@ -2798,7 +2803,8 @@ add_table(['Fichier', 'Tests', 'Périmètre'], test_rows,
 add_paragraph(
     f'Total : {TOTAL_TESTS} tests ({TODAY}), 0 échec. `manage.py check` est '
     'sans erreur et `makemigrations --check` ne signale aucun changement en '
-    'attente : les modèles et les 23 migrations appliquées sont alignés.',
+    f'attente : les modèles et les {int(DERNIERE_MIGRATION)} migrations '
+    'appliquées sont alignés.',
     bold_lead='Résultat de référence : ', size=10,
 )
 

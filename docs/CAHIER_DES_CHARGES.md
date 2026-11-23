@@ -44,7 +44,7 @@
 
 Univers Academy est une application web de gestion d'un centre de formation. Elle réunit dans une seule base les dossiers étudiants, les inscriptions, le catalogue pédagogique, les groupes, les séances, les présences, les ressources, la caisse, les paiements, les bourses et le journal d'audit. Elle remplace la dispersion entre classeurs Excel/Google Sheets, fichiers locaux et saisies parallèles.
 
-Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, gestion des comptes et des rôles métier par l'assistant administratif, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 778 tests automatisés. Les alertes flottantes sont brèves (son de 3 s, popup de 2,5 s) et ne remontent jamais une notification déjà lue. Le mode sombre garde les champs, les filtres, les listes, les options, les boutons et les couleurs en ligne lisibles. L’écran des salaires des formateurs distingue l’estimation de 30 % des paiements d’étudiants et les salaires réellement payés, lus dans le journal de caisse et filtrables par recherche, catégorie et période. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
+Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, gestion des comptes et des rôles métier par l'assistant administratif, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 779 tests automatisés. Les alertes flottantes sont brèves (son de 3 s, popup de 2,5 s) et ne remontent jamais une notification déjà lue. Le mode sombre garde les champs, les filtres, les listes, les options, les boutons et les couleurs en ligne lisibles. L’écran des salaires des formateurs distingue l’estimation de 30 % des paiements d’étudiants et les salaires réellement payés, lus dans le journal de caisse et filtrables par recherche, catégorie et période. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
 
 Le présent document constitue le cahier des charges de référence : il décrit le besoin, le périmètre, les acteurs, les exigences fonctionnelles et non fonctionnelles, les règles de gestion, l'architecture, les intégrations, la sécurité, la recette et les conditions d'exploitation.
 
@@ -120,7 +120,7 @@ Doter l'établissement d'une source unique, fiable, traçable et sécurisée pou
 
 ### 2.3 Résultats attendus
 
-- Le secrétariat crée un étudiant, un dossier d'inscription et un encaissement sans recourir à un tableur.
+- L'assistant administratif crée un étudiant, un dossier d'inscription et un encaissement sans recourir à un tableur.
 - Le responsable pédagogique crée une formation, ses modules et ses leçons directement depuis l'écran « Programmes ».
 - Le formateur saisit ses séances, ses présences et son cahier de texte ; l'étudiant consulte ses ressources, ses présences et sa fiche de cours.
 - La comptabilité tient une caisse unique, avec des soldes justes, des reçus et des clôtures.
@@ -184,17 +184,17 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | `SUPER_ADMIN` | Administration technique, comptes, rôles, audit, supervision, caisse. | `/dashboard/super-admin/` | `UA-ADM` |
 | `ADMIN` | Accès transversal en lecture, caisse, traitement des demandes d'accès, consultation des bourses. | `/dashboard/admin/` | `UA-ADM` |
 | `DIRECTION` | Pilotage, validation des inscriptions, catalogue, réglages, années académiques. | `/dashboard/direction/` | `UA-DIR` |
-| `ASSISTANT_ADMIN` | Assistance administrative et comptable, gestion des comptes et des rôles métier (poste issu de la fusion des anciens postes). | `/dashboard/comptabilite/` | `UA-ASY` |
-| `SECRETAIRE` | Dossiers étudiants, inscriptions au guichet, documents, consultation pédagogique. | `/dashboard/secretaire/` | `UA-SEC` |
+| `ASSISTANT_ADMIN` | Assistance administrative et comptable, dossiers étudiants, inscriptions au guichet, documents, consultation pédagogique, gestion des comptes et des rôles métier (poste issu de la fusion des anciens postes). | `/dashboard/comptabilite/` | `UA-ASY` |
+| `SECRETAIRE` | Ancien poste, conservé pour l'historique ; plus attribuable ni proposé dans les menus. | — (rôle historique) | `UA-SEC` |
 | `RESP_PEDA` | Catalogue, modules, leçons, groupes, séances, ressources, validation pédagogique. | `/dashboard/responsable-pedagogique/` | `UA-RPD` |
 | `FORMATEUR` | Groupes affectés, séances, présences, cahier de texte, ressources. | `/dashboard/formateur/` | `UA-FRM` |
 | `ETUDIANT` | Ressources publiées, présences, fiches de cours, espace personnel. | `/dashboard/etudiant/` | `UA-ETU` |
 | `COMPTABLE` | Ancien poste, conservé pour l'historique ; plus attribuable ni proposé dans les menus. | — (rôle historique) | `UA-CPT` |
 | `ACCUEIL` | Ancien poste, conservé pour l'historique ; plus attribuable ni proposé dans les menus. | — (rôle historique) | `UA-ACC` |
 
-**Rôles réellement attribuables** : `SUPER_ADMIN`, `ADMIN`, `DIRECTION`, `ASSISTANT_ADMIN`, `SECRETAIRE`, `RESP_PEDA`, `FORMATEUR`, `ETUDIANT`.
+**Rôles réellement attribuables** : `SUPER_ADMIN`, `ADMIN`, `DIRECTION`, `ASSISTANT_ADMIN`, `RESP_PEDA`, `FORMATEUR`, `ETUDIANT`.
 
-**Rôles qu'un demandeur peut solliciter** : `ETUDIANT`, `FORMATEUR`, `SECRETAIRE`, `ASSISTANT_ADMIN`, `RESP_PEDA`. Les rôles `SUPER_ADMIN`, `ADMIN` et `DIRECTION` ne passent jamais par le formulaire public.
+**Rôles qu'un demandeur peut solliciter** : `ETUDIANT`, `FORMATEUR`, `ASSISTANT_ADMIN`, `RESP_PEDA`. Les rôles `SUPER_ADMIN`, `ADMIN` et `DIRECTION` ne passent jamais par le formulaire public.
 
 ### 4.3 Règles transversales d'autorisation
 
@@ -202,7 +202,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 2. **Rôles transversaux** : `SUPER_ADMIN` et `ADMIN` accèdent en lecture à tous les modules. Ils ne peuvent pas écrire le métier courant (visites, prospects, étudiants, inscriptions à la création, présences, séances, ressources, modules, leçons).
 3. **Exception caisse et paiements** : la caisse est ouverte en écriture aux rôles transversaux (opération, annulation, correction, paiement étudiant, clôture, compte, catégorie), avec trace d'audit. L'encaissement d'un paiement étudiant suit la matrice `finance.write`.
 4. **Exception groupes** : la création et la modification d'un groupe sont ouvertes à `RESP_PEDA`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN` par la route dédiée ; les autres écritures pédagogiques (séances, présences, ressources, modules, leçons) restent fermées aux rôles transversaux.
-5. **Exception inscription existante** : la modification d'une inscription est ouverte à `SECRETAIRE`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN`, avec audit `ENROLLMENT_EDIT`.
+5. **Exception inscription existante** : la modification d'une inscription est ouverte à `ASSISTANT_ADMIN`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN`, avec audit `ENROLLMENT_EDIT`.
 6. **Gestion des comptes** : création et modification d'un compte, attribution ou retrait d'un rôle métier et changement de statut sont ouverts au `SUPER_ADMIN` et à l'`ASSISTANT_ADMIN`. La matrice des permissions, les rôles privilégiés (`SUPER_ADMIN`, `ADMIN`, `DIRECTION`) et la décision finale sur une bourse restent réservés au `SUPER_ADMIN`.
 7. **Auto-modification interdite** : personne ne peut modifier ses propres rôles ni son propre statut (403).
 8. **Dernier super administrateur** : le retrait du rôle `SUPER_ADMIN` au dernier super administrateur actif est refusé.
@@ -210,27 +210,27 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 
 ### 4.4 Matrice de synthèse des accès
 
-| Module | SUPER_ADMIN | ADMIN | DIRECTION | ASSISTANT_ADMIN | SECRETAIRE | RESP_PEDA | FORMATEUR | ETUDIANT |
-|---|---|---|---|---|---|---|---|---|
-| Visites / prospects | Lecture | Lecture | Écriture | Écriture | Écriture | — | — | — |
-| Dossiers étudiants | Lecture | Lecture | Écriture | Lecture | Écriture | — | — | Son dossier |
-| Inscriptions | Lecture + édition + validation | Lecture + édition | Création + édition + validation | Lecture + validation | Création + édition | Lecture + validation | — | Ses inscriptions |
-| Catalogue / modules / leçons | Lecture | Lecture | Écriture | — | Lecture | Écriture | Écriture (modules/leçons) | — |
-| Groupes | Écriture | Écriture | Écriture | — | Lecture | Écriture | Ses groupes | Ses groupes |
-| Séances / présences | Lecture | Lecture | Écriture | — | Lecture | Écriture | Ses séances | Ses présences |
-| Ressources | Lecture | Lecture | Écriture | — | — | Écriture | Écriture | Publiées |
-| Caisse / journal | Écriture | Écriture | Écriture | Écriture | — | — | — | — |
-| Paiements étudiants | Écriture | Écriture | Écriture | Écriture | Écriture | Écriture | — | Reçus de ses paiements |
-| Supervision financière | Lecture / export | Lecture / export | — | — | — | — | — | — |
-| Utilisateurs / rôles | Écriture | Lecture | — | Écriture (rôles métier) | — | — | — | — |
-| Journal d'audit | Lecture | Lecture | — | — | — | — | — | — |
-| Réglages / années | Écriture | Écriture | Écriture | — | — | — | — | — |
-| Demandes d'accès | Traitement | Traitement | Traitement | Traitement | Traitement | Traitement | — | — |
-| Bourses | Décision | Lecture | — | — | — | — | — | Suivi public |
+| Module | SUPER_ADMIN | ADMIN | DIRECTION | ASSISTANT_ADMIN | RESP_PEDA | FORMATEUR | ETUDIANT |
+|---|---|---|---|---|---|---|---|
+| Visites / prospects | Lecture | Lecture | Écriture | Écriture | — | — | — |
+| Dossiers étudiants | Lecture | Lecture | Écriture | Écriture | — | — | Son dossier |
+| Inscriptions | Lecture + édition + validation | Lecture + édition | Création + édition + validation | Création + édition + validation | Lecture + validation | — | Ses inscriptions |
+| Catalogue / modules / leçons | Lecture | Lecture | Écriture | Lecture | Écriture | Écriture (modules/leçons) | — |
+| Groupes | Écriture | Écriture | Écriture | Lecture | Écriture | Ses groupes | Ses groupes |
+| Séances / présences | Lecture | Lecture | Écriture | Lecture | Écriture | Ses séances | Ses présences |
+| Ressources | Lecture | Lecture | Écriture | — | Écriture | Écriture | Publiées |
+| Caisse / journal | Écriture | Écriture | Écriture | Écriture | — | — | — |
+| Paiements étudiants | Écriture | Écriture | Écriture | Écriture | Écriture | — | Reçus de ses paiements |
+| Supervision financière | Lecture / export | Lecture / export | — | — | — | — | — |
+| Utilisateurs / rôles | Écriture | Lecture | — | Écriture (rôles métier) | — | — | — |
+| Journal d'audit | Lecture | Lecture | — | — | — | — | — |
+| Réglages / années | Écriture | Écriture | Écriture | — | — | — | — |
+| Demandes d'accès | Traitement | Traitement | Traitement | Traitement | Traitement | — | — |
+| Bourses | Décision | Lecture | — | — | — | — | Suivi public |
 
-> **Lecture** : l'écran est accessible, l'écriture ne l'est pas. **—** : aucun accès à l'écran. Les rôles `COMPTABLE` et `ACCUEIL`, conservés pour l'historique, ne figurent pas dans cette matrice.
+> **Lecture** : l'écran est accessible, l'écriture ne l'est pas. **—** : aucun accès à l'écran. Les rôles `COMPTABLE`, `ACCUEIL` et `SECRETAIRE`, conservés pour l'historique, ne figurent pas dans cette matrice.
 >
-> La matrice fine (19 droits) est éditable par le `SUPER_ADMIN` dans `/dashboard/super-admin/permissions/`. Les décorateurs de rôle restent la première barrière ; à ce jour, seul le droit `finance.write` pilote une action (l'encaissement des paiements étudiants), les autres droits étant enregistrés sans être encore branchés. **Au 10/11/2026**, ce droit est porté en base par `DIRECTION`, `ASSISTANT_ADMIN`, `SECRETAIRE`, `RESP_PEDA`, `SUPER_ADMIN` et `ADMIN` (ainsi que par l'ancien rôle `COMPTABLE`) : le secrétariat et la supervision pédagogique peuvent donc encaisser un paiement étudiant tant que la matrice n'est pas resserrée.
+> La matrice fine (19 droits) est éditable par le `SUPER_ADMIN` dans `/dashboard/super-admin/permissions/`. Les décorateurs de rôle restent la première barrière ; à ce jour, seul le droit `finance.write` pilote une action (l'encaissement des paiements étudiants), les autres droits étant enregistrés sans être encore branchés. **Au 10/11/2026**, ce droit est porté en base par `DIRECTION`, `ASSISTANT_ADMIN`, `RESP_PEDA`, `SUPER_ADMIN` et `ADMIN` (ainsi que par les anciens rôles `COMPTABLE` et `SECRETAIRE`) : l'assistant administratif, qui reprend le secrétariat, et la supervision pédagogique peuvent donc encaisser un paiement étudiant tant que la matrice n'est pas resserrée.
 
 ### 4.5 Permissions fines
 
@@ -302,7 +302,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | AC-01 | Enregistrer une visite : contact, type de visiteur, motif, demande, service et personne hôtes, heure d'arrivée, agent. | M | Réalisé |
 | AC-02 | Réutiliser un contact existant par recherche téléphone/e-mail/nom, ou en créer un. | M | Réalisé |
 | AC-03 | Clôturer une visite par l'heure de départ ; statut `IN_PROGRESS` tant qu'elle est présente. | M | Réalisé |
-| AC-04 | Convertir une visite en prospect, puis un prospect en étudiant (rôle secrétariat pour la conversion étudiant). | M | Réalisé |
+| AC-04 | Convertir une visite en prospect, puis un prospect en étudiant (assistant administratif ou direction pour la conversion étudiant). | M | Réalisé |
 | AC-05 | Gérer les motifs de visite (libellé, ordre, actif/inactif). | S | Réalisé |
 | AC-06 | Gérer un prospect : source, formation visée, domaine, niveau, programme linguistique, contact préféré, statut, prochaine relance. | M | Réalisé |
 | AC-07 | Enregistrer les relances : type de contact, résumé, informations données, résultat, prochaine action et date. | M | Réalisé |
@@ -341,7 +341,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 - Le tarif mensuel de référence d'une formation ne modifie pas les inscriptions déjà créées : leur tarif est figé.
 - Une inscription terminée ou annulée renseigne `ended_at` ; une réactivation le remet à vide.
 - À la validation, le compte étudiant passe `ACTIVE` et une entrée d'audit `ENROLLMENT_VALIDATE` est écrite ; aucune notification n'est créée à ce stade.
-- Le bouton « Encaisser » suit le droit `finance.write` : à la date de référence, le secrétariat et la supervision pédagogique le détiennent comme la direction et l'assistant administratif ; resserrer la matrice ferme l'encaissement sans changer les rôles.
+- Le bouton « Encaisser » suit le droit `finance.write` : à la date de référence, la supervision pédagogique le détient comme la direction et l'assistant administratif ; resserrer la matrice ferme l'encaissement sans changer les rôles.
 
 ### 5.5 Pédagogie : catalogue, modules et leçons
 
@@ -426,7 +426,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | PG-01 | Créer un groupe : nom, formation, dates de début et de fin, horaires, capacité, statut, formateurs. | M | Réalisé |
 | PG-02 | Refuser un groupe dont la date de fin ne suit pas la date de début. | M | Réalisé |
 | PG-03 | Réserver la création et la modification des groupes à `RESP_PEDA`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN`. | M | Réalisé |
-| PG-04 | Un formateur ne voit que les groupes où il est affecté ; la direction, le secrétariat et les rôles transversaux voient tout. | M | Réalisé |
+| PG-04 | Un formateur ne voit que les groupes où il est affecté ; la direction, l'assistant administratif et les rôles transversaux voient tout. | M | Réalisé |
 | PG-05 | Planifier une séance : date, horaires prévus et réels, module, leçon, thème, objectifs, contenu, exercices, difficultés, statut. | M | Réalisé |
 | PG-06 | Refuser deux séances identiques (même groupe, même date, même heure de début prévue). | M | Réalisé |
 | PG-07 | Saisir les présences d'une séance : présent, absent, en retard, excusé, heure d'arrivée, motif, note. | M | Réalisé |
@@ -436,7 +436,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | PG-11 | Afficher la progression d'un groupe : heures planifiées, heures réalisées, volume du catalogue. | S | Réalisé |
 | PG-12 | Consulter l'historique des présences avec filtres (recherche, statut, formation, formateur, période). | S | Réalisé |
 | PG-13 | Un formateur ne peut écrire que dans les séances de ses groupes ; la direction et le responsable pédagogique peuvent écrire partout. | M | Réalisé |
-| PG-14 | Le secrétariat consulte les séances et les présences, mais ne les saisit pas. | M | Réalisé |
+| PG-14 | L'assistant administratif consulte les séances et les présences, mais ne les saisit pas. | M | Réalisé |
 
 **Règles d'acceptation**
 
@@ -571,7 +571,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | RG-ID-03 | Un compte sans rôle ne voit aucun écran métier et est renvoyé vers l'accueil public. |
 | RG-ID-04 | Un rôle élevé (`SUPER_ADMIN`, `ADMIN`, `DIRECTION`) ne peut pas être demandé depuis le formulaire public. |
 | RG-ID-05 | L'approbation d'une demande attribue un rôle effectif, distinct du rôle demandé, et le conserve dans `assigned_role`. |
-| RG-ID-06 | Un approbateur ne peut attribuer que les rôles de son périmètre : super administrateur et administrateur → tous les rôles demandables ; responsable pédagogique → formateur et étudiant ; direction, assistant administratif et secrétariat → étudiant. |
+| RG-ID-06 | Un approbateur ne peut attribuer que les rôles de son périmètre : super administrateur et administrateur → tous les rôles demandables ; responsable pédagogique → formateur et étudiant ; direction et assistant administratif → étudiant. |
 | RG-ID-07 | Le statut `ACTIVE` est requis pour tout accès métier ; les autres statuts bloquent la session en cours. |
 | RG-ID-08 | La suppression d'un compte n'est pas un parcours métier : on désactive ou on suspend. |
 | RG-ID-09 | Le changement d'e-mail passe par un jeton signé envoyé à la nouvelle adresse ; en cas d'échec d'envoi, aucune modification n'est enregistrée. |
@@ -662,7 +662,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 
 1. L'accueil enregistre une visite et éventuellement un prospect.
 2. Le prospect est relancé ; son statut évolue.
-3. Le secrétariat convertit le prospect en étudiant (compte `ETUDIANT`, code interne).
+3. L'assistant administratif convertit le prospect en étudiant (compte `ETUDIANT`, code interne).
 4. Il crée une inscription sur un groupe, avec tarif, remise et net.
 5. La direction, l'assistant administratif, le responsable pédagogique ou le super administrateur valide l'inscription.
 6. La comptabilité encaisse un paiement, choisit le mois réglé et le moyen.
@@ -1085,7 +1085,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 - La direction valide les tarifs, remises et décisions de bourse.
 - Le responsable pédagogique dispose des informations de catalogue (modules, leçons, heures).
-- Le secrétariat dispose des pièces administratives des étudiants.
+- L'assistant administratif dispose des pièces administratives des étudiants.
 - Google Cloud permet de créer un compte de service et de partager les feuilles avec son adresse.
 - L'établissement accepte une sauvegarde SQLite locale avant les écritures automatisées.
 - Les utilisateurs sont formés à leurs écrans et à leurs périmètres.
@@ -1110,7 +1110,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 ### 14.2 État des tests
 
-- **778 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
+- **779 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
 - `manage.py check` : aucun problème.
 - La base de production n'est jamais touchée par les tests.
 - Les tests couvrent notamment : portail, authentification, rôles, profils, visites, prospects, étudiants, inscriptions, pédagogie, comptabilité, permissions, supervision, bourses, réglages, années académiques, imports, synchronisation, sauvegardes, relations, messagerie interne et rendu bilingue.
@@ -1125,7 +1125,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 | Le responsable pédagogique crée un module | Module visible sous la formation, ordre suivant, audit `MODULE_CREATE`, retour sur l'ancre. |
 | Le responsable pédagogique crée une leçon | Leçon visible sous le module, ordre suivant, audit `LESSON_CREATE`, retour sur l'ancre. |
 | Un `ADMIN` tente de créer un module | 403, formulaire absent. |
-| Le secrétariat crée une inscription avec remise > tarif | Refus, message explicite, aucune écriture. |
+| L'assistant administratif crée une inscription avec remise > tarif | Refus, message explicite, aucune écriture. |
 | La direction valide l'inscription | Compte étudiant actif, groupe rattaché, audit `ENROLLMENT_VALIDATE`. |
 | La comptabilité encaisse plus que le reste à payer | Refus. |
 | Une sortie vide la caisse au-delà du découvert | Refus avec montant manquant, y compris par script. |

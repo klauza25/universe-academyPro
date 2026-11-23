@@ -1039,7 +1039,7 @@ class StudentPaymentTests(AccountingTestBase):
 
 class AccountingPermissionTests(AccountingTestBase):
     def test_le_journal_reste_reserve_au_poste_finance(self):
-        for user in (self.secretaire, self.etudiant):
+        for user in (self.formateur, self.etudiant):
             client = self.client_for(user)
             response = client.get(reverse('core:dashboard:journal'))
             self.assertEqual(response.status_code, 403)
@@ -1132,34 +1132,33 @@ class SingleSourceOfTruthTests(AccountingTestBase):
         self.assertEqual(response.context['total_revenue'], 10000)
 
 
-class ComptableStudentListTests(BusinessTestBase):
-    """La comptable consulte la liste des inscrits, sans écriture."""
+class AssistantStudentListTests(BusinessTestBase):
+    """Le poste fusionné consulte et tient les dossiers étudiants."""
 
-    def test_comptable_sees_students_list(self):
+    def test_assistant_sees_students_list(self):
         client = self.client_for(self.assistant)
         response = client.get(reverse('core:dashboard:student-list'))
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, self.etudiant.get_full_name())
         self.assertContains(
             response, reverse('core:dashboard:student-list'))
-        self.assertNotContains(
+        self.assertContains(
             response, reverse('core:dashboard:student-create'))
 
-    def test_comptable_reads_student_detail_without_write_controls(self):
+    def test_assistant_reads_student_detail_with_write_controls(self):
         client = self.client_for(self.assistant)
         response = client.get(reverse(
             'core:dashboard:student-detail', args=[self.etudiant.id]))
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(
+        self.assertContains(
             response,
             reverse('core:dashboard:student-edit', args=[self.etudiant.id]))
-        self.assertNotContains(
+        self.assertContains(
             response, reverse('core:dashboard:enrollment-create'))
-        self.assertNotContains(
+        self.assertContains(
             response,
             reverse('core:dashboard:student-document-upload',
                     args=[self.etudiant.id]))
-        self.assertContains(response, 'relève du secrétariat')
 
     def test_secretary_gets_the_document_form(self):
         response = self.client_for(self.secretaire).get(reverse(
@@ -1169,18 +1168,23 @@ class ComptableStudentListTests(BusinessTestBase):
             reverse('core:dashboard:student-document-upload',
                     args=[self.etudiant.id]))
 
-    def test_comptable_cannot_write_student_records(self):
+    def test_assistant_can_write_student_records(self):
         client = self.client_for(self.assistant)
         self.assertEqual(
             client.get(reverse('core:dashboard:student-create')).status_code,
-            403,
+            200,
         )
-        self.assertEqual(
-            client.post(reverse(
-                'core:dashboard:student-edit', args=[self.etudiant.id]),
-                {}).status_code,
-            403,
-        )
+        response = client.post(reverse(
+            'core:dashboard:student-edit', args=[self.etudiant.id]), {
+                'first_name': self.etudiant.first_name,
+                'last_name': self.etudiant.last_name,
+                'phone': '+242 06 000 00 00',
+            })
+        self.assertRedirects(
+            response,
+            reverse('core:dashboard:student-detail', args=[self.etudiant.id]),
+            fetch_redirect_response=False)
+        self.assert_audited('STUDENT_EDIT', self.etudiant.id)
 
 
 class StudentWithoutEnrollmentNoticeTests(BusinessTestBase):

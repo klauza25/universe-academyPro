@@ -23,7 +23,7 @@ from .models import (
 )
 from .utils import log_audit
 
-PEDAGOGY_ROLES = ('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'SECRETAIRE')
+PEDAGOGY_ROLES = ('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ASSISTANT_ADMIN')
 MANAGE_ROLES = ('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 
 
@@ -32,13 +32,13 @@ def _is_manager(user):
 
 
 def _can_access_session(user, session):
-    if _is_manager(user) or user.has_role('SECRETAIRE'):
+    if _is_manager(user) or user.has_role('ASSISTANT_ADMIN'):
         return True
     return session.formateurs.filter(id=user.id).exists()
 
 
 def _my_sessions(user):
-    if _is_manager(user) or user.has_role('SECRETAIRE'):
+    if _is_manager(user) or user.has_role('ASSISTANT_ADMIN'):
         return CourseSession.objects.all()
     return CourseSession.objects.filter(formateurs=user)
 
@@ -357,7 +357,7 @@ def course_session_edit(request, session_id):
 @role_required(*PEDAGOGY_ROLES)
 def session_record_list(request):
     records = _record_queryset()
-    if not (_is_manager(request.user) or request.user.has_role('SECRETAIRE')):
+    if not (_is_manager(request.user) or request.user.has_role('ASSISTANT_ADMIN')):
         records = records.filter(session__formateurs=request.user)
 
     query = (request.GET.get('q') or '').strip()
@@ -484,7 +484,7 @@ def session_record_detail(request, record_id):
     })
 
 
-@role_required(*MANAGE_ROLES, 'SECRETAIRE')
+@role_required(*MANAGE_ROLES, 'ASSISTANT_ADMIN')
 def attendance_sheet(request, record_id):
     record = get_object_or_404(_record_queryset(), id=record_id)
     if not _can_access_session(request.user, record.session):
@@ -587,7 +587,7 @@ def attendance_history(request):
     attendances = Attendance.objects.select_related(
         'enrollment__student', 'enrollment__session__course', 'session_record'
     )
-    if not (_is_manager(request.user) or request.user.has_role('SECRETAIRE')):
+    if not (_is_manager(request.user) or request.user.has_role('ASSISTANT_ADMIN')):
         attendances = attendances.filter(
             enrollment__session__formateurs=request.user
         )
@@ -836,7 +836,7 @@ def resource_edit(request, resource_id):
     })
 
 
-@role_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ETUDIANT', 'SECRETAIRE')
+@role_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ETUDIANT', 'ASSISTANT_ADMIN')
 def resource_download(request, resource_id):
     resource = get_object_or_404(Resource, id=resource_id)
     if not _resource_access(request.user, resource, student=True):

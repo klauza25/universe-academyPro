@@ -57,7 +57,6 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
             'ADMIN': self.admin,
             'DIRECTION': self.direction,
             'ASSISTANT_ADMIN': self.assistant,
-            'SECRETAIRE': self.secretaire,
             'RESP_PEDA': self.peda,
             'FORMATEUR': self.formateur,
             'ETUDIANT': self.etudiant,

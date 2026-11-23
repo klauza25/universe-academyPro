@@ -4,7 +4,7 @@
 {% block title %}{% blocktrans with n=student.get_full_name|default:student.email %}{{ n }} — Étudiant{% endblocktrans %}{% endblock %}
 
 {% block sidebar_nav %}
-{% if 'ASSISTANT_ADMIN' in user_roles and 'SECRETAIRE' not in user_roles and 'DIRECTION' not in user_roles %}
+{% if 'ASSISTANT_ADMIN' in user_roles and 'DIRECTION' not in user_roles %}
     {% include "dashboard/comptabilite/_nav.html" %}
 {% else %}
     {% include "dashboard/secretaire/_nav.html" %}
@@ -31,7 +31,7 @@
         <p class="ua-page-sub">{{ student.internal_code|default:"—" }} · {{ student.email }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
-        {% if not is_elevated and 'ASSISTANT_ADMIN' not in user_roles %}
+        {% if not is_elevated %}
         <a href="{% url 'core:dashboard:student-edit' student.id %}" class="ua-btn ua-btn-primary">{% icon "settings" %} {{ act_modifier }}</a>
         <a href="{% url 'core:dashboard:enrollment-create' %}?student={{ student.id }}" class="ua-btn ua-btn-light">{% icon "clipboard" %} {{ act_inscription }}</a>
         {% endif %}

@@ -435,7 +435,7 @@ table(
          '`ALLOWED_HOSTS` renseignés, `CSRF_TRUSTED_ORIGINS` avec le '
          'domaine HTTPS.', 'Bloquant'],
         ['2', 'Comptes de démonstration', 'Supprimer ou changer les mots '
-         'de passe par défaut (`admin@`, `comptable@`, `secretaire@`, etc.).',
+         'de passe par défaut (`admin@`, `assistant@`, `formateur@`, etc.).',
          'Bloquant'],
         ['3', 'Serveur d’application', 'Ajouter gunicorn et WhiteNoise '
          '(ou nginx) ; lancer `collectstatic` au déploiement.', 'Bloquant'],

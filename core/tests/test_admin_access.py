@@ -123,10 +123,10 @@ class AdminRestrictedWriteTests(BusinessTestBase):
     def test_admin_cannot_assign_roles(self):
         response = self.client.post(reverse(
             'core:dashboard:user-role-assign', args=[self.secretaire.id]),
-            {'role_key': RoleKey.ASSISTANT_ADMIN, 'action': 'add'},
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'add'},
         )
         self.assertEqual(response.status_code, 403)
-        self.assertFalse(self.secretaire.has_role(RoleKey.ASSISTANT_ADMIN))
+        self.assertFalse(self.secretaire.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
 
     def test_admin_can_review_access_requests(self):
         applicant = self.make_user(

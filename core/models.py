@@ -34,14 +34,14 @@ class RoleKey(models.TextChoices):
 # Postes fusionnés dans ASSISTANT_ADMIN. Les lignes restent en base pour que
 # l'historique (audit, paiements encaissés, demandes d'accès passées) garde son
 # sens ; ils ne sont plus attribuables nulle part et n'ont plus de menu.
-ROLES_DISSOUS = ('COMPTABLE', 'ACCUEIL')
+ROLES_DISSOUS = ('COMPTABLE', 'ACCUEIL', 'SECRETAIRE')
 
 ROLE_DASHBOARD_ROUTES = {
     'SUPER_ADMIN': 'core:dashboard:super-admin-dashboard',
     'ADMIN': 'core:dashboard:admin-dashboard',
     'DIRECTION': 'core:dashboard:direction-dashboard',
     'ASSISTANT_ADMIN': 'core:dashboard:comptabilite-dashboard',
-    'SECRETAIRE': 'core:dashboard:secretaire-dashboard',
+    'SECRETAIRE': 'core:dashboard:comptabilite-dashboard',
     'COMPTABLE': 'core:dashboard:comptabilite-dashboard',
     'RESP_PEDA': 'core:dashboard:resp-peda-dashboard',
     'FORMATEUR': 'core:dashboard:formateur-dashboard',
@@ -61,7 +61,7 @@ ELEVATED_ROLES = ('SUPER_ADMIN', 'ADMIN')
 # (SUPER_ADMIN, ADMIN) et la direction restent attribués depuis l'écran
 # « Utilisateurs » par un SUPER_ADMIN, jamais par un formulaire public.
 REQUESTABLE_ROLES = (
-    'ETUDIANT', 'FORMATEUR', 'SECRETAIRE', 'ASSISTANT_ADMIN', 'RESP_PEDA',
+    'ETUDIANT', 'FORMATEUR', 'ASSISTANT_ADMIN', 'RESP_PEDA',
 )
 REQUESTABLE_ROLE_CHOICES = [
     (key, RoleKey(key).label) for key in REQUESTABLE_ROLES

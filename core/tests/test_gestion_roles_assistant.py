@@ -49,19 +49,19 @@ class AssistantUserManagementTests(BusinessTestBase):
 
     def test_assistant_creates_account_with_role(self):
         response = self.client_assistant.post(reverse(CREATE_URL), {
-            'first_name': 'Nouvelle',
-            'last_name': 'Secrétaire',
-            'email': 'nvlle.secretaire@test.local',
+            'first_name': 'Nouveau',
+            'last_name': 'Responsable',
+            'email': 'nvlle.responsable@test.local',
             'phone': '+242060000099',
-            'role': RoleKey.SECRETAIRE,
+            'role': RoleKey.RESPONSABLE_PEDAGOGIQUE,
             'session': '',
             'password': 'AssistantPass123!',
         })
         self.assertRedirects(
             response, reverse(LIST_URL), fetch_redirect_response=False)
-        created = User.objects.get(email='nvlle.secretaire@test.local')
-        self.assertTrue(created.has_role(RoleKey.SECRETAIRE))
-        self.assertTrue(created.internal_code.startswith('UA-SEC'))
+        created = User.objects.get(email='nvlle.responsable@test.local')
+        self.assertTrue(created.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
+        self.assertTrue(created.internal_code.startswith('UA-RPD'))
         self.assert_audited('USER_CREATE', created.id)
 
     def test_assistant_create_form_hides_privileged_roles(self):
@@ -72,7 +72,9 @@ class AssistantUserManagementTests(BusinessTestBase):
         }
         self.assertNotIn(
             {'SUPER_ADMIN', 'ADMIN', 'DIRECTION'}, choix)
-        self.assertIn(RoleKey.SECRETAIRE, choix)
+        self.assertNotIn(
+            {'SECRETAIRE', 'COMPTABLE', 'ACCUEIL'}, choix)
+        self.assertIn(RoleKey.ASSISTANT_ADMIN, choix)
 
     def test_assistant_cannot_create_a_privileged_account(self):
         before = User.objects.count()
@@ -115,17 +117,26 @@ class AssistantUserManagementTests(BusinessTestBase):
     def test_assistant_assigns_and_removes_a_business_role(self):
         response = self.client_assistant.post(
             reverse(ROLES_URL, args=[self.etudiant.id]),
-            {'role_key': RoleKey.SECRETAIRE, 'action': 'add'})
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'add'})
         self.assertEqual(response.status_code, 302)
-        self.assertTrue(self.etudiant.has_role(RoleKey.SECRETAIRE))
+        self.assertTrue(self.etudiant.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
         self.assert_audited('ROLE_ASSIGN', self.etudiant.id)
 
         response = self.client_assistant.post(
             reverse(ROLES_URL, args=[self.etudiant.id]),
-            {'role_key': RoleKey.SECRETAIRE, 'action': 'remove'})
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'remove'})
         self.assertEqual(response.status_code, 302)
-        self.assertFalse(self.etudiant.has_role(RoleKey.SECRETAIRE))
+        self.assertFalse(self.etudiant.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
         self.assert_audited('ROLE_REMOVE', self.etudiant.id)
+
+    def test_assistant_cannot_grant_a_dissolved_role(self):
+        for role_key in ('SECRETAIRE', 'COMPTABLE', 'ACCUEIL'):
+            with self.subTest(role=role_key):
+                response = self.client_assistant.post(
+                    reverse(ROLES_URL, args=[self.etudiant.id]),
+                    {'role_key': role_key, 'action': 'add'})
+                self.assertEqual(response.status_code, 302)
+                self.assertFalse(self.etudiant.has_role(role_key))
 
     def test_assistant_cannot_grant_a_privileged_role(self):
         for role_key in (
@@ -148,13 +159,13 @@ class AssistantUserManagementTests(BusinessTestBase):
     def test_assistant_cannot_change_own_roles(self):
         response = self.client_assistant.post(
             reverse(ROLES_URL, args=[self.assistant.id]),
-            {'role_key': RoleKey.SECRETAIRE, 'action': 'add'})
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'add'})
         self.assertEqual(response.status_code, 403)
         self.assistant.refresh_from_db()
-        self.assertFalse(self.assistant.has_role(RoleKey.SECRETAIRE))
+        self.assertFalse(self.assistant.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
 
     def test_other_roles_stay_outside_user_management(self):
-        for user in (self.secretaire, self.formateur, self.etudiant):
+        for user in (self.direction, self.peda, self.formateur, self.etudiant):
             with self.subTest(role=user.primary_role):
                 client = self.client_for(user)
                 self.assertEqual(

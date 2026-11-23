@@ -89,7 +89,7 @@ class SalaireFormateurTests(BusinessTestBase):
         for user in (self.direction, self.assistant, self.admin, self.super_admin):
             with self.subTest(user=user.email):
                 self.assertEqual(self.client_for(user).get(url).status_code, 200)
-        for user in (self.formateur, self.etudiant, self.secretaire, self.peda):
+        for user in (self.formateur, self.etudiant, self.peda):
             with self.subTest(user=user.email):
                 self.assertEqual(self.client_for(user).get(url).status_code, 403)
         self.assertEqual(self.client.get(url).status_code, 302)

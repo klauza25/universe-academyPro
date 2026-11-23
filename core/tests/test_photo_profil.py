@@ -127,14 +127,17 @@ class PhotoPoseeParLeSecretariatTests(BusinessTestBase):
         self.assertFalse(default_storage.exists(nom))
         self.assert_audited('PROFILE_AVATAR_DELETE', self.eleve.pk)
 
-    def test_un_assistant_admin_ne_pose_pas_de_photo(self):
+    def test_l_assistant_admin_pose_aussi_la_photo(self):
         self.client = self.client_for(self.assistant)
         reponse = self.client.post(self.url, {
             'action': 'avatar', 'avatar': photo(),
         })
-        self.assertEqual(reponse.status_code, 403)
+        self.assertRedirects(
+            reponse, reverse('core:dashboard:student-detail',
+                             args=[self.eleve.id]),
+            fetch_redirect_response=False)
         self.eleve.refresh_from_db()
-        self.assertFalse(self.eleve.avatar)
+        self.assertTrue(self.eleve.avatar)
 
 
 class PhotoPoseeParLeSuperAdministrateurTests(BusinessTestBase):

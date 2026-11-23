@@ -268,9 +268,9 @@ class ProspectTests(AccueilTestBase):
         self.assertTrue(prospect.reference.startswith('PRO-'))
         self.assert_audited('PROSPECT_CREATE', prospect.pk)
 
-    def test_convert_to_student_is_not_offered_to_reception(self):
+    def test_convert_to_student_is_not_offered_to_admin(self):
         prospect = self.make_prospect()
-        response = self.client.get(
+        response = self.client_for(self.admin).get(
             reverse('core:dashboard:prospect-detail', args=[prospect.pk]))
         self.assertEqual(response.status_code, 200)
         self.assertNotContains(response, 'Convertir en étudiant')

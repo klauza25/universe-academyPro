@@ -641,10 +641,10 @@ para(
 h1('5', 'Qui fait quoi')
 
 para(
-    'Huit rôles sont actifs. Deux anciens rôles, COMPTABLE et ACCUEIL, sont '
-    'conservés dans l’historique mais ne sont plus attribuables : leurs '
-    'missions ont été reprises par la comptabilité, le secrétariat et '
-    'l’assistant administratif.'
+    'Sept rôles sont actifs. Trois anciens rôles, COMPTABLE, ACCUEIL et '
+    'SECRETAIRE, sont conservés dans l’historique mais ne sont plus '
+    'attribuables : leurs missions ont été reprises par l’assistant '
+    'administratif, qui tient l’accueil, la caisse et le secrétariat.'
 )
 
 table(
@@ -656,10 +656,8 @@ table(
          'Aucune écriture métier', 'Gérer les rôles ou les permissions.'],
         ['DIRECTION', 'Pilotage, validation des inscriptions, encaissement, contrôle.',
          'Étudiants, inscriptions, pédagogie, finance, accueil', 'Gérer les comptes et les rôles.'],
-        ['ASSISTANT_ADMIN', 'Accueil, visites, prospects, dossiers étudiants, guichet.',
-         'Étudiants, inscriptions, finance, accueil', 'Pédagogie (séances, cahier de texte).'],
-        ['SECRETAIRE', 'Dossiers étudiants, inscriptions, documents, accueil.',
-         'Étudiants, inscriptions, finance, accueil', 'Créer des groupes ou des séances.'],
+        ['ASSISTANT_ADMIN', 'Accueil, visites, prospects, dossiers étudiants, inscriptions, documents, guichet, comptes et rôles métier.',
+         'Étudiants, inscriptions, finance, accueil, comptes et rôles métier', 'Pédagogie (séances, cahier de texte) ; rôles privilégiés.'],
         ['RESP_PEDA', 'Programmes, groupes, séances, ressources, suivi pédagogique.',
          'Pédagogie, validation d’inscriptions, demandes d’accès de son équipe', 'Gérer les rôles administratifs.'],
         ['FORMATEUR', 'Ses groupes, ses séances, le cahier de texte et les présences.',
@@ -685,17 +683,19 @@ para(
 para(
     'Cette séparation est volontaire : elle empêche qu’un administrateur '
     'technique puisse modifier seul les données financières ou pédagogiques. '
-    'Les actes sensibles sont réservés au super administrateur et tracés dans '
-    'l’audit.'
+    'La gestion courante des comptes et des rôles métier est partagée avec '
+    'l’assistant administratif ; la matrice des permissions, les rôles '
+    'privilégiés et la décision de bourse restent réservés au super '
+    'administrateur. Tout est tracé dans l’audit.'
 )
 
 h2('5.2 Les rôles dissous')
 
 para(
-    'COMPTABLE et ACCUEIL n’apparaissent plus dans les choix d’attribution. '
-    'Les utilisateurs qui les portaient historiquement gardent leurs traces '
-    '(paiements, visites, audit) ; pour leur donner accès, attribuez-leur '
-    'ASSISTANT_ADMIN ou SECRETAIRE selon leur poste réel.'
+    'COMPTABLE, ACCUEIL et SECRETAIRE n’apparaissent plus dans les choix '
+    'd’attribution. Les utilisateurs qui les portaient historiquement gardent '
+    'leurs traces (paiements, visites, audit) ; pour leur donner accès, '
+    'attribuez-leur ASSISTANT_ADMIN, qui reprend ces trois postes.'
 )
 
 
@@ -893,9 +893,10 @@ para(
 h1('8', 'Parcours secrétariat')
 
 para(
-    'Le secrétariat tient le dossier étudiant de bout en bout : identité, '
-    'inscription, documents, tarif et remise. Il ne crée ni les groupes ni les '
-    'séances.'
+    'Le service scolaire (« Secrétariat ») est tenu par l’assistant '
+    'administratif depuis la fusion des postes : il tient le dossier étudiant '
+    'de bout en bout — identité, inscription, documents, tarif et remise. '
+    'Il ne crée ni les groupes ni les séances.'
 )
 
 h2('8.1 La liste des étudiants')
@@ -993,17 +994,17 @@ h2('8.6 Les documents administratifs')
 para(
     'Les pièces (identité, diplôme, relevé de notes, photo, certificat, '
     'autre) sont ajoutées depuis la fiche étudiant. Le téléchargement est '
-    'contrôlé : l’étudiant ne peut ouvrir que ses propres pièces, le '
-    'secrétariat, la direction et l’administration voient celles de tous. '
+    'contrôlé : l’étudiant ne peut ouvrir que ses propres pièces, '
+    'l’assistant administratif, la direction et l’administration voient celles de tous. '
     'Chaque accès est journalisé.'
 )
 
 h2('8.7 Prospects et visites')
 
 para(
-    'Le secrétariat peut consulter les prospects et les visites, suivre les '
-    'relances et ouvrir un dossier depuis un prospect. La création d’une '
-    'visite et la transformation en prospect se font à l’accueil.'
+    'L’assistant administratif peut consulter les prospects et les visites, '
+    'suivre les relances et ouvrir un dossier depuis un prospect. La création '
+    'd’une visite et la transformation en prospect se font à l’accueil.'
 )
 
 
@@ -1250,9 +1251,9 @@ step(4, 'Le dossier passe au statut « Active » ; s’il était en attente, le 
 step(5, 'Le dossier peut maintenant être encaissé.')
 
 note(
-    'Si le dossier est incomplet, ne validez pas : demandez la correction au '
-    'secrétariat. Une validation se trace dans l’audit et ne se « défait » '
-    'pas par simple clic.',
+    'Si le dossier est incomplet, ne validez pas : demandez la correction à '
+    'l’assistant administratif. Une validation se trace dans l’audit et ne se '
+    '« défait » pas par simple clic.',
 )
 
 h2('11.3 Contrôler')
@@ -1261,7 +1262,8 @@ para(
     'La direction consulte le journal comptable, les caisses, les étudiants, '
     'les visites, les prospects, la vue direction et le journal d’audit. Elle '
     'peut encaisser un paiement et suivre les bourses en lecture. La gestion '
-    'des comptes et des rôles reste réservée au super administrateur.'
+    'des comptes et des rôles métier appartient au super administrateur et à '
+    'l’assistant administratif ; la direction n’y a pas accès.'
 )
 
 
@@ -1679,27 +1681,27 @@ note(
 h1('', 'Annexe A — Matrice des écrans par rôle')
 
 table(
-    ['Écran', 'SUPER_ADMIN', 'ADMIN', 'DIRECTION', 'ASSISTANT', 'SECRETAIRE', 'RESP_PEDA', 'FORMATEUR', 'ETUDIANT'],
+    ['Écran', 'SUPER_ADMIN', 'ADMIN', 'DIRECTION', 'ASSISTANT', 'RESP_PEDA', 'FORMATEUR', 'ETUDIANT'],
     [
-        ['Tableau de bord du rôle', '✓', '✓', '✓', '✓', '✓', '✓', '✓', '✓'],
-        ['Accueil, visites, prospects', '✓', '✓', '✓', '✓', '✓', '—', '—', '—'],
-        ['Étudiants et dossiers', '✓', '✓', '✓', '✓', '✓', 'lecture', '—', '—'],
-        ['Inscriptions', '✓', 'lecture', '✓', '✓', '✓', 'lecture', '—', '—'],
-        ['Validation d’inscription', '✓', '—', '✓', '✓', '—', '✓', '—', '—'],
-        ['Programmes, groupes, séances', '✓', '✓', '✓', '—', 'lecture', '✓', '✓', '—'],
-        ['Cahier de texte et présences', '✓', '✓', '✓', '—', 'lecture', '✓', '✓', '—'],
-        ['Ressources', '✓', '✓', '✓', '—', 'lecture', '✓', '✓', 'lecture'],
-        ['Journal et caisses', '✓', '✓', '✓', '✓', '✓', 'lecture', '—', '—'],
-        ['Paiement étudiant', '✓', '—', '✓', '✓', '✓', '—', '—', '—'],
-        ['Clôtures', '✓', '✓', '✓', '✓', '✓', '—', '—', '—'],
-        ['Journal d’audit', '✓', '✓', '✓', '—', '—', '—', '—', '—'],
-        ['Demandes d’accès', '✓', 'lecture', '—', '—', '—', 'périmètre', '—', '—'],
-        ['Utilisateurs et rôles', '✓', 'lecture', '—', '✓', '—', '—', '—', '—'],
-        ['Permissions', '✓', '—', '—', '—', '—', '—', '—', '—'],
-        ['Bourses (instruction)', '✓', 'lecture', '—', '—', '—', '—', '—', '—'],
+        ['Tableau de bord du rôle', '✓', '✓', '✓', '✓', '✓', '✓', '✓'],
+        ['Accueil, visites, prospects', '✓', '✓', '✓', '✓', '—', '—', '—'],
+        ['Étudiants et dossiers', '✓', '✓', '✓', '✓', 'lecture', '—', '—'],
+        ['Inscriptions', '✓', 'lecture', '✓', '✓', 'lecture', '—', '—'],
+        ['Validation d’inscription', '✓', '—', '✓', '✓', '✓', '—', '—'],
+        ['Programmes, groupes, séances', '✓', '✓', '✓', 'lecture', '✓', '✓', '—'],
+        ['Cahier de texte et présences', '✓', '✓', '✓', 'lecture', '✓', '✓', '—'],
+        ['Ressources', '✓', '✓', '✓', '—', '✓', '✓', 'lecture'],
+        ['Journal et caisses', '✓', '✓', '✓', '✓', 'lecture', '—', '—'],
+        ['Paiement étudiant', '✓', '—', '✓', '✓', '—', '—', '—'],
+        ['Clôtures', '✓', '✓', '✓', '✓', '—', '—', '—'],
+        ['Journal d’audit', '✓', '✓', '✓', '—', '—', '—', '—'],
+        ['Demandes d’accès', '✓', 'lecture', '✓', '✓', 'périmètre', '—', '—'],
+        ['Utilisateurs et rôles', '✓', 'lecture', '—', '✓', '—', '—', '—'],
+        ['Permissions', '✓', '—', '—', '—', '—', '—', '—'],
+        ['Bourses (instruction)', '✓', 'lecture', '—', '—', '—', '—', '—'],
     ],
-    [4.4, 1.5, 1.4, 1.6, 1.8, 1.7, 1.8, 1.6, 1.2],
-    font=7.9, header_font=7.6, align_center={1, 2, 3, 4, 5, 6, 7, 8},
+    [4.8, 1.6, 1.5, 1.7, 2.0, 2.0, 1.8, 1.6],
+    font=7.9, header_font=7.6, align_center={1, 2, 3, 4, 5, 6, 7},
 )
 
 para(

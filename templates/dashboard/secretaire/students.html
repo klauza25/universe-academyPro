@@ -4,7 +4,7 @@
 {% block title %}{% translate "Étudiants" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}
-{% if 'ASSISTANT_ADMIN' in user_roles and 'SECRETAIRE' not in user_roles and 'DIRECTION' not in user_roles %}
+{% if 'ASSISTANT_ADMIN' in user_roles and 'DIRECTION' not in user_roles %}
     {% include "dashboard/comptabilite/_nav.html" %}
 {% else %}
     {% include "dashboard/secretaire/_nav.html" %}
@@ -18,7 +18,7 @@
         <h1 class="ua-page-title">{% translate "Étudiants" %}</h1>
         <p class="ua-page-sub">{% translate "Dossiers administratifs et inscriptions." %}</p>
     </div>
-    {% if not is_elevated and 'ASSISTANT_ADMIN' not in user_roles %}
+    {% if not is_elevated %}
     <a href="{% url 'core:dashboard:student-create' %}" class="ua-btn ua-btn-primary">
         {% icon "user-plus" %} {% translate "Nouvel étudiant" %}
     </a>

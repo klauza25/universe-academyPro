@@ -63,7 +63,11 @@ class BusinessTestBase(TestCase):
         cls.admin = cls.make_user(RoleKey.ADMIN, 'admin@test.local')
         cls.direction = cls.make_user(RoleKey.DIRECTION, 'direction@test.local')
         cls.assistant = cls.make_user(RoleKey.ASSISTANT_ADMIN, 'assistant@test.local')
-        cls.secretaire = cls.make_user(RoleKey.SECRETAIRE, 'secretaire@test.local')
+        # L'ancien poste de secrétaire est fusionné dans l'assistant
+        # administratif ; la suite garde un second compte sous ce rôle pour
+        # conserver la couverture des écrans scolaires sans rouvrir l'ancien
+        # poste dans les formulaires et la matrice.
+        cls.secretaire = cls.make_user(RoleKey.ASSISTANT_ADMIN, 'secretaire@test.local')
         cls.peda = cls.make_user(RoleKey.RESPONSABLE_PEDAGOGIQUE, 'peda@test.local')
         cls.formateur = cls.make_user(RoleKey.FORMATEUR, 'formateur@test.local')
         cls.etudiant = cls.make_user(RoleKey.ETUDIANT, 'etudiant@test.local')

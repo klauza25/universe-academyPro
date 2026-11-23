@@ -1118,7 +1118,7 @@ def student_payment_months(request):
     })
 
 
-@role_required(*FINANCE_ROLES, 'ETUDIANT', 'SECRETAIRE')
+@role_required(*FINANCE_ROLES, 'ETUDIANT')
 def payment_receipt(request, payment_id):
     payment = get_object_or_404(
         Payment.objects.select_related(
@@ -1129,8 +1129,7 @@ def payment_receipt(request, payment_id):
     )
     user = request.user
     if not (
-        user.has_any_role('ASSISTANT_ADMIN', 'DIRECTION', 'SUPER_ADMIN', 'ADMIN',
-                          'SECRETAIRE') or
+        user.has_any_role('ASSISTANT_ADMIN', 'DIRECTION', 'SUPER_ADMIN', 'ADMIN') or
         payment.enrollment.student_id == user.id
     ):
         return HttpResponseForbidden(_("Accès au reçu non autorisé."))

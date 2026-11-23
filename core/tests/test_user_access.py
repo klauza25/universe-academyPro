@@ -30,7 +30,7 @@ class UserDetailAccessPanelTests(BusinessTestBase):
         self.assertContains(response, reverse(STATUS_URL, args=[self.secretaire.id]))
         # Les rôles déjà attribués ne sont pas proposés une seconde fois.
         self.assertNotIn(
-            RoleKey.SECRETAIRE,
+            RoleKey.ASSISTANT_ADMIN,
             [role.key for role in response.context['available_roles']],
         )
         self.assertTrue(response.context['can_manage_access'])
@@ -82,14 +82,14 @@ class RoleAssignmentTests(BusinessTestBase):
         )
 
     def test_super_admin_adds_role(self):
-        response = self.post_role(self.secretaire, RoleKey.ASSISTANT_ADMIN)
+        response = self.post_role(self.secretaire, RoleKey.RESPONSABLE_PEDAGOGIQUE)
         self.assertRedirects(
             response,
             reverse(DETAIL_URL, args=[self.secretaire.id]),
             fetch_redirect_response=False,
         )
         self.assertTrue(
-            self.secretaire.roles.filter(key=RoleKey.ASSISTANT_ADMIN).exists())
+            self.secretaire.roles.filter(key=RoleKey.RESPONSABLE_PEDAGOGIQUE).exists())
         self.assert_audited('ROLE_ASSIGN', self.secretaire.id)
 
     def test_role_assignment_generates_internal_code(self):
@@ -103,25 +103,26 @@ class RoleAssignmentTests(BusinessTestBase):
         self.assert_audited('ROLE_ASSIGN', user.id)
 
     def test_adding_an_existing_role_is_idempotent(self):
-        RoleAssignmentTests.post_role(self, self.secretaire, RoleKey.SECRETAIRE)
-        response = self.post_role(self.secretaire, RoleKey.SECRETAIRE)
+        RoleAssignmentTests.post_role(self, self.secretaire, RoleKey.ASSISTANT_ADMIN)
+        response = self.post_role(self.secretaire, RoleKey.ASSISTANT_ADMIN)
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             UserRole.objects.filter(
-                user=self.secretaire, role__key=RoleKey.SECRETAIRE).count(),
+                user=self.secretaire, role__key=RoleKey.ASSISTANT_ADMIN).count(),
             1,
         )
 
     def test_super_admin_removes_role(self):
+        self.post_role(self.secretaire, RoleKey.RESPONSABLE_PEDAGOGIQUE)
         response = self.post_role(
-            self.secretaire, RoleKey.SECRETAIRE, action='remove')
+            self.secretaire, RoleKey.RESPONSABLE_PEDAGOGIQUE, action='remove')
         self.assertRedirects(
             response,
             reverse(DETAIL_URL, args=[self.secretaire.id]),
             fetch_redirect_response=False,
         )
         self.assertFalse(
-            self.secretaire.roles.filter(key=RoleKey.SECRETAIRE).exists())
+            self.secretaire.roles.filter(key=RoleKey.RESPONSABLE_PEDAGOGIQUE).exists())
         self.assert_audited('ROLE_REMOVE', self.secretaire.id)
 
     def test_unknown_role_is_rejected_without_change(self):
@@ -130,25 +131,25 @@ class RoleAssignmentTests(BusinessTestBase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             list(self.secretaire.roles.values_list('key', flat=True)),
-            [RoleKey.SECRETAIRE],
+            [RoleKey.ASSISTANT_ADMIN],
         )
         self.assertEqual(AuditLog.objects.count(), before)
 
     def test_unknown_action_is_rejected_without_change(self):
         response = self.post_role(
-            self.secretaire, RoleKey.ASSISTANT_ADMIN, action='promote')
+            self.secretaire, RoleKey.RESPONSABLE_PEDAGOGIQUE, action='promote')
         self.assertEqual(response.status_code, 302)
         self.assertFalse(
-            self.secretaire.roles.filter(key=RoleKey.ASSISTANT_ADMIN).exists())
+            self.secretaire.roles.filter(key=RoleKey.RESPONSABLE_PEDAGOGIQUE).exists())
 
     def test_admin_cannot_assign_roles(self):
         response = self.client_for(self.admin).post(
             reverse(ROLES_URL, args=[self.secretaire.id]),
-            {'role_key': RoleKey.ASSISTANT_ADMIN, 'action': 'add'},
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'add'},
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(
-            self.secretaire.roles.filter(key=RoleKey.ASSISTANT_ADMIN).exists())
+            self.secretaire.roles.filter(key=RoleKey.RESPONSABLE_PEDAGOGIQUE).exists())
 
     def test_cannot_change_own_roles(self):
         response = self.client_for(self.super_admin).post(
@@ -164,7 +165,7 @@ class RoleAssignmentTests(BusinessTestBase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(
             list(self.secretaire.roles.values_list('key', flat=True)),
-            [RoleKey.SECRETAIRE],
+            [RoleKey.ASSISTANT_ADMIN],
         )
 
 

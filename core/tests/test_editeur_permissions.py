@@ -101,7 +101,7 @@ class EditeurDePermissionsTests(BusinessTestBase):
         self.assertContains(caisse.get(dossier), 'Encaisser</a>', html=False)
 
         self.super_client.post(self.editeur, {
-            'grant': self.cases(sans=[('SECRETAIRE', 'finance.write')]),
+            'grant': self.cases(sans=[('ASSISTANT_ADMIN', 'finance.write')]),
         })
         self.assertNotContains(caisse.get(dossier), 'Encaisser</a>', html=False)
 
@@ -121,12 +121,12 @@ class EditeurDePermissionsTests(BusinessTestBase):
 
     def test_chaque_sauvegarde_laisse_sa_trace_dans_le_journal(self):
         self.super_client.post(self.editeur, {
-            'grant': self.cases(sans=[('SECRETAIRE', 'finance.write')]),
+            'grant': self.cases(sans=[('ASSISTANT_ADMIN', 'finance.write')]),
         })
         entree = AuditLog.objects.get(action='ROLE_PERMISSIONS_UPDATE')
         self.assertEqual(entree.actor, self.super_admin)
         self.assertEqual(entree.before_summary['retirees'],
-                         [['SECRETAIRE', 'finance.write']])
+                         [['ASSISTANT_ADMIN', 'finance.write']])
 
     def test_une_sauvegarde_sans_changement_ne_journalise_rien(self):
         page = self.super_client.post(self.editeur, {'grant': self.cases()},

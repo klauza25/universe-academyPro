@@ -58,9 +58,9 @@ class PermissionBoundaryTests(BusinessTestBase):
     def test_cross_role_access_is_forbidden(self):
         cases = (
             (self.formateur, 'core:dashboard:journal'),
-            (self.secretaire, 'core:dashboard:accounts'),
+            (self.formateur, 'core:dashboard:accounts'),
             (self.etudiant, 'core:dashboard:student-list'),
-            (self.assistant, 'core:dashboard:programs'),
+            (self.etudiant, 'core:dashboard:programs'),
             (self.assistant, 'core:dashboard:audit-log'),
             (self.direction, 'core:dashboard:audit-log'),
             (self.formateur, 'core:dashboard:visit-list'),
@@ -92,7 +92,7 @@ class PermissionBoundaryTests(BusinessTestBase):
                 client.get(reverse('core:dashboard:user-list')).status_code,
                 200,
             )
-        client = self.client_for(self.secretaire)
+        client = self.client_for(self.peda)
         self.assertEqual(
             client.get(reverse('core:dashboard:user-list')).status_code, 403)
 
@@ -239,11 +239,11 @@ class AdminTransversalAccessTests(BusinessTestBase):
         response = client.post(
             reverse('core:dashboard:user-role-assign',
                     args=[self.secretaire.id]),
-            {'role_key': RoleKey.ASSISTANT_ADMIN, 'action': 'add'},
+            {'role_key': RoleKey.RESPONSABLE_PEDAGOGIQUE, 'action': 'add'},
         )
         self.assertEqual(response.status_code, 403)
         self.assertFalse(
-            self.secretaire.roles.filter(key=RoleKey.ASSISTANT_ADMIN).exists())
+            self.secretaire.roles.filter(key=RoleKey.RESPONSABLE_PEDAGOGIQUE).exists())
 
     def test_admin_can_review_access_request(self):
         pending = AccessRequest.objects.create(
@@ -1022,7 +1022,7 @@ class ResponsablePedaPerimetreAccesTests(BusinessTestBase):
             with self.subTest(role=user.primary_role):
                 demande = self._demande(
                     RoleKey.ETUDIANT,
-                    f'etudiant-{user.primary_role.lower()}@test.local',
+                    f"etudiant-{user.email.split('@')[0]}@test.local",
                 )
                 response = self.client_for(user).post(
                     reverse('core:dashboard:access-request-review',

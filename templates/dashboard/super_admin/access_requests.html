@@ -4,9 +4,7 @@
 {% block title %}{% translate "Demandes d'accès" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}
-    {% if 'SECRETAIRE' in user_roles %}
-        {% include "dashboard/secretaire/_nav.html" %}
-    {% elif 'ASSISTANT_ADMIN' in user_roles %}
+    {% if 'ASSISTANT_ADMIN' in user_roles %}
         {% include "dashboard/comptabilite/_nav.html" %}
     {% elif 'RESP_PEDA' in user_roles %}
         {% include "dashboard/pedagogie/_nav.html" %}

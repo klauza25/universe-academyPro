@@ -6,7 +6,7 @@
 <a href="{% url 'core:dashboard:student-list' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'student-list' or request.resolver_match.url_name == 'student-detail' or request.resolver_match.url_name == 'student-edit' %}is-active{% endif %}">
     {% icon "graduation" %}<span>{% translate "Étudiants" %}</span>
 </a>
-{% if 'SECRETAIRE' in user_roles %}
+{% if 'ASSISTANT_ADMIN' in user_roles %}
 <a href="{% url 'core:dashboard:access-requests' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
     {% icon "user-check" %}<span>{% translate "Demandes d'accès étudiant" %}</span>
 </a>
