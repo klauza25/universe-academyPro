@@ -7,10 +7,12 @@ simple opération de caisse, et une sortie de caisse porte la bonne catégorie.
 """
 import datetime as dt
 import tempfile
+from io import StringIO
 from pathlib import Path
 
 import openpyxl
 
+from django.core.management import call_command
 from django.utils import timezone
 
 from core import feuille_import
@@ -59,6 +61,59 @@ class LectureDuJournalTests(BusinessTestBase):
         self.assertEqual(sortie.genre, 'depense',
                          'sans colonne d’opération, le libellé dit le sens')
         self.assertEqual(sortie.categorie, 'Charges de fonctionnement')
+
+    def test_une_ligne_sans_date_prolonge_la_precedente(self):
+        chemin = self._ecrire_classeur([
+            [dt.datetime(2026, 7, 17), 'Sortie', 'Charges', 'Transport du Personnel',
+             '', 2026, 2000, 'recup des attestations', '', ''],
+            ['', 'Sortie', 'Autres', 'Transport du Personnel',
+             '', 2026, 2000, "recup de l'AVI", '', ''],
+        ])
+        premiere, suite = lire(chemin)
+        self.assertEqual(suite.date, premiere.date,
+                         'le jour non répété est celui de la ligne du dessus')
+
+    def test_la_commande_redate_les_ecritures_sans_date_du_classeur(self):
+        chemin = self._ecrire_classeur([
+            [dt.datetime(2026, 7, 17), 'Sortie', 'Charges', 'Loyer',
+             '', 2026, 2000, '', '', ''],
+            [dt.datetime(2026, 7, 18), 'Entrée', 'Frais Mensuel',
+             'Frais Mensuel Etudiant', '', 2026, 2000, '', 'Paul PAUL', 'Anglais'],
+        ])
+        CashTransaction.objects.create(
+            tx_type=CashTransaction.Type.IN, amount=2000,
+            category=self.income_category, account=self.cash,
+            occurred_at=timezone.make_aware(dt.datetime(2026, 7, 1, 12)),
+            status=CashTransaction.Status.VALIDATED,
+        )
+        ecriture = CashTransaction.objects.create(
+            tx_type=CashTransaction.Type.OUT, amount=2000,
+            category=self.expense_category, account=self.cash,
+            occurred_at=timezone.make_aware(dt.datetime(2026, 11, 3, 12)),
+            status=CashTransaction.Status.VALIDATED,
+            note=f'{MARQUE_FEUILLE} : ligne 6',
+        )
+        entree = CashTransaction.objects.create(
+            tx_type=CashTransaction.Type.IN, amount=2000,
+            category=self.income_category, account=self.cash,
+            occurred_at=timezone.make_aware(dt.datetime(2026, 11, 3, 12)),
+            status=CashTransaction.Status.VALIDATED,
+            note=f'{MARQUE_FEUILLE} : ligne 7',
+        )
+        payement = Payment.objects.create(
+            enrollment=self.enrollment, amount=2000, method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED, recorded_by=self.assistant,
+            transaction=entree,
+            paid_at=timezone.make_aware(dt.datetime(2026, 11, 3, 12)),
+        )
+        call_command('corriger_dates_feuille', classeur=str(chemin),
+                     ecrire=True, stdout=StringIO())
+        ecriture.refresh_from_db()
+        entree.refresh_from_db()
+        payement.refresh_from_db()
+        self.assertEqual(ecriture.occurred_at.date(), dt.date(2026, 7, 17))
+        self.assertEqual(entree.occurred_at.date(), dt.date(2026, 7, 18))
+        self.assertEqual(payement.paid_at.date(), dt.date(2026, 7, 18))
 
     def test_un_classeur_sans_onglet_journal_est_refuse(self):
         fichier = openpyxl.Workbook()

@@ -59,7 +59,11 @@ def _date_filtre(valeur: str) -> str:
     """Une date mal formée ne doit pas transformer le journal en erreur 500."""
     if not valeur:
         return ''
-    return valeur if parse_date(valeur) else ''
+    try:
+        return valeur if parse_date(valeur) else ''
+    except ValueError:
+        # 2026-09-31 est invalide : parse_date lève au lieu de renvoyer None.
+        return ''
 
 
 def _journal_queryset(request):

@@ -145,9 +145,17 @@ def lire(classeur) -> list[Ligne]:
     if ONGLET not in feuilles.sheetnames:
         raise ValueError(f"onglet {ONGLET} absent de {classeur}")
     lignes = []
+    dernier_jour = None
     for rang, rude in enumerate(list(feuilles[ONGLET].values)[PREMIERE_LIGNE - 1:], PREMIERE_LIGNE):
         cells = list(rude) + [None] * 10
         date, operation, libelle, intitule, mois, annee, montant, commentaire, nom, formation = cells[:10]
+        # Une ligne sans date prolonge celle du dessus : le journal ne répète
+        # pas le jour des dépenses qui se suivent. Sans cela, l'import les
+        # datait du jour de l'import et les filtres de date les égaraient.
+        if isinstance(date, dt.datetime):
+            dernier_jour = date
+        else:
+            date = dernier_jour
         montant = int(float(montant)) if isinstance(montant, (int, float)) else 0
         if not montant:
             continue
@@ -156,7 +164,7 @@ def lire(classeur) -> list[Ligne]:
             # Le journal marque rarement l'operation : le libelle dit le sens.
             operation = 'sortie' if normatif(libelle) in ('charges', 'impression') else 'entree'
         lignes.append(Ligne(
-            rang=rang, date=date if isinstance(date, dt.datetime) else None,
+            rang=rang, date=date,
             operation=operation, libelle=str(libelle or '').strip(),
             intitule=str(intitule or '').strip(), mois=str(mois or '').strip(),
             annee=int(float(annee)) if isinstance(annee, (int, float)) else None,

@@ -144,12 +144,14 @@ class JournalTests(AccountingTestBase):
         self.make_tx(label='Toujours visible')
         response = self.client.get(reverse('core:dashboard:journal'), {
             'type': 'INVALID', 'status': 'INVALID', 'from': 'hier',
-            'category': 'pas-un-uuid', 'account': 'pas-un-uuid',
+            'to': '2026-09-31', 'category': 'pas-un-uuid',
+            'account': 'pas-un-uuid',
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.context['page'].paginator.count, 1)
         self.assertEqual(response.context['type_filter'], '')
         self.assertEqual(response.context['category_filter'], '')
+        self.assertEqual(response.context['date_to'], '')
 
     def test_journal_totals_ignore_cancelled_operations(self):
         self.make_tx(amount=10000)
