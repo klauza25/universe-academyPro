@@ -49,7 +49,15 @@ from .taches import (
     marqueur_evenements, marqueur_notifications_non_lues, tableau_des_files,
 )
 from .views_profile import changer_avatar
+from .views_comptabilite import _date_filtre
 from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
+
+# Catégories de dépenses qui représentent un salaire, y compris les avances et
+# les honoraires de formateur : elles viennent du journal de caisse, pas des
+# paiements d'étudiants servant à l'estimation de 30 %.
+CATEGORIES_SALAIRES = (
+    'Salaires', 'Avances sur salaire', 'Paiements des formateurs',  # i18n-exempt : noms stockés en base, affichés tels quels
+)
 
 
 def home(request):
@@ -1461,12 +1469,45 @@ def formateur_dashboard(request):
 
 @role_required('DIRECTION', 'ASSISTANT_ADMIN', 'COMPTABLE')
 def salaires_formateurs(request):
-    """Estimation de la part de chaque formateur : 30 % des paiements validés."""
+    """Part estimée par formateur et salaires réellement sortis de la caisse."""
     salaires = calculer_salaires_formateurs()
+
+    recherche = (request.GET.get('q') or '').strip()
+    categorie = request.GET.get('categorie') or ''
+    if categorie not in CATEGORIES_SALAIRES:
+        categorie = ''
+    date_from = _date_filtre(request.GET.get('from') or '')
+    date_to = _date_filtre(request.GET.get('to') or '')
+
+    payes = CashTransaction.objects.filter(
+        tx_type=CashTransaction.Type.OUT,
+        status=CashTransaction.Status.VALIDATED,
+        category__name__in=([categorie] if categorie else CATEGORIES_SALAIRES),
+    ).select_related('category', 'account')
+    if recherche:
+        payes = payes.filter(
+            Q(label__icontains=recherche) |
+            Q(counterparty__icontains=recherche) |
+            Q(description__icontains=recherche)
+        )
+    if date_from:
+        payes = payes.filter(occurred_at__date__gte=date_from)
+    if date_to:
+        payes = payes.filter(occurred_at__date__lte=date_to)
+    payes = payes.order_by('-occurred_at')
+
     return render(request, 'dashboard/comptabilite/salaires_formateurs.html', {
         'salaires': salaires,
         'total_salaire': sum(ligne['salary'] for ligne in salaires),
         'total_paiements': sum(ligne['payments_total'] for ligne in salaires),
+        'salaires_payes': payes,
+        'total_salaires_payes': payes.aggregate(total=Sum('amount'))['total'] or 0,
+        'nb_salaires_payes': payes.count(),
+        'categories_salaires': CATEGORIES_SALAIRES,
+        'recherche': recherche,
+        'categorie_filtre': categorie,
+        'date_from': date_from,
+        'date_to': date_to,
     })
 
 

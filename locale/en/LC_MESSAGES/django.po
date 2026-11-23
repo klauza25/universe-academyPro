@@ -5689,13 +5689,6 @@ msgstr "Loading…"
 msgid "Salaires des formateurs"
 msgstr "Trainers' salaries"
 
-msgid ""
-"Estimation de la part de 30 % des paiements validés des étudiants de leurs "
-"groupes."
-msgstr ""
-"Estimate of the 30% share of validated payments from students in their class"
-" groups."
-
 msgid "Part estimée"
 msgstr "Estimated share"
 
@@ -5909,3 +5902,45 @@ msgstr "Press Enter to send, Shift+Enter for a new line."
 
 msgid "Supprimer ce message ? Cette action est définitive."
 msgstr "Delete this message? This cannot be undone."
+
+msgid ""
+"Estimation de la part de 30 % des paiements validés des étudiants de leurs "
+"groupes, et salaires réellement payés lus dans le journal de caisse."
+msgstr ""
+"Estimate of the 30% share of validated payments from students in their class"
+" groups, plus salaries actually paid as recorded in the cash journal."
+
+msgid "Salaires payés (caisse)"
+msgstr "Salaries paid (cash)"
+
+msgid "Salaires réellement payés"
+msgstr "Salaries actually paid"
+
+msgid ""
+"Sorties de caisse validées du journal : salaires, avances et honoraires de "
+"formateur."
+msgstr ""
+"Validated cash outflows from the journal: salaries, advances and trainer "
+"fees."
+
+msgid "Journal de caisse"
+msgstr "Cash journal"
+
+msgid "Libellé, bénéficiaire ou commentaire…"
+msgstr "Label, beneficiary or comment…"
+
+msgid "Toutes les catégories de salaire"
+msgstr "All salary categories"
+
+msgid "Bénéficiaire"
+msgstr "Beneficiary"
+
+msgid "Aucun salaire payé ne correspond à ces filtres."
+msgstr "No salary payment matches these filters."
+
+msgid ""
+"Ces écritures sont enregistrées dans la caisse et ne créent aucune "
+"estimation de salaire."
+msgstr ""
+"These entries are recorded in the cash register and do not create any salary"
+" estimate."

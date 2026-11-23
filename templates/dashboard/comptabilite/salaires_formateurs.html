@@ -6,15 +6,17 @@
 {% block sidebar_nav %}{% include "dashboard/comptabilite/_nav.html" %}{% endblock %}
 
 {% block hero_title %}{% translate "Salaires des formateurs" %}{% endblock %}
-{% block hero_text %}{% translate "Estimation de la part de 30 % des paiements validés des étudiants de leurs groupes." %}{% endblock %}
+{% block hero_text %}{% translate "Estimation de la part de 30 % des paiements validés des étudiants de leurs groupes, et salaires réellement payés lus dans le journal de caisse." %}{% endblock %}
 
 {% block dashboard_content %}
 {% translate "Part estimée" as lbl_part_estimee %}
 {% translate "Paiements pris en compte" as lbl_paiements_comptes %}
+{% translate "Salaires payés (caisse)" as lbl_salaires_payes %}
 {% translate "Groupes" as lbl_groupes %}
-<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-6">
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-6">
     {% include "dashboard/_stat.html" with label=lbl_part_estimee value=total_salaire|floatformat:0 icon="users" tone="amber" unite=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_paiements_comptes value=total_paiements|floatformat:0 icon="wallet" tone="green" unite=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_salaires_payes value=total_salaires_payes|floatformat:0 icon="file-text" tone="rose" unite=plateforme.devise hint=nb_salaires_payes %}
 </div>
 
 <section class="ua-card ua-card-pad">
@@ -60,6 +62,77 @@
 
     <p class="ua-muted text-xs mt-4">
         {% translate "Seuls les paiements effectués sont comptés. Cette estimation ne crée ni paie, ni écriture comptable, ni virement." %}
+    </p>
+</section>
+
+<section class="ua-card ua-card-pad mt-6">
+    <div class="flex flex-wrap items-start justify-between gap-3 mb-4">
+        <div>
+            <h2 class="ua-section-title">{% translate "Salaires réellement payés" %}</h2>
+            <p class="ua-page-sub mt-1">{% translate "Sorties de caisse validées du journal : salaires, avances et honoraires de formateur." %}</p>
+        </div>
+        <span class="ua-badge ua-badge-green">{% translate "Journal de caisse" %}</span>
+    </div>
+
+    <form method="get" class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end mb-4">
+        <div class="md:col-span-2">
+            <label class="text-xs ua-muted block mb-1">{% translate "Recherche" %}</label>
+            <input type="search" name="q" value="{{ recherche }}" placeholder="{% translate 'Libellé, bénéficiaire ou commentaire…' %}"
+                   class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
+        </div>
+        <div>
+            <label class="text-xs ua-muted block mb-1">{% translate "Catégorie" %}</label>
+            <select name="categorie" class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
+                <option value="">{% translate "Toutes les catégories de salaire" %}</option>
+                {% for nom in categories_salaires %}
+                <option value="{{ nom }}" {% if categorie_filtre == nom %}selected{% endif %}>{{ nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-xs ua-muted block mb-1">{% translate "Du" %}</label>
+            <input type="date" name="from" value="{{ date_from }}" class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
+        </div>
+        <div>
+            <label class="text-xs ua-muted block mb-1">{% translate "Au" %}</label>
+            <input type="date" name="to" value="{{ date_to }}" class="w-full px-3 py-2 rounded-xl border" style="border-color:#e6e7f5;">
+        </div>
+        <button type="submit" class="ua-btn ua-btn-primary justify-center">{% icon "search" %} {% translate "Filtrer" %}</button>
+    </form>
+
+    <div class="overflow-x-auto">
+        <table class="ua-table w-full">
+            <thead>
+                <tr>
+                    <th>{% translate "Date" %}</th>
+                    <th>{% translate "Libellé" %}</th>
+                    <th>{% translate "Bénéficiaire" %}</th>
+                    <th>{% translate "Catégorie" %}</th>
+                    <th>{% translate "Caisse" %}</th>
+                    <th class="text-right">{% translate "Montant" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for tx in salaires_payes %}
+                <tr>
+                    <td>{{ tx.occurred_at|date:"d/m/Y" }}</td>
+                    <td><a class="ua-cell-title" href="{% url 'core:dashboard:transaction-detail' tx.id %}">{{ tx.label }}</a></td>
+                    <td>{{ tx.counterparty|default:"—" }}</td>
+                    <td>{{ tx.category.name }}</td>
+                    <td>{{ tx.account.name }}</td>
+                    <td class="text-right font-bold">{{ tx.amount }} {{ plateforme.devise }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="ua-empty">{% translate "Aucun salaire payé ne correspond à ces filtres." %}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <p class="ua-muted text-xs mt-4">
+        {% translate "Ces écritures sont enregistrées dans la caisse et ne créent aucune estimation de salaire." %}
     </p>
 </section>
 {% endblock %}
