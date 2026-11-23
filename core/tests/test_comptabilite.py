@@ -1493,7 +1493,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         self.assertContains(
             peta.get(reverse(
                 'core:dashboard:enrollment-detail', args=[enrollment.pk])),
-            'Solde restant',
+            'Suivi des mensualités',
         )
 
     def test_panel_de_validation_present_sur_les_tableaux_habilites(self):

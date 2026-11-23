@@ -15,8 +15,6 @@
 {% translate "Aucun événement d'audit pour cette inscription." as audit_vide_inscription %}
 {% translate "Tarif" as lbl_tarif %}
 {% translate "Remise" as lbl_remise %}
-{% translate "Net dû" as lbl_net %}
-{% translate "Solde restant" as lbl_solde %}
 {% translate "Tarif mensuel" as lbl_tarif_mensuel %}
 {% translate "Total payé" as lbl_total_paye %}
 <div class="ua-page-head">
@@ -54,11 +52,9 @@
 </section>
 {% endif %}
 
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
     {% include "dashboard/_stat.html" with label=lbl_tarif_mensuel value=enrollment.monthly_tariff_amount icon="wallet" tone="indigo" hint=plateforme.devise %}
-    {% include "dashboard/_stat.html" with label=lbl_net value=enrollment.total_due icon="credit-card" tone="sky" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_total_paye value=enrollment.total_paid icon="check-circle" tone="green" hint=plateforme.devise %}
-    {% include "dashboard/_stat.html" with label=lbl_solde value=enrollment.balance_due icon="chart" tone="rose" hint=plateforme.devise %}
 </div>
 
 <section class="ua-card ua-card-pad mb-5" id="monthly-payment">
