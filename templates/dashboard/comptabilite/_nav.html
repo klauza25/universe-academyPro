@@ -28,6 +28,11 @@
     {% icon "users" %}<span>{% translate "Salaires des formateurs" %}</span>
 </a>
 {% if 'ASSISTANT_ADMIN' in user_roles %}
+<a href="{% url 'core:dashboard:user-list' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'user-list' or request.resolver_match.url_name == 'user-detail' or request.resolver_match.url_name == 'user-create' or request.resolver_match.url_name == 'user-edit' %}is-active{% endif %}">
+    {% icon "users" %}<span>{% translate "Utilisateurs" %}</span>
+</a>
+{% endif %}
+{% if 'ASSISTANT_ADMIN' in user_roles %}
 <a href="{% url 'core:dashboard:access-requests' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
     {% icon "user-check" %}<span>{% translate "Demandes d'accès étudiant" %}</span>
 </a>

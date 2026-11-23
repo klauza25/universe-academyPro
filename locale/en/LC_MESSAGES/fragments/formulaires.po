@@ -44,8 +44,8 @@ msgstr "The passwords do not match."
 msgid "Rôle"
 msgstr "Role"
 
-msgid "Les rôles SUPER_ADMIN et ADMIN s'attribuent ensuite depuis la fiche utilisateur, par un super administrateur."
-msgstr "SUPER_ADMIN and ADMIN roles are assigned later from the user profile, by a super administrator."
+msgid "Les rôles privilégiés (super administrateur, administrateur, direction) restent réservés au super administrateur."
+msgstr "Privileged roles (super administrator, administrator, management) remain reserved to the super administrator."
 
 msgid "Formation / groupe"
 msgstr "Program / class group"

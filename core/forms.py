@@ -16,7 +16,7 @@ from .models import (
     PlatformSetting,
     Payment, Attendance, AccessEvent, AccountStatus, RoleKey,
     Role, UserRole,
-    REQUESTABLE_ROLE_CHOICES, MOIS, ROLES_DISSOUS,
+    REQUESTABLE_ROLE_CHOICES, MOIS, ROLES_DISSOUS, PRIVILEGED_ROLES,
     Contact, Visit, VisitReason, Prospect, ProspectFollowUp,
     Module, Lesson, SessionRecord, Resource, ResourceFeedback, StudentDocument,
     CashAccount, CashTransaction, CashClosure, TransactionCategory,
@@ -135,7 +135,7 @@ class UserCreateForm(forms.ModelForm):
             if key not in ('SUPER_ADMIN', 'ADMIN') and key not in ROLES_DISSOUS
         ],
         label=_("Rôle"),
-        help_text=_("Les rôles SUPER_ADMIN et ADMIN s'attribuent ensuite depuis la fiche utilisateur, par un super administrateur."),
+        help_text=_("Les rôles privilégiés (super administrateur, administrateur, direction) restent réservés au super administrateur."),
     )
     session = forms.ModelChoiceField(
         label=_("Formation / groupe"),
@@ -150,6 +150,15 @@ class UserCreateForm(forms.ModelForm):
         widget=forms.PasswordInput(attrs={'class': 'w-full p-2 border rounded'}),
         help_text=_("Laisser vide pour envoyer une invitation par email")
     )
+
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if user is not None and not user.has_role('SUPER_ADMIN'):
+            self.fields['role'].choices = [
+                (key, label)
+                for key, label in self.fields['role'].choices
+                if not key or key not in PRIVILEGED_ROLES
+            ]
 
     class Meta:
         model = User

@@ -14,8 +14,11 @@ ROLE_PERMISSIONS = {
         'attendance.read', 'finance.read', 'finance.write',
         'scholarship.read',
     ],
-    # Le guichet encaisse : inscription du visiteur, dossier étudiant, paiement.
+    # Le guichet encaisse et gère les comptes : inscription du visiteur,
+    # dossier étudiant, paiement, utilisateurs et attributions de rôles.
     'ASSISTANT_ADMIN': [
+        'users.read', 'users.create', 'users.edit', 'roles.manage',
+        'access_requests.review',
         'students.read', 'students.write',
         'formations.read', 'attendance.read',
         'finance.read', 'finance.write',

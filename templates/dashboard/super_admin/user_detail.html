@@ -3,7 +3,7 @@
 
 {% block title %}{% translate "Détail utilisateur" %} — {{ plateforme.nom }}{% endblock %}
 
-{% block sidebar_nav %}{% include "dashboard/admin/_nav.html" %}{% endblock %}
+{% block sidebar_nav %}{% include "dashboard/super_admin/_nav.html" %}{% endblock %}
 
 {% block hero %}{% endblock %}
 
@@ -17,7 +17,7 @@
         </p>
     </div>
     <div class="flex flex-wrap gap-2">
-        {% if 'SUPER_ADMIN' in user_roles %}
+        {% if can_manage_users %}
         <a href="{% url 'core:dashboard:user-edit' profile_user.id %}" class="ua-btn ua-btn-primary">
             {% icon "settings" %} {% translate "Modifier" %}
         </a>
@@ -106,9 +106,12 @@
             <p class="text-xs ua-muted mt-1">
                 {% translate "Attribuez les rôles métier et le statut d'accès de ce compte." %}
                 {% translate "Chaque changement est tracé dans le journal d'audit." %}
+                {% if 'SUPER_ADMIN' not in user_roles %}
+                {% translate "Les rôles privilégiés (super administrateur, administrateur, direction) restent réservés au super administrateur." %}
+                {% endif %}
             </p>
         </div>
-        <span class="ua-badge ua-badge-indigo">{% translate "Super administrateur uniquement" %}</span>
+        <span class="ua-badge ua-badge-indigo">{% translate "Gestion des accès" %}</span>
     </div>
 
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -196,10 +199,10 @@
         </div>
     </div>
 </section>
-{% elif is_self and 'SUPER_ADMIN' in user_roles %}
+{% elif is_self and can_manage_users %}
 <section class="ua-card ua-card-pad mt-6">
     <p class="text-sm ua-muted">
-        {% translate "Vous consultez votre propre fiche : vos rôles et votre statut ne peuvent pas être modifiés ici. Utilisez un autre compte super administrateur." %}
+        {% translate "Vous consultez votre propre fiche : vos rôles et votre statut ne peuvent pas être modifiés ici. Utilisez un autre compte gestionnaire." %}
     </p>
 </section>
 {% endif %}

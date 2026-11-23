@@ -1,0 +1,6 @@
+{% load i18n %}
+{% if can_manage_users and 'SUPER_ADMIN' not in user_roles and 'ADMIN' not in user_roles %}
+{% include "dashboard/comptabilite/_nav.html" %}
+{% else %}
+{% include "dashboard/admin/_nav.html" %}
+{% endif %}

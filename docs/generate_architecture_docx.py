@@ -2708,6 +2708,10 @@ test_rows = [
     ['`test_audit_finances.py`', '4', 'Cohérence financière.'],
     ['`test_user_access.py`', '30', 'Rôles, statuts, garde-fous, dernier '
      'super administrateur.'],
+    ['`test_gestion_roles_assistant.py`', '9', 'Gestion complète des comptes '
+     'par l’assistant administratif : menu, création, édition, statut, '
+     'attribution de rôles métier, refus des rôles privilégiés et de '
+     'l’auto-modification.'],
     ['`test_statut_etudiant.py`', '12', 'Statut par défaut de l’étudiant, '
      'approbation à la validation, reprise des fiches de classeur, aucune '
      'révocation automatique.'],

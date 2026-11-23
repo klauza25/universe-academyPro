@@ -86,8 +86,11 @@ msgstr "Assign the business roles and the access status of this account."
 msgid "Chaque changement est tracé dans le journal d'audit."
 msgstr "Every change is tracked in the audit log."
 
-msgid "Super administrateur uniquement"
-msgstr "Super administrator only"
+msgid "Gestion des accès"
+msgstr "Access management"
+
+msgid "Les rôles privilégiés (super administrateur, administrateur, direction) restent réservés au super administrateur."
+msgstr "Privileged roles (super administrator, administrator, management) remain reserved to the super administrator."
 
 msgid "Rôles attribués"
 msgstr "Assigned roles"
@@ -131,8 +134,8 @@ msgstr "Apply"
 msgid "Un compte suspendu, désactivé ou refusé perd immédiatement l'accès au back-office ; les données restent consultables par le super administrateur."
 msgstr "A suspended, disabled or refused account immediately loses access to the back office; the data remains viewable by the super administrator."
 
-msgid "Vous consultez votre propre fiche : vos rôles et votre statut ne peuvent pas être modifiés ici. Utilisez un autre compte super administrateur."
-msgstr "You are viewing your own profile: your roles and your status cannot be changed here. Use another super administrator account."
+msgid "Vous consultez votre propre fiche : vos rôles et votre statut ne peuvent pas être modifiés ici. Utilisez un autre compte gestionnaire."
+msgstr "You are viewing your own profile: your roles and your status cannot be changed here. Use another manager account."
 
 # templates/dashboard/responsable_pedagogique/index.html
 msgid "Responsable Pédagogique — Univers Academy"

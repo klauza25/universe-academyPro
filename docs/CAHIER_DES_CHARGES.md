@@ -44,7 +44,7 @@
 
 Univers Academy est une application web de gestion d'un centre de formation. Elle réunit dans une seule base les dossiers étudiants, les inscriptions, le catalogue pédagogique, les groupes, les séances, les présences, les ressources, la caisse, les paiements, les bourses et le journal d'audit. Elle remplace la dispersion entre classeurs Excel/Google Sheets, fichiers locaux et saisies parallèles.
 
-Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 769 tests automatisés. Les alertes flottantes sont brèves (son de 3 s, popup de 2,5 s) et ne remontent jamais une notification déjà lue. Le mode sombre garde les champs, les filtres, les listes, les options, les boutons et les couleurs en ligne lisibles. L’écran des salaires des formateurs distingue l’estimation de 30 % des paiements d’étudiants et les salaires réellement payés, lus dans le journal de caisse et filtrables par recherche, catégorie et période. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
+Le système est aujourd'hui fonctionnel sur son cœur métier : authentification locale, dix rôles, gestion des comptes et des rôles métier par l'assistant administratif, dossiers étudiants, inscriptions et encaissements, pédagogie, comptabilité de caisse, supervision, réglages d'établissement, journal d'audit, messagerie interne, administration Django à l'identité du centre et 778 tests automatisés. Les alertes flottantes sont brèves (son de 3 s, popup de 2,5 s) et ne remontent jamais une notification déjà lue. Le mode sombre garde les champs, les filtres, les listes, les options, les boutons et les couleurs en ligne lisibles. L’écran des salaires des formateurs distingue l’estimation de 30 % des paiements d’étudiants et les salaires réellement payés, lus dans le journal de caisse et filtrables par recherche, catégorie et période. La synchronisation horaire des deux classeurs Google est spécifiée, outillée et exécutée en écriture : les deux feuilles sont publiques en lecture, ce qui suffit sans compte de service ; celui-ci reste recommandé si les feuilles redeviennent privées.
 
 Le présent document constitue le cahier des charges de référence : il décrit le besoin, le périmètre, les acteurs, les exigences fonctionnelles et non fonctionnelles, les règles de gestion, l'architecture, les intégrations, la sécurité, la recette et les conditions d'exploitation.
 
@@ -184,7 +184,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | `SUPER_ADMIN` | Administration technique, comptes, rôles, audit, supervision, caisse. | `/dashboard/super-admin/` | `UA-ADM` |
 | `ADMIN` | Accès transversal en lecture, caisse, traitement des demandes d'accès, consultation des bourses. | `/dashboard/admin/` | `UA-ADM` |
 | `DIRECTION` | Pilotage, validation des inscriptions, catalogue, réglages, années académiques. | `/dashboard/direction/` | `UA-DIR` |
-| `ASSISTANT_ADMIN` | Assistance administrative et comptable (poste issu de la fusion des anciens postes). | `/dashboard/comptabilite/` | `UA-ASY` |
+| `ASSISTANT_ADMIN` | Assistance administrative et comptable, gestion des comptes et des rôles métier (poste issu de la fusion des anciens postes). | `/dashboard/comptabilite/` | `UA-ASY` |
 | `SECRETAIRE` | Dossiers étudiants, inscriptions au guichet, documents, consultation pédagogique. | `/dashboard/secretaire/` | `UA-SEC` |
 | `RESP_PEDA` | Catalogue, modules, leçons, groupes, séances, ressources, validation pédagogique. | `/dashboard/responsable-pedagogique/` | `UA-RPD` |
 | `FORMATEUR` | Groupes affectés, séances, présences, cahier de texte, ressources. | `/dashboard/formateur/` | `UA-FRM` |
@@ -198,12 +198,12 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 
 ### 4.3 Règles transversales d'autorisation
 
-1. **Contrôle serveur** : les décorateurs `role_required`, `business_write_required`, `cash_write_required`, `payment_write_required`, `permission_required`, `super_admin_required` et `enrollment_validation_required` refusent par un HTTP 403, jamais par un simple masquage d'interface.
+1. **Contrôle serveur** : les décorateurs `role_required`, `business_write_required`, `cash_write_required`, `payment_write_required`, `permission_required`, `user_management_required`, `super_admin_required` et `enrollment_validation_required` refusent par un HTTP 403, jamais par un simple masquage d'interface.
 2. **Rôles transversaux** : `SUPER_ADMIN` et `ADMIN` accèdent en lecture à tous les modules. Ils ne peuvent pas écrire le métier courant (visites, prospects, étudiants, inscriptions à la création, présences, séances, ressources, modules, leçons).
 3. **Exception caisse et paiements** : la caisse est ouverte en écriture aux rôles transversaux (opération, annulation, correction, paiement étudiant, clôture, compte, catégorie), avec trace d'audit. L'encaissement d'un paiement étudiant suit la matrice `finance.write`.
 4. **Exception groupes** : la création et la modification d'un groupe sont ouvertes à `RESP_PEDA`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN` par la route dédiée ; les autres écritures pédagogiques (séances, présences, ressources, modules, leçons) restent fermées aux rôles transversaux.
 5. **Exception inscription existante** : la modification d'une inscription est ouverte à `SECRETAIRE`, `DIRECTION`, `SUPER_ADMIN` et `ADMIN`, avec audit `ENROLLMENT_EDIT`.
-6. **Actes réservés au `SUPER_ADMIN`** : création et modification d'un compte, attribution ou retrait d'un rôle, changement de statut, matrice des permissions, décision finale sur une bourse.
+6. **Gestion des comptes** : création et modification d'un compte, attribution ou retrait d'un rôle métier et changement de statut sont ouverts au `SUPER_ADMIN` et à l'`ASSISTANT_ADMIN`. La matrice des permissions, les rôles privilégiés (`SUPER_ADMIN`, `ADMIN`, `DIRECTION`) et la décision finale sur une bourse restent réservés au `SUPER_ADMIN`.
 7. **Auto-modification interdite** : personne ne peut modifier ses propres rôles ni son propre statut (403).
 8. **Dernier super administrateur** : le retrait du rôle `SUPER_ADMIN` au dernier super administrateur actif est refusé.
 9. **Périmètre formateur** : un formateur ne voit que les groupes où il est affecté, leurs séances, présences et cahiers de texte ; il ne peut pas écrire dans les groupes des autres.
@@ -222,7 +222,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | Caisse / journal | Écriture | Écriture | Écriture | Écriture | — | — | — | — |
 | Paiements étudiants | Écriture | Écriture | Écriture | Écriture | Écriture | Écriture | — | Reçus de ses paiements |
 | Supervision financière | Lecture / export | Lecture / export | — | — | — | — | — | — |
-| Utilisateurs / rôles | Écriture | Lecture | — | — | — | — | — | — |
+| Utilisateurs / rôles | Écriture | Lecture | — | Écriture (rôles métier) | — | — | — | — |
 | Journal d'audit | Lecture | Lecture | — | — | — | — | — | — |
 | Réglages / années | Écriture | Écriture | Écriture | — | — | — | — | — |
 | Demandes d'accès | Traitement | Traitement | Traitement | Traitement | Traitement | Traitement | — | — |
@@ -537,9 +537,9 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 | ID | Exigence | Priorité | Statut |
 |---|---|---|---|
 | UT-01 | Lister, rechercher et filtrer les comptes. | M | Réalisé |
-| UT-02 | Créer un compte, le modifier, poser sa photo (super administrateur). | M | Réalisé |
-| UT-03 | Attribuer et retirer un rôle depuis la fiche utilisateur, avec génération du code interne. | M | Réalisé |
-| UT-04 | Changer le statut d'accès depuis la fiche utilisateur. | M | Réalisé |
+| UT-02 | Créer un compte, le modifier, poser sa photo (super administrateur ou assistant administratif). | M | Réalisé |
+| UT-03 | Attribuer et retirer un rôle métier depuis la fiche utilisateur, avec génération du code interne ; les rôles privilégiés restent au super administrateur. | M | Réalisé |
+| UT-04 | Changer le statut d'accès depuis la fiche utilisateur (super administrateur ou assistant administratif). | M | Réalisé |
 | UT-05 | Interdire l'auto-modification des rôles et du statut. | M | Réalisé |
 | UT-06 | Protéger le dernier super administrateur actif. | M | Réalisé |
 | UT-07 | Éditer la matrice postes × permissions. À ce jour, seul `finance.write` est branché sur une action (l'encaissement) ; les autres droits sont enregistrés pour la suite. | S | Partiel |
@@ -555,6 +555,7 @@ Le statut est contrôlé à chaque requête par le middleware `AccountStatusMidd
 - Une action sans effet (rôle déjà attribué, statut identique) ne crée pas de doublon d'audit.
 - L'activation d'un compte remet `disabled_at` à vide ; toute autre valeur l'horodate.
 - Un `ADMIN` voit la fiche utilisateur mais pas les contrôles de rôle/statut et reçoit un 403 sur les routes correspondantes.
+- L'`ASSISTANT_ADMIN` voit l'onglet Utilisateurs et pilote les comptes ; un POST tentant d'attribuer `SUPER_ADMIN`, `ADMIN` ou `DIRECTION` est refusé sans écriture.
 - Le journal d'audit ne casse aucun lien sur les identifiants non-UUID (exports, réglages).
 
 ---
@@ -1006,7 +1007,7 @@ Le chemin peut être surchargé par `GOOGLE_APPLICATION_CREDENTIALS` ou `--crede
 
 - Contrôle serveur systématique, doublé d'un masquage d'interface pour ne pas proposer une action vouée au 403.
 - Séparation des pouvoirs : les rôles transversaux lisent tout mais n'écrivent pas le métier courant ; la caisse, les paiements et la création/modification des groupes font exception (voir § 4.3).
-- Les actes les plus sensibles (comptes, rôles, statuts, décision de bourse) sont réservés au `SUPER_ADMIN`.
+- Les comptes, les rôles métier et les statuts sont gérés par le `SUPER_ADMIN` et l'`ASSISTANT_ADMIN` ; la matrice des permissions, les rôles privilégiés et la décision de bourse restent au `SUPER_ADMIN`.
 - Le périmètre formateur est limité à ses groupes.
 - Les documents privés ne sont accessibles que par leur vue dédiée.
 
@@ -1109,7 +1110,7 @@ Le journal conserve : acteur, action, type et identifiant d'entité, résumé av
 
 ### 14.2 État des tests
 
-- **769 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
+- **778 tests** exécutés avec succès sur la base de test créée par Django (dernière exécution connue au 23/11/2026).
 - `manage.py check` : aucun problème.
 - La base de production n'est jamais touchée par les tests.
 - Les tests couvrent notamment : portail, authentification, rôles, profils, visites, prospects, étudiants, inscriptions, pédagogie, comptabilité, permissions, supervision, bourses, réglages, années académiques, imports, synchronisation, sauvegardes, relations, messagerie interne et rendu bilingue.
@@ -1367,7 +1368,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\installer_tache_synchr
 | `audit_privileges` | Contrôles des attributions de rôles. |
 | `verifier_i18n` | Contrôle des messages non traduits. |
 | `compiler_traductions` | Compile les fichiers de traduction. |
-| `seed_roles` | Crée les rôles de référence. |
+| `seed_roles` | Crée les rôles et la matrice de référence, dont les droits de gestion de l'assistant administratif. |
 | `seed_demo` | Jeu de démonstration, mots de passe générés. |
 | `purger_donnees_fictives` | Purge encadrée des données de démonstration. |
 | `create_superadmin` | Crée un super administrateur initial. |

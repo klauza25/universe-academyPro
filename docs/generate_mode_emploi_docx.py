@@ -546,13 +546,16 @@ note(
     'validé par un super administrateur.',
 )
 
-h2('3.4 La création directe par le super administrateur')
+h2('3.4 La création directe par le super administrateur ou l’assistant administratif')
 
 para(
     'Dans « Utilisateurs » → « Nouvel utilisateur », le super administrateur '
-    'crée un compte en choisissant le rôle, éventuellement un groupe pour un '
-    'étudiant, et soit un mot de passe, soit une invitation par e-mail. Le '
-    'compte est immédiatement utilisable lorsque le mot de passe est fourni.'
+    'ou l’assistant administratif crée un compte en choisissant le rôle, '
+    'éventuellement un groupe pour un étudiant, et soit un mot de passe, soit '
+    'une invitation par e-mail. Le compte est immédiatement utilisable lorsque '
+    'le mot de passe est fourni. Les rôles privilégiés (super administrateur, '
+    'administrateur, direction) ne peuvent être attribués que par le super '
+    'administrateur.'
 )
 
 
@@ -1332,12 +1335,12 @@ para(
 table(
     ['Action', 'Où', 'Qui'],
     [
-        ['Créer un utilisateur', 'Utilisateurs → Nouvel utilisateur', 'SUPER_ADMIN'],
-        ['Modifier l’identité', 'Fiche → Modifier', 'SUPER_ADMIN'],
-        ['Changer la photo', 'Fiche → Photo', 'SUPER_ADMIN'],
-        ['Attribuer ou retirer un rôle', 'Fiche → Rôles et accès', 'SUPER_ADMIN'],
-        ['Activer, suspendre, désactiver, refuser', 'Fiche → Statut', 'SUPER_ADMIN'],
-        ['Consulter la fiche et l’audit', 'Utilisateurs', 'SUPER_ADMIN, ADMIN'],
+        ['Créer un utilisateur', 'Utilisateurs → Nouvel utilisateur', 'SUPER_ADMIN, ASSISTANT_ADMIN'],
+        ['Modifier l’identité', 'Fiche → Modifier', 'SUPER_ADMIN, ASSISTANT_ADMIN'],
+        ['Changer la photo', 'Fiche → Photo', 'SUPER_ADMIN, ASSISTANT_ADMIN'],
+        ['Attribuer ou retirer un rôle métier', 'Fiche → Rôles et accès', 'SUPER_ADMIN, ASSISTANT_ADMIN'],
+        ['Activer, suspendre, désactiver, refuser', 'Fiche → Statut', 'SUPER_ADMIN, ASSISTANT_ADMIN'],
+        ['Consulter la fiche et l’audit', 'Utilisateurs', 'SUPER_ADMIN, ADMIN, ASSISTANT_ADMIN'],
     ],
     [5.2, 6.8, 5.0],
     font=8.8, header_font=8.8, bold_first=True,
@@ -1345,7 +1348,8 @@ table(
 
 note(
     'Garde-fous : un administrateur ne peut pas modifier les rôles depuis '
-    'l’écran ADMIN, personne ne peut modifier ses propres rôles, et le dernier '
+    'l’écran ADMIN, l’assistant administratif ne peut pas attribuer les rôles '
+    'privilégiés, personne ne peut modifier ses propres rôles, et le dernier '
     'super administrateur actif ne peut pas être désactivé.',
 )
 
@@ -1690,7 +1694,7 @@ table(
         ['Clôtures', '✓', '✓', '✓', '✓', '✓', '—', '—', '—'],
         ['Journal d’audit', '✓', '✓', '✓', '—', '—', '—', '—', '—'],
         ['Demandes d’accès', '✓', 'lecture', '—', '—', '—', 'périmètre', '—', '—'],
-        ['Utilisateurs et rôles', '✓', 'lecture', '—', '—', '—', '—', '—', '—'],
+        ['Utilisateurs et rôles', '✓', 'lecture', '—', '✓', '—', '—', '—', '—'],
         ['Permissions', '✓', '—', '—', '—', '—', '—', '—', '—'],
         ['Bourses (instruction)', '✓', 'lecture', '—', '—', '—', '—', '—', '—'],
     ],

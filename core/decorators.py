@@ -38,6 +38,29 @@ def role_required(*role_keys):
     return decorator
 
 
+# Rôles autorisés à gérer les comptes et les attributions de rôles.
+# L'ADMIN conserve sa consultation transversale mais reste en lecture seule.
+USER_MANAGER_ROLES = ('SUPER_ADMIN', 'ASSISTANT_ADMIN')
+
+
+def user_management_required(view_func):
+    """Création, édition et attribution de rôles depuis l'écran Utilisateurs.
+
+    Le super administrateur et l'assistant administratif ont la main sur les
+    comptes. Les rôles privilégiés restent réservés au super administrateur dans
+    la vue elle-même : ce garde-fou ne peut pas être contourné par un POST.
+    """
+    @wraps(view_func)
+    @active_account_required
+    def wrapper(request, *args, **kwargs):
+        if not request.user.has_any_role(*USER_MANAGER_ROLES):
+            return HttpResponseForbidden(
+                _("La gestion des utilisateurs et des rôles est réservée au super administrateur et à l'assistant administratif.")
+            )
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
 def business_write_required(*role_keys):
     """Écriture métier réservée aux rôles opérationnels.
 

@@ -36,7 +36,7 @@ from .forms import (
 from .decorators import (
     active_account_required, business_write_required, permission_required,
     ACCESS_REQUEST_REVIEW_ROLES, role_required, roles_attribuables,
-    super_admin_required,
+    super_admin_required, user_management_required,
 )
 from .utils import (
     enrollments_waiting_validation, log_audit, notifier_changement_statut_bourse,
@@ -58,6 +58,19 @@ from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
 CATEGORIES_SALAIRES = (
     'Salaires', 'Avances sur salaire', 'Paiements des formateurs',  # i18n-exempt : noms stockés en base, affichés tels quels
 )
+
+
+def peut_gerer_comptes(user):
+    """Super admin et assistant admin peuvent gérer les comptes et les rôles."""
+    return user.has_any_role('SUPER_ADMIN', 'ASSISTANT_ADMIN')
+
+
+def roles_attribuables_depuis_fiche(user):
+    """Rôles proposés sur la fiche : les postes privilégiés restent au super admin."""
+    roles = Role.objects.exclude(key__in=ROLES_DISSOUS)
+    if not user.has_role('SUPER_ADMIN'):
+        roles = roles.exclude(key__in=PRIVILEGED_ROLES)
+    return roles
 
 
 def home(request):
@@ -394,7 +407,7 @@ def super_admin_dashboard(request):
     return render(request, 'dashboard/super_admin/index.html', context)
 
 
-@role_required('SUPER_ADMIN', 'ADMIN')
+@role_required('SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN')
 def user_list(request):
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
@@ -419,6 +432,7 @@ def user_list(request):
 
     return render(request, 'dashboard/super_admin/users.html', {
         'page': page,
+        'can_manage_users': peut_gerer_comptes(request.user),
         'query': query,
         'status_filter': status_filter,
         'role_filter': role_filter,
@@ -428,11 +442,11 @@ def user_list(request):
     })
 
 
-@super_admin_required
+@user_management_required
 def user_create(request):
-    form = UserCreateForm()
+    form = UserCreateForm(user=request.user)
     if request.method == 'POST':
-        form = UserCreateForm(request.POST)
+        form = UserCreateForm(request.POST, user=request.user)
         if form.is_valid():
             user = form.save(commit=False)
             user.username = form.cleaned_data['email']
@@ -486,7 +500,9 @@ def user_create(request):
             messages.success(request, _("Utilisateur %(nom)s créé avec succès.") % {'nom': user.get_full_name()})
             return redirect('core:dashboard:user-list')
 
-    return render(request, 'dashboard/super_admin/user_form.html', {'form': form})
+    return render(request, 'dashboard/super_admin/user_form.html', {
+        'form': form, 'can_manage_users': True,
+    })
 
 
 def _warn_student_without_enrollment(request, user):
@@ -523,7 +539,7 @@ def _is_last_active_super_admin(user):
     ).exclude(id=user.id).exists()
 
 
-@role_required('SUPER_ADMIN', 'ADMIN')
+@role_required('SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN')
 def user_detail(request, user_id):
     user = get_object_or_404(User, id=user_id)
     audit = AuditLog.objects.filter(
@@ -531,25 +547,26 @@ def user_detail(request, user_id):
     )[:20]
     held_keys = list(user.roles.values_list('key', flat=True))
     is_self = request.user.id == user.id
-    can_manage = request.user.has_role(RoleKey.SUPER_ADMIN) and not is_self
+    can_manage = peut_gerer_comptes(request.user) and not is_self
 
     return render(request, 'dashboard/super_admin/user_detail.html', {
         'profile_user': user,
         'audit_entries': audit,
         'held_role_keys': held_keys,
         'available_roles': (
-            Role.objects.exclude(key__in=held_keys)
-            .exclude(key__in=ROLES_DISSOUS).order_by('label')
+            roles_attribuables_depuis_fiche(request.user)
+            .exclude(key__in=held_keys).order_by('label')
             if can_manage else Role.objects.none()
         ),
         'status_choices': AccountStatus.choices,
         'can_manage_access': can_manage,
+        'can_manage_users': peut_gerer_comptes(request.user),
         'avatar_form': AvatarForm(),
         'is_self': is_self,
     })
 
 
-@super_admin_required
+@user_management_required
 def user_edit(request, user_id):
     user = get_object_or_404(User, id=user_id)
     before = {
@@ -568,7 +585,8 @@ def user_edit(request, user_id):
                     _("Impossible de désactiver ou suspendre le dernier super administrateur actif."),
                 )
                 return render(request, 'dashboard/super_admin/user_form.html', {
-                    'form': form, 'editing': True, 'profile_user': user
+                    'form': form, 'editing': True, 'profile_user': user,
+                    'can_manage_users': True,
                 })
             if (updated_user.account_status == AccountStatus.SUSPENDED and
                     before['status'] != AccountStatus.SUSPENDED):
@@ -594,20 +612,21 @@ def user_edit(request, user_id):
             return redirect('core:dashboard:user-detail', user_id=user.id)
 
     return render(request, 'dashboard/super_admin/user_form.html', {
-        'form': form, 'editing': True, 'profile_user': user
+        'form': form, 'editing': True, 'profile_user': user,
+        'can_manage_users': True,
     })
 
 
-@super_admin_required
+@user_management_required
 def user_avatar(request, user_id):
-    """Un super administrateur pose la photo d'un compte depuis sa fiche."""
+    """Le gestionnaire du compte pose la photo depuis sa fiche."""
     compte = get_object_or_404(User, id=user_id)
     if request.method == 'POST':
         changer_avatar(request, compte)
     return redirect('core:dashboard:user-detail', user_id=compte.id)
 
 
-@super_admin_required
+@user_management_required
 def user_role_assign(request, user_id):
     redirect_to_detail = redirect(
         'core:dashboard:user-detail', user_id=user_id)
@@ -680,7 +699,7 @@ def user_role_assign(request, user_id):
     return redirect_to_detail
 
 
-@super_admin_required
+@user_management_required
 def user_status_change(request, user_id):
     """Change le statut d'accès d'un compte depuis sa fiche (POST uniquement)."""
     redirect_to_detail = redirect(

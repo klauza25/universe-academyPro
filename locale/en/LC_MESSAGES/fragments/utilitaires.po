@@ -25,6 +25,10 @@ msgstr "Permission denied."
 msgid "Cette action est réservée au super administrateur."
 msgstr "This action is restricted to the super administrator."
 
+# core/decorators.py
+msgid "La gestion des utilisateurs et des rôles est réservée au super administrateur et à l'assistant administratif."
+msgstr "Managing users and roles is restricted to the super administrator and the administrative assistant."
+
 # core/context_processors.py
 msgid "Bonjour"
 msgstr "Good morning"
