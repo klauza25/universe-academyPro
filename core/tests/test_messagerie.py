@@ -6,6 +6,7 @@ n'est lue ni écrite.
 import json
 
 from django.urls import reverse
+from django.utils import timezone
 
 from core.models import (
     AccountStatus, AuditLog, Conversation, Message, Notification, User,
@@ -188,6 +189,68 @@ class MessagerieTest(BusinessTestBase):
         self.assertTrue(note_fil.is_read)
         self.assertFalse(note_autre.is_read)
 
+    def test_fil_affiche_le_destinataire_dans_la_carte(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+
+        response = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'ua-chat-entete')
+        self.assertContains(response, self.formateur.display_label)
+        self.assertContains(response, 'Conversation privée')
+
+    def test_messages_recus_et_envoyes_sont_dans_le_meme_fil(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        Message.objects.create(
+            conversation=conversation, sender=self.formateur, body='Recu',
+        )
+        Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Envoye',
+        )
+
+        html = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        ).content.decode()
+        debut = html.index('id="ua-chat-fil"')
+        fin = html.index('id="ua-chat-form"')
+        segment = html[debut:fin]
+
+        self.assertIn('Recu', segment)
+        self.assertIn('Envoye', segment)
+        self.assertIn('ua-chat-bulle ', segment)
+        self.assertIn('ua-chat-bulle mien', segment)
+
+    def test_fil_affiche_lannee_et_laccuse_de_lecture(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Daté',
+            read_at=timezone.now(),
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        )
+
+        horodatage = timezone.localtime(
+            message.created_at
+        ).strftime('%d/%m/%Y %H:%M')
+        self.assertContains(response, horodatage)
+        self.assertContains(response, '· Lu')
+
+    def test_message_non_lu_affiche_envoye(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='En attente',
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        )
+
+        self.assertContains(response, '· Envoyé')
+
     def test_poll_des_notifications_expose_le_lien_du_fil(self):
         _, conversation = self.ouvre(self.formateur, self.etudiant)
         self.client_for(self.formateur).post(
@@ -334,6 +397,23 @@ class MessagerieTest(BusinessTestBase):
         self.assertEqual(response.status_code, 405)
         self.assertTrue(Message.objects.filter(pk=message.pk).exists())
 
+    def test_suppression_demande_confirmation_dans_le_gabarit(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        Message.objects.create(
+            conversation=conversation, sender=self.etudiant,
+            body='Confirmation',
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        )
+
+        self.assertContains(response, 'ua-chat-suppr-form')
+        self.assertContains(
+            response,
+            'Supprimer ce message ? Cette action est définitive.',
+        )
+
     def test_bouton_de_suppression_uniquement_sur_les_propres_messages(self):
         conversation, _ = Conversation.pour(self.etudiant, self.formateur)
         mien = Message.objects.create(
@@ -400,6 +480,45 @@ class MessagerieTest(BusinessTestBase):
         self.assertTrue(donnees['messages'][1]['mien'])
         self.assertTrue(donnees['signature'])
         self.assertNotIn('Secret', response.content.decode())
+
+    def test_poll_expose_laccuse_de_lecture_et_lannee(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Lu ?',
+        )
+        client = self.client_for(self.etudiant)
+
+        avant = json.loads(client.get(self.poll_url(conversation)).content)
+        self.assertEqual(len(avant['messages']), 1)
+        self.assertRegex(
+            avant['messages'][0]['heure'],
+            r'^\d{2}/\d{2}/\d{4} \d{2}:\d{2}$',
+        )
+        self.assertFalse(avant['messages'][0]['lu'])
+
+        Message.objects.filter(pk=message.pk).update(read_at=timezone.now())
+        apres = json.loads(client.get(self.poll_url(conversation)).content)
+
+        self.assertTrue(apres['messages'][0]['lu'])
+        self.assertNotEqual(apres['signature'], avant['signature'])
+
+    def test_signature_du_sondage_change_a_larrivee_dun_message(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        client = self.client_for(self.etudiant)
+
+        avant = json.loads(
+            client.get(self.poll_url(conversation)).content
+        )['signature']
+        Message.objects.create(
+            conversation=conversation, sender=self.formateur,
+            body='Nouveau message',
+        )
+        apres = json.loads(
+            client.get(self.poll_url(conversation)).content
+        )
+
+        self.assertNotEqual(apres['signature'], avant)
+        self.assertEqual(apres['messages'][-1]['corps'], 'Nouveau message')
 
     def test_poll_reserve_aux_participants(self):
         conversation, _ = Conversation.pour(self.etudiant, self.formateur)

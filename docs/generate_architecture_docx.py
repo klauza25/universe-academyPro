@@ -2761,12 +2761,13 @@ test_rows = [
      'nommage et classement des onglets, sauvegardes et portique de la commande.'],
     ['`test_synchronisation_vue.py`', '7', 'Bouton de synchro manuelle : réservé '
      'au super admin, POST, verrou, audit et message d’échec sans trace de succès.'],
-    ['`test_messagerie.py`', '27', 'Messagerie interne 1:1 : un seul fil par '
+    ['`test_messagerie.py`', '34', 'Messagerie interne 1:1 : un seul fil par '
      'paire, recherche de destinataire, refus de soi-même et des comptes '
      'inactifs, accès réservé aux participants, messages lus à l’ouverture, '
      'notification cliquable éteinte à la lecture, envoi audité, suppression '
-     'par l’expéditeur (refus à autrui, audit), consultation et suppression '
-     'tracée dans l’admin, compteur de non-lus et sondage JSON.'],
+     'par l’expéditeur (confirmation, refus à autrui, audit), consultation et suppression '
+     'tracée dans l’admin, messages des deux côtés du même fil, accusé de '
+     'lecture, compteur de non-lus et sondage JSON.'],
 ]
 
 # Les compteurs sont relevés sur la suite Django : les descriptifs restent

@@ -10,18 +10,30 @@
 
 {% block dashboard_content %}
 <section class="ua-card ua-card-pad">
+    <header class="ua-chat-entete">
+        {% vignette interlocuteur "ua-avatar ua-avatar-sm" %}
+        <div class="ua-chat-entete-texte">
+            <p class="ua-chat-entete-nom">{{ interlocuteur.display_label }}</p>
+            <p class="ua-chat-entete-sous">{% translate "Conversation privée" %}</p>
+        </div>
+        <a href="{% url 'core:dashboard:messagerie' %}" class="ua-chat-entete-retour">{% translate "← Toutes les conversations" %}</a>
+    </header>
+
     <div id="ua-chat-fil" class="ua-chat-fil"
          data-poll-url="{% url 'core:dashboard:messagerie-poll' conversation.id %}"
-         data-signature="{{ messages|length }}:{{ messages.last.id|default_if_none:'' }}"
+         data-signature="{{ messages|length }}:{{ messages.last.id|default_if_none:'' }}:{{ nb_lus }}"
          data-vide-label="{% translate 'Aucun message. Envoyez le premier !' %}"
-         data-delete-label="{% translate 'Supprimer ce message' %}">
+         data-delete-label="{% translate 'Supprimer ce message' %}"
+         data-lu-label="{% translate 'Lu' %}"
+         data-envoye-label="{% translate 'Envoyé' %}"
+         data-confirmation-suppression="{% translate 'Supprimer ce message ? Cette action est définitive.' %}">
         {% for message in messages %}
         <article class="ua-chat-bulle {% if message.sender_id == request.user.pk %}mien{% endif %}">
             <p class="ua-chat-corps">{{ message.body }}</p>
             <div class="ua-chat-pied">
-                <span class="ua-chat-meta">{{ message.sender.display_label }} — {{ message.created_at|date:"d/m H:i" }}</span>
+                <span class="ua-chat-meta">{{ message.sender.display_label }} — {{ message.created_at|date:"d/m/Y H:i" }}{% if message.sender_id == request.user.pk %} · {% if message.read_at %}{% translate "Lu" %}{% else %}{% translate "Envoyé" %}{% endif %}{% endif %}</span>
                 {% if message.sender_id == request.user.pk %}
-                <form method="post" action="{% url 'core:dashboard:messagerie-delete' conversation.id message.id %}">
+                <form method="post" class="ua-chat-suppr-form" action="{% url 'core:dashboard:messagerie-delete' conversation.id message.id %}">
                     {% csrf_token %}
                     <button type="submit" class="ua-chat-suppr"
                             title="{% translate 'Supprimer ce message' %}"
@@ -44,13 +56,19 @@
             <textarea id="ua-chat-corps" name="body" maxlength="{{ longueur_max }}" required
                       placeholder="{% translate 'Écrivez votre message…' %}"></textarea>
         </div>
-        <button type="submit" class="ua-btn ua-btn-primary">{% icon "send" %} {% translate "Envoyer" %}</button>
+        <button type="submit" class="ua-btn ua-btn-primary" id="ua-chat-envoyer">{% icon "send" %} {% translate "Envoyer" %}</button>
     </form>
-    <p class="ua-muted text-xs mt-2">{% blocktrans with limite=longueur_max %}Maximum {{ limite }} caractères.{% endblocktrans %}</p>
+    <p class="ua-chat-aide">
+        <span id="ua-chat-compteur" aria-live="polite">0 / {{ longueur_max }}</span>
+        <span aria-hidden="true"> · </span>
+        {% blocktrans with limite=longueur_max %}Maximum {{ limite }} caractères.{% endblocktrans %}
+        <span aria-hidden="true"> · </span>
+        {% translate "Entrée pour envoyer, Maj+Entrée pour un retour à la ligne." %}
+    </p>
 
     {# Modele clone par messagerie.js pour les messages arrivés par sondage. #}
     <template id="ua-chat-suppr-modele">
-        <form method="post">
+        <form method="post" class="ua-chat-suppr-form">
             {% csrf_token %}
             <button type="submit" class="ua-chat-suppr"
                     title="{% translate 'Supprimer ce message' %}"
@@ -63,5 +81,5 @@
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'js/messagerie.js' %}?v=20261123-delete1"></script>
+<script src="{% static 'js/messagerie.js' %}?v=20261123-confort2"></script>
 {% endblock %}

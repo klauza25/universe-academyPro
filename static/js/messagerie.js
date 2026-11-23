@@ -6,7 +6,48 @@
 
     const url = fil.dataset.pollUrl;
     const videLabel = fil.dataset.videLabel || '';
+    const luLabel = fil.dataset.luLabel || '';
+    const envoyeLabel = fil.dataset.envoyeLabel || '';
+    const confirmationSuppression = fil.dataset.confirmationSuppression || '';
     const modeleSuppr = document.getElementById('ua-chat-suppr-modele');
+    const formulaire = document.getElementById('ua-chat-form');
+    const champ = document.getElementById('ua-chat-corps');
+    const compteur = document.getElementById('ua-chat-compteur');
+
+    const metAJourCompteur = () => {
+        if (!champ || !compteur) return;
+        compteur.textContent = champ.value.length + ' / ' + champ.maxLength;
+        compteur.classList.toggle(
+            'est-plein', champ.value.length >= champ.maxLength * 0.9
+        );
+    };
+
+    if (champ) {
+        metAJourCompteur();
+        champ.addEventListener('input', metAJourCompteur);
+        // Entrée envoie ; Maj+Entrée garde le retour à la ligne. La validation
+        // HTML et le POST restent ceux du formulaire, sans double soumission.
+        champ.addEventListener('keydown', (evenement) => {
+            if (evenement.key !== 'Enter' || evenement.shiftKey || evenement.isComposing) return;
+            if (!champ.value.trim()) return;
+            evenement.preventDefault();
+            if (!formulaire) return;
+            if (typeof formulaire.requestSubmit === 'function') formulaire.requestSubmit();
+            else formulaire.submit();
+        });
+    }
+
+    // Délégation : couvre les messages rendus par Django et ceux ajoutés par
+    // le sondage. Le libellé vient du gabarit traduit, jamais du JavaScript.
+    if (confirmationSuppression) {
+        fil.addEventListener('submit', (evenement) => {
+            const form = evenement.target;
+            if (!(form instanceof HTMLFormElement)
+                || !form.classList.contains('ua-chat-suppr-form')) return;
+            evenement.preventDefault();
+            if (window.confirm(confirmationSuppression)) form.submit();
+        });
+    }
 
     const formule = (message) => {
         const article = document.createElement('article');
@@ -21,7 +62,11 @@
 
         const meta = document.createElement('span');
         meta.className = 'ua-chat-meta';
-        meta.textContent = message.auteur + ' — ' + message.heure;
+        let texteMeta = message.auteur + ' — ' + message.heure;
+        if (message.mien) {
+            texteMeta += ' · ' + (message.lu ? luLabel : envoyeLabel);
+        }
+        meta.textContent = texteMeta;
         pied.append(meta);
 
         // Le bouton vient du gabarit : libellés traduits et jeton CSRF inclus.

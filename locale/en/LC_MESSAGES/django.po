@@ -5894,3 +5894,18 @@ msgstr "Message deleted."
 
 msgid "Extrait"
 msgstr "Excerpt"
+
+msgid "Conversation privée"
+msgstr "Private conversation"
+
+msgid "Lu"
+msgstr "Read"
+
+msgid "Envoyé"
+msgstr "Sent"
+
+msgid "Entrée pour envoyer, Maj+Entrée pour un retour à la ligne."
+msgstr "Press Enter to send, Shift+Enter for a new line."
+
+msgid "Supprimer ce message ? Cette action est définitive."
+msgstr "Delete this message? This cannot be undone."

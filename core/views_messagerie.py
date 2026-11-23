@@ -111,12 +111,16 @@ def conversation_detail(request, conversation_id):
         is_read=False,
     ).update(is_read=True)
 
+    messages = conversation.messages.select_related('sender').order_by(
+        'created_at'
+    )
     return render(request, 'dashboard/messagerie/fil.html', {
         'conversation': conversation,
         'interlocuteur': conversation.interlocuteur(request.user),
-        'messages': conversation.messages.select_related('sender').order_by(
-            'created_at'
-        ),
+        'messages': messages,
+        'nb_lus': messages.filter(
+            sender=request.user, read_at__isnull=False
+        ).count(),
         'longueur_max': LONGUEUR_MAX,
     })
 
@@ -217,21 +221,26 @@ def messages_poll(request, conversation_id):
         'created_at'
     )[:100]:
         mien = message.sender_id == request.user.pk
+        lu = message.read_at is not None
         relevés.append({
             'id': str(message.id),
             'auteur': message.sender.display_label,
             'corps': message.body,
             'heure': timezone.localtime(
                 message.created_at
-            ).strftime('%d/%m %H:%M'),
+            ).strftime('%d/%m/%Y %H:%M'),
             'mien': mien,
+            'lu': lu,
             'delete_url': reverse(
                 'core:dashboard:messagerie-delete',
                 args=[conversation.id, message.id],
             ) if mien else '',
         })
+    # Un accusé de lecture ne change ni le nombre ni le dernier message : il
+    # doit pourtant faire repartir le sondage, sinon le « Lu » n'apparaît jamais.
+    lus = sum(1 for releve in relevés if releve['mien'] and releve['lu'])
     return JsonResponse({
         'messages': relevés,
         'signature': f'{len(relevés)}:'
-                     f'{relevés[-1]["id"] if relevés else ""}',
+                     f'{relevés[-1]["id"] if relevés else ""}:{lus}',
     })
