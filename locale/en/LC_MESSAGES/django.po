@@ -417,9 +417,6 @@ msgstr "Super administrator"
 msgid "Administrateur"
 msgstr "Administrator"
 
-msgid "Direction"
-msgstr "Management"
-
 msgid "Secrétaire"
 msgstr "Secretary"
 
@@ -2664,9 +2661,6 @@ msgstr "-- Class group (required for a student) --"
 msgid "-- Rôle à attribuer --"
 msgstr "-- Role to assign --"
 
-msgid "7 derniers jours"
-msgstr "Last 7 days"
-
 msgid "Accueil & visites"
 msgstr "Reception & visits"
 
@@ -2737,9 +2731,6 @@ msgstr "No sheet filled in for this program."
 msgid "Aucune formation en cours"
 msgstr "No program in progress"
 
-msgid "Aucune opération sur la période."
-msgstr "No transaction over the period."
-
 msgid "Aucune présence enregistrée"
 msgstr "No attendance recorded"
 
@@ -2748,9 +2739,6 @@ msgstr "No resource published yet."
 
 msgid "Aucune ressource publiée pour vos formations."
 msgstr "No resource published for your programs."
-
-msgid "Aucune session active."
-msgstr "No active class group."
 
 msgid "Aucune sortie validée pour ces critères."
 msgstr "No validated exit for these criteria."
@@ -2864,9 +2852,6 @@ msgstr "Requester"
 msgid "Derniers comptes créés"
 msgstr "Recently created accounts"
 
-msgid "Derniers paiements"
-msgstr "Recent payments"
-
 msgid "Dernière mise à jour : %(d)s"
 msgstr "Last updated: %(d)s"
 
@@ -2888,23 +2873,11 @@ msgstr "Record %(r)s · %(d)s"
 msgid "Dossiers, inscriptions, documents"
 msgstr "Records, enrollments, documents"
 
-msgid "Début"
-msgstr "Start"
-
 msgid "Décision"
 msgstr "Decision"
 
-msgid "Dépenses"
-msgstr "Expenses"
-
 msgid "Détails & avis"
 msgstr "Details & reviews"
-
-msgid "Effectif"
-msgstr "Headcount"
-
-msgid "Effectifs par session active"
-msgstr "Headcount per active class group"
 
 msgid "En attente de validation"
 msgstr "Awaiting validation"
@@ -2966,9 +2939,6 @@ msgstr "Program / concepts"
 msgid "Formation%(fp)s"
 msgstr "Program%(fp)s"
 
-msgid "Formations en cours"
-msgstr "Programs in progress"
-
 msgid "Gérer les utilisateurs"
 msgstr "Manage users"
 
@@ -2993,9 +2963,6 @@ msgstr "Enrollments in progress"
 
 msgid "J'ai déjà un compte"
 msgstr "I already have an account"
-
-msgid "Jour"
-msgstr "Day"
 
 msgid "Journal d'audit"
 msgstr "Audit log"
@@ -3054,14 +3021,8 @@ msgstr "My payments"
 msgid "Mes présences"
 msgstr "My attendance"
 
-msgid "Mois en cours"
-msgstr "Current month"
-
 msgid "Motif (facultatif)"
 msgstr "Reason (optional)"
-
-msgid "Mouvements validés de la période"
-msgstr "Validated transactions for the period"
 
 msgid "Moyen"
 msgstr "Method"
@@ -3081,9 +3042,6 @@ msgstr "Internal note"
 msgid "Notion, formation, sujet…"
 msgstr "Concept, program, topic…"
 
-msgid "Nouvelles inscriptions"
-msgstr "New enrollments"
-
 msgid "Opérations en attente"
 msgstr "Pending transactions"
 
@@ -3095,9 +3053,6 @@ msgstr "Yes"
 
 msgid "PDF, JPG ou PNG — 10 Mo maximum par fichier."
 msgstr "PDF, JPG or PNG — 10 MB maximum per file."
-
-msgid "Paiements effectués"
-msgstr "Payments made"
 
 msgid "Paiements incomplets"
 msgstr "Incomplete payments"
@@ -3111,9 +3066,6 @@ msgstr "Programs in progress"
 msgid "Pilotage de la vie académique"
 msgstr "Oversight of academic life"
 
-msgid "Pilotage financier et académique"
-msgstr "Financial and academic oversight"
-
 msgid "Programme"
 msgstr "Program"
 
@@ -3126,20 +3078,11 @@ msgstr "Programs, sessions, attendance"
 msgid "Projet d'études"
 msgstr "Study project"
 
-msgid "Prospects en base"
-msgstr "Prospects in the database"
-
 msgid "Présence"
 msgstr "Attendance"
 
 msgid "Pédagogie"
 msgstr "Academics"
-
-msgid "Période personnalisée"
-msgstr "Custom period"
-
-msgid "Recettes"
-msgstr "Income"
 
 msgid "Refuser"
 msgstr "Reject"
@@ -3217,9 +3160,6 @@ msgstr "Sign in"
 msgid "Secrétariat"
 msgstr "Secretary"
 
-msgid "Sessions actives"
-msgstr "Active sessions"
-
 msgid "Solde net (filtre)"
 msgstr "Net balance (filter)"
 
@@ -3247,9 +3187,6 @@ msgstr "Submitted on"
 msgid "Suivi de candidature"
 msgstr "Application tracking"
 
-msgid "Suivi des encaissements récents"
-msgstr "Recent collections tracking"
-
 msgid "Suivre ma candidature"
 msgstr "Track my application"
 
@@ -3276,9 +3213,6 @@ msgstr "Total"
 
 msgid "Tous comptes actifs"
 msgstr "All active accounts"
-
-msgid "Tous cursus"
-msgstr "All curricula"
 
 msgid "Tous les modules"
 msgstr "All modules"
@@ -3349,9 +3283,6 @@ msgstr "Your training path"
 
 msgid "Vue d'ensemble de la plateforme"
 msgstr "Platform overview"
-
-msgid "Vue direction"
-msgstr "Management view"
 
 msgid "en attente"
 msgstr "pending"
@@ -4031,13 +3962,6 @@ msgstr "— None —"
 
 msgid "Assistant administratif"
 msgstr "Administrative assistant"
-
-msgid ""
-"La validation d'une inscription est réservée à la direction, à l'assistant "
-"administratif, à la supervision pédagogique et au super administrateur."
-msgstr ""
-"Approving an enrollment is reserved for management, the administrative "
-"assistant, academic supervision and the super administrator."
 
 msgid "%(d)s droit(s) accordé(s) sur %(p)s poste(s) éditable(s)."
 msgstr "%(d)s right(s) granted across %(p)s editable post(s)."
@@ -4779,13 +4703,6 @@ msgstr ""
 msgid "%(r)s %(dv)s de recettes pour %(d)s %(dv)s de dépenses enregistrées."
 msgstr "%(r)s %(dv)s of income against %(d)s %(dv)s of recorded expenses."
 
-msgid ""
-"%(t)s étudiant(s) actif(s), %(s)s session(s) en cours et %(r)s %(dv)s de "
-"recettes encaissées."
-msgstr ""
-"%(t)s active student(s), %(s)s ongoing class group(s) and %(r)s %(dv)s of "
-"income collected."
-
 msgid "Aperçu de l'en-tête imprimé"
 msgstr "Printed header preview"
 
@@ -5012,9 +4929,6 @@ msgstr "balance due %(amount)s %(dv)s"
 
 msgid "Clôtures aujourd'hui : %(c)s"
 msgstr "Closings today: %(c)s"
-
-msgid "%(dv)s de recettes"
-msgstr "%(dv)s of income"
 
 msgid "%(dv)s de solde des caisses"
 msgstr "%(dv)s across cash accounts"
@@ -5957,3 +5871,10 @@ msgstr "Record a student's enrollment fee on their record."
 
 msgid "Mensualités payées"
 msgstr "Monthly fees paid"
+
+msgid ""
+"La validation d'une inscription est réservée à l'assistant administratif, à "
+"la supervision pédagogique et au super administrateur."
+msgstr ""
+"Approving an enrollment is reserved for the administrative assistant, "
+"academic supervision and the super administrator."

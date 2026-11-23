@@ -654,7 +654,7 @@ table(
          'Partout', 'Modifier ses propres rôles ; désactiver le dernier super administrateur actif.'],
         ['ADMIN', 'Contrôle transversal de tous les modules.',
          'Aucune écriture métier', 'Gérer les rôles ou les permissions.'],
-        ['DIRECTION', 'Pilotage, validation des inscriptions, encaissement, contrôle.',
+        ['ASSISTANT_ADMIN', 'Pilotage, validation des inscriptions, encaissement, contrôle.',
          'Étudiants, inscriptions, pédagogie, finance, accueil', 'Gérer les comptes et les rôles.'],
         ['ASSISTANT_ADMIN', 'Accueil, visites, prospects, dossiers étudiants, inscriptions, documents, guichet, comptes et rôles métier.',
          'Étudiants, inscriptions, finance, accueil, comptes et rôles métier', 'Pédagogie (séances, cahier de texte) ; rôles privilégiés.'],
@@ -1681,7 +1681,7 @@ note(
 h1('', 'Annexe A — Matrice des écrans par rôle')
 
 table(
-    ['Écran', 'SUPER_ADMIN', 'ADMIN', 'DIRECTION', 'ASSISTANT', 'RESP_PEDA', 'FORMATEUR', 'ETUDIANT'],
+    ['Écran', 'SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN', 'ASSISTANT', 'RESP_PEDA', 'FORMATEUR', 'ETUDIANT'],
     [
         ['Tableau de bord du rôle', '✓', '✓', '✓', '✓', '✓', '✓', '✓'],
         ['Accueil, visites, prospects', '✓', '✓', '✓', '✓', '—', '—', '—'],

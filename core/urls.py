@@ -77,7 +77,6 @@ dashboard_urlpatterns = [
     path('super-admin/scholarships/', views.scholarship_review_list, name='scholarship-review-list'),
     path('super-admin/scholarships/<uuid:app_id>/', views.scholarship_review_detail, name='scholarship-review-detail'),
     path('admin/', views.admin_dashboard, name='admin-dashboard'),
-    path('direction/', views.direction_dashboard, name='direction-dashboard'),
 
     # Réglages de l'établissement --------------------------------------------
     path('reglages/parametres-generaux/', views_reglages.parametres_generaux,

@@ -4,7 +4,7 @@
 {% block title %}{% translate "Étudiants" %} — {{ plateforme.nom }}{% endblock %}
 
 {% block sidebar_nav %}
-{% if 'ASSISTANT_ADMIN' in user_roles and 'DIRECTION' not in user_roles %}
+{% if 'ASSISTANT_ADMIN' in user_roles %}
     {% include "dashboard/comptabilite/_nav.html" %}
 {% else %}
     {% include "dashboard/secretaire/_nav.html" %}

@@ -604,7 +604,7 @@ ROLE_INFO = [
      'Accès transversal en lecture à tous les modules, revue des demandes '
      'd’accès, supervision. Ne peut ni créer/modifier un compte, ni attribuer '
      'un rôle, ni écrire dans le métier.'),
-    ('DIRECTION', 'Direction', 'UA-DIR',
+    ('ASSISTANT_ADMIN', 'Direction', 'UA-DIR',
      'Pilotage : lecture des dossiers, formations, présences et finances ; '
      'écriture pédagogique (modules, leçons, groupes) et encaissements.'),
     ('ASSISTANT_ADMIN', 'Assistant administratif', 'UA-ASY',
@@ -2441,7 +2441,7 @@ add_table(['Rôle', 'Route', 'Contenu principal'], [
      'utilisateurs, demandes, finances, bourses, audit.'],
     ['ADMIN', '`/dashboard/admin/`', 'Vue transversale, demandes en attente, '
      'accès directs aux modules.'],
-    ['DIRECTION', '`/dashboard/direction/`', 'Pilotage académique et '
+    ['ASSISTANT_ADMIN', '`/dashboard/direction/`', 'Pilotage académique et '
      'financier.'],
     ['ASSISTANT_ADMIN', '`/dashboard/comptabilite/`', 'Journal, caisses, '
      'clôtures, paiements par mois, reçus ; et dans la même barre latérale, '

@@ -36,7 +36,7 @@ def _etat_reglages(reglages):
     }
 
 
-@role_required('DIRECTION')
+@role_required('ASSISTANT_ADMIN')
 def parametres_generaux(request):
     """Les mots de l'établissement, enregistrés en base au lieu du code.
 
@@ -87,7 +87,7 @@ def _lignes():
     } for annee in AcademicYear.objects.all()]
 
 
-@role_required('DIRECTION')
+@role_required('ASSISTANT_ADMIN')
 def annee_academique_list(request):
     """Le calendrier : créer une année, en cocher une seule « en cours »."""
     form = AcademicYearForm()
@@ -119,7 +119,7 @@ def annee_academique_list(request):
     })
 
 
-@role_required('DIRECTION')
+@role_required('ASSISTANT_ADMIN')
 def annee_academique_update(request, year_id):
     """Régler une année : les dates se corrigent, le passé des listes reste."""
     annee = get_object_or_404(AcademicYear, id=year_id)

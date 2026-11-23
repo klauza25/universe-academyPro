@@ -66,7 +66,6 @@ class AdminGlobalReadTests(BusinessTestBase):
             ('core:dashboard:prospect-list', ()),
             ('core:dashboard:visit-reasons', ()),
             # Pilotage / supervision
-            ('core:dashboard:direction-dashboard', ()),
             ('core:dashboard:user-list', ()),
             ('core:dashboard:user-detail', (self.etudiant.id,)),
             ('core:dashboard:access-requests', ()),

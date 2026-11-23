@@ -53,7 +53,7 @@ class BusinessTestBase(TestCase):
                 defaults={
                     'label': member.label,
                     'is_privileged': member.value in (
-                        'SUPER_ADMIN', 'ADMIN', 'DIRECTION'
+                        'SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN'
                     ),
                 },
             )
@@ -61,7 +61,7 @@ class BusinessTestBase(TestCase):
 
         cls.super_admin = cls.make_user(RoleKey.SUPER_ADMIN, 'superadmin@test.local')
         cls.admin = cls.make_user(RoleKey.ADMIN, 'admin@test.local')
-        cls.direction = cls.make_user(RoleKey.DIRECTION, 'direction@test.local')
+        cls.direction = cls.make_user(RoleKey.ASSISTANT_ADMIN, 'direction@test.local')
         cls.assistant = cls.make_user(RoleKey.ASSISTANT_ADMIN, 'assistant@test.local')
         # L'ancien poste de secrétaire est fusionné dans l'assistant
         # administratif ; la suite garde un second compte sous ce rôle pour

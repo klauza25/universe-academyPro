@@ -57,10 +57,6 @@
    class="ua-nav-link {% if request.resolver_match.url_name == 'accounts' %}is-active{% endif %}">
     {% icon "credit-card" %}<span>{% translate "Caisses & comptes" %}</span>
 </a>
-<a href="{% url 'core:dashboard:direction-dashboard' %}"
-   class="ua-nav-link {% if request.resolver_match.url_name == 'direction-dashboard' %}is-active{% endif %}">
-    {% icon "chart" %}<span>{% translate "Vue direction" %}</span>
-</a>
 <a href="{% url 'core:dashboard:trainer-salaries' %}"
    class="ua-nav-link {% if request.resolver_match.url_name == 'trainer-salaries' %}is-active{% endif %}">
     {% icon "users" %}<span>{% translate "Salaires des formateurs" %}</span>
@@ -73,7 +69,7 @@
 </a>
 <a href="{% url 'core:dashboard:access-requests' %}"
    class="ua-nav-link {% if request.resolver_match.url_name == 'access-requests' or request.resolver_match.url_name == 'access-request-review' %}is-active{% endif %}">
-    {% icon "user-check" %}<span>{% if 'DIRECTION' in user_roles %}{% translate "Demandes d'accès étudiant" %}{% else %}{% translate "Demandes d'accès" %}{% endif %}</span>
+    {% icon "user-check" %}<span>{% translate "Demandes d'accès" %}</span>
     {% if pending_requests %}<span class="ua-nav-count">{{ pending_requests }}</span>{% endif %}
 </a>
 <a href="{% url 'core:dashboard:scholarship-review-list' %}"

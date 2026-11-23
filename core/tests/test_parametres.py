@@ -151,14 +151,14 @@ class ParametresEcranTest(ParametresGenerauxBase):
         self.reglages.refresh_from_db()
         self.assertEqual(self.reglages.seuil_alerte, 80)
 
-    def test_l_ecran_se_refuse_au_guichet(self):
+    def test_l_ecran_est_autorise_a_l_assistant_administratif(self):
         client = self.client_for(self.secretaire)
         self.assertEqual(
-            client.get(reverse('core:dashboard:platform-settings')).status_code, 403)
+            client.get(reverse('core:dashboard:platform-settings')).status_code, 200)
         self.assertEqual(
             client.post(reverse('core:dashboard:platform-settings'),
                         {'nom': 'X', 'devise': 'FCFA', 'seuil_alerte': '80'}).status_code,
-            403)
+            302)
 
     def test_l_historique_des_reglages_parait_sous_le_formulaire(self):
         self.client.post(

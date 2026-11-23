@@ -21,7 +21,6 @@ class AccountStatus(models.TextChoices):
 class RoleKey(models.TextChoices):
     SUPER_ADMIN = 'SUPER_ADMIN', _("Super Administrateur")
     ADMIN = 'ADMIN', _("Administrateur")
-    DIRECTION = 'DIRECTION', _("Direction")
     ASSISTANT_ADMIN = 'ASSISTANT_ADMIN', _("Assistant administratif")
     SECRETAIRE = 'SECRETAIRE', _("Secrétaire")
     COMPTABLE = 'COMPTABLE', _("Comptable")
@@ -39,7 +38,6 @@ ROLES_DISSOUS = ('COMPTABLE', 'ACCUEIL', 'SECRETAIRE')
 ROLE_DASHBOARD_ROUTES = {
     'SUPER_ADMIN': 'core:dashboard:super-admin-dashboard',
     'ADMIN': 'core:dashboard:admin-dashboard',
-    'DIRECTION': 'core:dashboard:direction-dashboard',
     'ASSISTANT_ADMIN': 'core:dashboard:comptabilite-dashboard',
     'SECRETAIRE': 'core:dashboard:comptabilite-dashboard',
     'COMPTABLE': 'core:dashboard:comptabilite-dashboard',
@@ -49,7 +47,7 @@ ROLE_DASHBOARD_ROUTES = {
     'ACCUEIL': 'core:dashboard:accueil-dashboard',
 }
 
-PRIVILEGED_ROLES = {'SUPER_ADMIN', 'ADMIN', 'DIRECTION'}
+PRIVILEGED_ROLES = {'SUPER_ADMIN', 'ADMIN'}
 
 # Rôles disposant d'un accès transversal en lecture à l'ensemble des modules.
 # Les opérations les plus sensibles (création de comptes, attribution de rôles,
@@ -58,8 +56,8 @@ ELEVATED_ROLES = ('SUPER_ADMIN', 'ADMIN')
 
 # Rôles qu'un demandeur peut solliciter et qu'un SUPER_ADMIN peut attribuer
 # lors de l'approbation d'une demande d'accès. Les rôles d'administration
-# (SUPER_ADMIN, ADMIN) et la direction restent attribués depuis l'écran
-# « Utilisateurs » par un SUPER_ADMIN, jamais par un formulaire public.
+# (SUPER_ADMIN, ADMIN) restent attribués depuis l'écran « Utilisateurs » par un
+# SUPER_ADMIN, jamais par un formulaire public.
 REQUESTABLE_ROLES = (
     'ETUDIANT', 'FORMATEUR', 'ASSISTANT_ADMIN', 'RESP_PEDA',
 )
@@ -95,7 +93,6 @@ PERMISSION_LABELS = dict(PERMISSIONS)
 INTERNAL_CODE_PREFIXES = {
     'SUPER_ADMIN': 'UA-ADM',
     'ADMIN': 'UA-ADM',
-    'DIRECTION': 'UA-DIR',
     'ASSISTANT_ADMIN': 'UA-ASY',
     'SECRETAIRE': 'UA-SEC',
     'RESP_PEDA': 'UA-RPD',

@@ -1212,98 +1212,7 @@ def admin_dashboard(request):
     return render(request, 'dashboard/admin/index.html', context)
 
 
-@role_required('DIRECTION')
-def direction_dashboard(request):
-    today = timezone.localdate()
-    month_start = today.replace(day=1)
-    period = request.GET.get('period') or 'month'
-    date_from = request.GET.get('from') or ''
-    date_to = request.GET.get('to') or ''
-
-    payments = Payment.objects.filter(status=Payment.Status.COMPLETED)
-    transactions = CashTransaction.objects.filter(
-        status=CashTransaction.Status.VALIDATED
-    )
-    if period == 'day':
-        payments = payments.filter(paid_at__date=today)
-        transactions = transactions.filter(occurred_at__date=today)
-    elif period == 'week':
-        from datetime import timedelta
-        start = today - timedelta(days=7)
-        payments = payments.filter(paid_at__date__gte=start)
-        transactions = transactions.filter(occurred_at__date__gte=start)
-    elif period == 'year':
-        payments = payments.filter(paid_at__year=today.year)
-        transactions = transactions.filter(occurred_at__year=today.year)
-    elif period == 'custom' and date_from and date_to:
-        payments = payments.filter(paid_at__date__gte=date_from,
-                                   paid_at__date__lte=date_to)
-        transactions = transactions.filter(
-            occurred_at__date__gte=date_from,
-            occurred_at__date__lte=date_to,
-        )
-    else:
-        payments = payments.filter(paid_at__date__gte=month_start)
-        transactions = transactions.filter(occurred_at__date__gte=month_start)
-
-    from .views_comptabilite import accounts_with_balance
-
-    context = {
-        'period': period,
-        'date_from': date_from,
-        'date_to': date_to,
-        'total_revenue': transactions.filter(
-            tx_type=CashTransaction.Type.IN
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'active_students': students_count(only_active=True),
-        'active_sessions': CourseSession.objects.filter(
-            status=CourseSession.Status.ACTIVE
-        ).count(),
-        'new_enrollments': Enrollment.objects.filter(
-            enrolled_at__date__gte=month_start
-        ).count(),
-        'recent_payments': payments.select_related(
-            'enrollment__student'
-        ).order_by('-paid_at')[:8],
-        'visits_count': Visit.objects.filter(
-            arrival_at__date__gte=month_start
-        ).count(),
-        'prospects_count': Prospect.objects.count(),
-        'converted_count': Prospect.objects.filter(
-            converted_student__isnull=False
-        ).count(),
-        'total_expenses': transactions.filter(
-            tx_type=CashTransaction.Type.OUT
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'cash_rows': accounts_with_balance(),
-        'recent_transactions': transactions.select_related(
-            'account', 'category'
-        ).order_by('-occurred_at')[:8],
-        'students_by_session': CourseSession.objects.filter(
-            status=CourseSession.Status.ACTIVE
-        ).annotate(effectif=Count('enrollments')).select_related('course')[:8],
-        'attendance_stats': Attendance.objects.filter(
-            date__gte=month_start
-        ).aggregate(
-            total=Count('id'),
-            presents=Count('id', filter=Q(status='PRESENT')),
-            absents=Count('id', filter=Q(status='ABSENT')),
-        ),
-        'records_stats': SessionRecord.objects.filter(
-            date__gte=month_start
-        ).aggregate(
-            total=Count('id'),
-            completed=Count('id', filter=Q(status='COMPLETED')),
-        ),
-        # Inscriptions ouvertes au guichet : elles attendent une validation
-        # avant de pouvoir être encaissées.
-        'enrollments_to_validate': enrollments_waiting_validation(),
-        'graphiques': pour_direction(),
-    }
-    return render(request, 'dashboard/direction/index.html', context)
-
-
-@role_required('ASSISTANT_ADMIN', 'DIRECTION')
+@role_required('ASSISTANT_ADMIN')
 def secretaire_dashboard(request):
     context = {
         'pending_enrollments': Enrollment.objects.filter(
@@ -1486,7 +1395,7 @@ def formateur_dashboard(request):
     })
 
 
-@role_required('DIRECTION', 'ASSISTANT_ADMIN', 'COMPTABLE')
+@role_required('ASSISTANT_ADMIN', 'COMPTABLE')
 def salaires_formateurs(request):
     """Part estimée par formateur et salaires réellement sortis de la caisse."""
     salaires = calculer_salaires_formateurs()

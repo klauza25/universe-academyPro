@@ -202,14 +202,6 @@ class AssiduiteTests(BusinessTestBase):
 class TableauDeBordGraphiqueTests(BusinessTestBase):
     """La vue pose les séries et les scripts : le rendu reste dans le navigateur."""
 
-    def test_la_page_direction_porte_ses_quatre_graphiques(self):
-        page = self.client_for(self.direction).get(
-            reverse('core:dashboard:direction-dashboard'))
-        self.assertEqual(page.status_code, 200)
-        for identifiant in ('encaissements', 'effectifs', 'restes', 'assiduite'):
-            self.assertContains(page, f'data-chart-source="{identifiant}"')
-        self.assertContains(page, 'chart.umd.min.js')
-
     def test_la_page_comptable_ne_rend_pas_un_graphique_pedagogique(self):
         page = self.client_for(self.assistant).get(
             reverse('core:dashboard:comptabilite-dashboard'))

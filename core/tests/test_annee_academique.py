@@ -368,13 +368,13 @@ class AnneeAcademiqueEcranTest(AnneeAcademiqueBase):
             client.post(reverse('core:dashboard:academic-years'),
                         self.payload(label='2024-2025')).status_code, 302)
 
-    def test_le_calendrier_est_refuse_au_secretaire(self):
+    def test_le_calendrier_est_autorise_a_l_assistant_administratif(self):
         client = self.client_for(self.secretaire)
         self.assertEqual(
-            client.get(reverse('core:dashboard:academic-years')).status_code, 403)
+            client.get(reverse('core:dashboard:academic-years')).status_code, 200)
         self.assertEqual(
             client.post(reverse('core:dashboard:academic-years'),
-                        self.payload()).status_code, 403)
+                        self.payload()).status_code, 302)
 
     def test_le_calendrier_se_consulte_dans_django_admin_sans_se_modifier_ici(self):
         enregistre = admin.site._registry[AcademicYear]

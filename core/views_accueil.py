@@ -14,7 +14,7 @@ from .models import (
 )
 from .utils import log_audit
 
-ACCUEIL_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION')
+ACCUEIL_ROLES = ('ASSISTANT_ADMIN',)
 
 
 def _filter_visits(request):
@@ -285,16 +285,16 @@ def prospect_detail(request, prospect_id):
         'audit_entries': AuditLog.objects.filter(
             entity_type='Prospect', entity_id=str(prospect.id),
         ).select_related('actor').order_by('-created_at')[:20],
-        'can_convert': not request.user.is_elevated and request.user.has_any_role(
-            'ASSISTANT_ADMIN', 'DIRECTION'
+        'can_convert': not request.user.is_elevated and request.user.has_role(
+            'ASSISTANT_ADMIN'
         ),
-        'can_manage_students': not request.user.is_elevated and request.user.has_any_role(
-            'ASSISTANT_ADMIN', 'DIRECTION'
+        'can_manage_students': not request.user.is_elevated and request.user.has_role(
+            'ASSISTANT_ADMIN'
         ),
     })
 
 
-@role_required('ASSISTANT_ADMIN', 'DIRECTION', 'SUPER_ADMIN')
+@role_required('ASSISTANT_ADMIN', 'SUPER_ADMIN')
 def visit_reason_list(request):
     form = VisitReasonForm()
     if request.method == 'POST':
@@ -313,7 +313,7 @@ def visit_reason_list(request):
     })
 
 
-@business_write_required('ASSISTANT_ADMIN', 'DIRECTION')
+@business_write_required('ASSISTANT_ADMIN')
 def visit_reason_toggle(request, reason_id):
     if request.method != 'POST':
         return redirect('core:dashboard:visit-reasons')
@@ -329,7 +329,7 @@ def visit_reason_toggle(request, reason_id):
     return redirect('core:dashboard:visit-reasons')
 
 
-@role_required('ASSISTANT_ADMIN', 'DIRECTION')
+@role_required('ASSISTANT_ADMIN')
 def contact_search(request):
     """Recherche AJAX simple pour réutiliser une fiche contact existante."""
     query = (request.GET.get('q') or '').strip()
