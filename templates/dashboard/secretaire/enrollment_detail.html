@@ -16,7 +16,7 @@
 {% translate "Tarif" as lbl_tarif %}
 {% translate "Remise" as lbl_remise %}
 {% translate "Tarif mensuel" as lbl_tarif_mensuel %}
-{% translate "Total payé" as lbl_total_paye %}
+{% translate "Mensualités payées" as lbl_total_paye %}
 <div class="ua-page-head">
     <div>
         <h1 class="ua-page-title">{{ enrollment.session.course.title }}</h1>
@@ -54,7 +54,7 @@
 
 <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 mb-5">
     {% include "dashboard/_stat.html" with label=lbl_tarif_mensuel value=enrollment.monthly_tariff_amount icon="wallet" tone="indigo" hint=plateforme.devise %}
-    {% include "dashboard/_stat.html" with label=lbl_total_paye value=enrollment.total_paid icon="check-circle" tone="green" hint=plateforme.devise %}
+    {% include "dashboard/_stat.html" with label=lbl_total_paye value=monthly_paid_total icon="check-circle" tone="green" hint=plateforme.devise %}
 </div>
 
 <section class="ua-card ua-card-pad mb-5" id="monthly-payment">

@@ -483,10 +483,15 @@ def enrollment_detail(request, enrollment_id):
             'year': payment_form.data.get('year'),
             'month': payment_form.data.get('month'),
         })
+    monthly_paid_total = payments.filter(
+        status=Payment.Status.COMPLETED,
+        motif=Payment.Motif.MONTHLY,
+    ).aggregate(total=Sum('amount'))['total'] or 0
     return render(request, 'dashboard/secretaire/enrollment_detail.html', {
         'enrollment': enrollment,
         'payments': payments,
         'monthly_rows': monthly_rows,
+        'monthly_paid_total': monthly_paid_total,
         'selected_year': year,
         'payment_form': payment_form,
         'can_record_payment': (

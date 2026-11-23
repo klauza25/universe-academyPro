@@ -107,6 +107,9 @@ msgstr "Monthly tuition"
 msgid "Total payé"
 msgstr "Total paid"
 
+msgid "Mensualités payées"
+msgstr "Monthly fees paid"
+
 msgid "Choisissez un compte existant ou renseignez les informations du nouvel étudiant."
 msgstr "Choose an existing account or enter the new student's information."
 
