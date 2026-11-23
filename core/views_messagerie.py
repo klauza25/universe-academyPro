@@ -170,6 +170,40 @@ def message_create(request, conversation_id):
     )
 
 
+@require_POST
+@active_account_required
+def message_delete(request, conversation_id, message_id):
+    """Supprime un message envoyé, avec une ligne d'audit avant l'effacement.
+
+    Seul l'expéditeur peut retirer sa propre phrase : effacer celle d'autrui
+    reviendrait à réécrire l'historique de l'autre participant. L'accès au fil
+    est vérifié d'abord, pour ne pas révéler l'existence d'un message tiers.
+    """
+    conversation = get_object_or_404(
+        Conversation, pk=conversation_id, participants=request.user
+    )
+    message = get_object_or_404(
+        Message, pk=message_id, conversation=conversation
+    )
+    if message.sender_id != request.user.pk:
+        return HttpResponseForbidden(
+            _("Vous ne pouvez supprimer que vos propres messages.")
+        )
+
+    log_audit(
+        request, 'MESSAGE_DELETE', 'Message', message.id,
+        before={
+            'length': len(message.body),
+            'conversation': str(conversation.id),
+        },
+    )
+    message.delete()
+    messages.success(request, _("Message supprimé."))
+    return redirect(
+        'core:dashboard:messagerie-detail', conversation_id=conversation.id
+    )
+
+
 @require_GET
 @never_cache
 @active_account_required
@@ -178,15 +212,24 @@ def messages_poll(request, conversation_id):
     conversation = get_object_or_404(
         Conversation, pk=conversation_id, participants=request.user
     )
-    relevés = [{
-        'id': str(message.id),
-        'auteur': message.sender.display_label,
-        'corps': message.body,
-        'heure': timezone.localtime(message.created_at).strftime('%d/%m %H:%M'),
-        'mien': message.sender_id == request.user.pk,
-    } for message in conversation.messages.select_related('sender').order_by(
+    relevés = []
+    for message in conversation.messages.select_related('sender').order_by(
         'created_at'
-    )[:100]]
+    )[:100]:
+        mien = message.sender_id == request.user.pk
+        relevés.append({
+            'id': str(message.id),
+            'auteur': message.sender.display_label,
+            'corps': message.body,
+            'heure': timezone.localtime(
+                message.created_at
+            ).strftime('%d/%m %H:%M'),
+            'mien': mien,
+            'delete_url': reverse(
+                'core:dashboard:messagerie-delete',
+                args=[conversation.id, message.id],
+            ) if mien else '',
+        })
     return JsonResponse({
         'messages': relevés,
         'signature': f'{len(relevés)}:'

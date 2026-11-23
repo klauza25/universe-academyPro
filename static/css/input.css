@@ -1819,6 +1819,37 @@ html[data-theme="dark"] .shadow-slate-200 { --tw-shadow-color: var(--ua-shadow);
     color: var(--ua-muted);
 }
 
+.ua-chat-pied {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.ua-chat-suppr {
+    display: inline-grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    margin-top: 3px;
+    padding: 0;
+    border: 0;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ua-muted);
+    cursor: pointer;
+}
+
+.ua-chat-suppr:hover {
+    color: #e11d48;
+    background: var(--ua-brand-soft);
+}
+
+.ua-chat-suppr .ua-icon {
+    width: 14px;
+    height: 14px;
+}
+
 .ua-chat-compose {
     display: flex;
     align-items: flex-end;

@@ -10,7 +10,7 @@ from .models import (
     ScholarshipApplication, ScholarshipDocument, Destination,
     AccessEvent, Notification, AuditLog, Certificate, ResourceFeedback,
     CashAccount, CashClosure, CashTransaction, TransactionCategory,
-    PlatformSetting,
+    PlatformSetting, Conversation, Message,
 )
 from .utils import log_audit, notifier_changement_statut_bourse
 
@@ -262,6 +262,85 @@ class PlatformSettingAdmin(ConsultationSeule):
     """
     list_display = ('nom', 'telephone', 'email', 'devise', 'seuil_alerte',
                     'mise_a_jour_le')
+
+
+@admin.register(Conversation)
+class ConversationAdmin(admin.ModelAdmin):
+    """Les fils sont consultables ici, mais jamais remaniés à la main."""
+
+    list_display = ('pair_key', 'participants_label', 'message_count',
+                    'created_at', 'updated_at')
+    search_fields = (
+        'pair_key', 'participants__email',  # i18n-exempt : relation Django
+        'participants__first_name',
+        'participants__last_name', 'participants__internal_code',
+    )
+    date_hierarchy = 'created_at'
+    readonly_fields = ('id', 'pair_key', 'created_at', 'updated_at')
+
+    @admin.display(description=_("Participants"))
+    def participants_label(self, obj):
+        return ', '.join(p.display_label for p in obj.participants.all())
+
+    @admin.display(description=_("Messages"))
+    def message_count(self, obj):
+        return obj.messages.count()
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        # Supprimer un fil effacerait ses messages en cascade, sans distinction
+        # ni audit : la suppression se fait message par message.
+        return False
+
+
+@admin.register(Message)
+class MessageAdmin(admin.ModelAdmin):
+    """Lecture intégrale des échanges, suppression individuelle et tracée."""
+
+    list_display = ('created_at', 'sender', 'conversation', 'extrait', 'read_at')
+    list_filter = ('read_at',)
+    search_fields = (
+        'body', 'sender__email',  # i18n-exempt : relation Django
+        'sender__first_name', 'sender__last_name',
+        'conversation__pair_key',
+    )
+    date_hierarchy = 'created_at'
+    readonly_fields = ('id', 'conversation', 'sender', 'body',
+                       'created_at', 'read_at')
+
+    @admin.display(description=_("Extrait"))
+    def extrait(self, obj):
+        return obj.body[:80]
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    @staticmethod
+    def _journaliser(request, obj):
+        log_audit(
+            request, 'MESSAGE_DELETE', 'Message', obj.id,
+            before={
+                'length': len(obj.body),
+                'conversation': str(obj.conversation_id),
+            },
+        )
+
+    def delete_model(self, request, obj):
+        self._journaliser(request, obj)
+        super().delete_model(request, obj)
+
+    def delete_queryset(self, request, queryset):
+        for obj in queryset:
+            self._journaliser(request, obj)
+        super().delete_queryset(request, queryset)
 
 
 admin.site.register(UserRole)

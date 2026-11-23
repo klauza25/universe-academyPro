@@ -6,6 +6,7 @@
 
     const url = fil.dataset.pollUrl;
     const videLabel = fil.dataset.videLabel || '';
+    const modeleSuppr = document.getElementById('ua-chat-suppr-modele');
 
     const formule = (message) => {
         const article = document.createElement('article');
@@ -15,11 +16,22 @@
         corps.className = 'ua-chat-corps';
         corps.textContent = message.corps;
 
+        const pied = document.createElement('div');
+        pied.className = 'ua-chat-pied';
+
         const meta = document.createElement('span');
         meta.className = 'ua-chat-meta';
         meta.textContent = message.auteur + ' — ' + message.heure;
+        pied.append(meta);
 
-        article.append(corps, meta);
+        // Le bouton vient du gabarit : libellés traduits et jeton CSRF inclus.
+        if (message.delete_url && modeleSuppr) {
+            const formuleSuppr = modeleSuppr.content.firstElementChild.cloneNode(true);
+            formuleSuppr.action = message.delete_url;
+            pied.append(formuleSuppr);
+        }
+
+        article.append(corps, pied);
         return article;
     };
 

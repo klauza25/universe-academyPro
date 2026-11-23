@@ -13,11 +13,24 @@
     <div id="ua-chat-fil" class="ua-chat-fil"
          data-poll-url="{% url 'core:dashboard:messagerie-poll' conversation.id %}"
          data-signature="{{ messages|length }}:{{ messages.last.id|default_if_none:'' }}"
-         data-vide-label="{% translate 'Aucun message. Envoyez le premier !' %}">
+         data-vide-label="{% translate 'Aucun message. Envoyez le premier !' %}"
+         data-delete-label="{% translate 'Supprimer ce message' %}">
         {% for message in messages %}
         <article class="ua-chat-bulle {% if message.sender_id == request.user.pk %}mien{% endif %}">
             <p class="ua-chat-corps">{{ message.body }}</p>
-            <span class="ua-chat-meta">{{ message.sender.display_label }} — {{ message.created_at|date:"d/m H:i" }}</span>
+            <div class="ua-chat-pied">
+                <span class="ua-chat-meta">{{ message.sender.display_label }} — {{ message.created_at|date:"d/m H:i" }}</span>
+                {% if message.sender_id == request.user.pk %}
+                <form method="post" action="{% url 'core:dashboard:messagerie-delete' conversation.id message.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="ua-chat-suppr"
+                            title="{% translate 'Supprimer ce message' %}"
+                            aria-label="{% translate 'Supprimer ce message' %}">
+                        {% icon "trash" %}
+                    </button>
+                </form>
+                {% endif %}
+            </div>
         </article>
         {% empty %}
         <p class="ua-chat-vide">{% translate "Aucun message. Envoyez le premier !" %}</p>
@@ -34,9 +47,21 @@
         <button type="submit" class="ua-btn ua-btn-primary">{% icon "send" %} {% translate "Envoyer" %}</button>
     </form>
     <p class="ua-muted text-xs mt-2">{% blocktrans with limite=longueur_max %}Maximum {{ limite }} caractères.{% endblocktrans %}</p>
+
+    {# Modele clone par messagerie.js pour les messages arrivés par sondage. #}
+    <template id="ua-chat-suppr-modele">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="ua-chat-suppr"
+                    title="{% translate 'Supprimer ce message' %}"
+                    aria-label="{% translate 'Supprimer ce message' %}">
+                {% icon "trash" %}
+            </button>
+        </form>
+    </template>
 </section>
 {% endblock %}
 
 {% block extra_scripts %}
-<script src="{% static 'js/messagerie.js' %}"></script>
+<script src="{% static 'js/messagerie.js' %}?v=20261123-delete1"></script>
 {% endblock %}

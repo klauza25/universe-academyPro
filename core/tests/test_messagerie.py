@@ -36,6 +36,12 @@ class MessagerieTest(BusinessTestBase):
             args=[conversation.id],
         )
 
+    def delete_url(self, conversation, message):
+        return reverse(
+            'core:dashboard:messagerie-delete',
+            args=[conversation.id, message.id],
+        )
+
     def ouvre(self, expediteur, destinataire):
         """Ouvre un fil via l'interface, comme un utilisateur le ferait."""
         client = self.client_for(expediteur)
@@ -265,6 +271,108 @@ class MessagerieTest(BusinessTestBase):
         self.assertContains(response, 'ua-compte-badge')
 
     # ------------------------------------------------------------------
+    # Suppression
+    # ------------------------------------------------------------------
+
+    def test_expediteur_supprime_son_message_avec_audit(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant,
+            body='À effacer',
+        )
+
+        response = self.client_for(self.etudiant).post(
+            self.delete_url(conversation, message)
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.url, self.detail_url(conversation))
+        self.assertFalse(Message.objects.filter(pk=message.pk).exists())
+        journal = AuditLog.objects.get(action='MESSAGE_DELETE')
+        self.assertEqual(journal.actor, self.etudiant)
+        self.assertEqual(journal.before_summary['length'], len('À effacer'))
+        self.assertEqual(journal.entity_id, str(message.id))
+
+    def test_destinataire_ne_peut_pas_supprimer_un_message_recu(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant,
+            body='Texte protege',
+        )
+
+        response = self.client_for(self.formateur).post(
+            self.delete_url(conversation, message)
+        )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(Message.objects.filter(pk=message.pk).exists())
+        self.assertFalse(AuditLog.objects.filter(action='MESSAGE_DELETE').exists())
+
+    def test_etranger_ne_peut_pas_supprimer_un_message(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Prive',
+        )
+
+        response = self.client_for(self.admin).post(
+            self.delete_url(conversation, message)
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertTrue(Message.objects.filter(pk=message.pk).exists())
+
+    def test_suppression_refuse_le_get(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        message = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Prive',
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.delete_url(conversation, message)
+        )
+
+        self.assertEqual(response.status_code, 405)
+        self.assertTrue(Message.objects.filter(pk=message.pk).exists())
+
+    def test_bouton_de_suppression_uniquement_sur_les_propres_messages(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        mien = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Le mien',
+        )
+        autre = Message.objects.create(
+            conversation=conversation, sender=self.formateur, body='Le sien',
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.detail_url(conversation)
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, self.delete_url(conversation, mien))
+        self.assertNotContains(response, self.delete_url(conversation, autre))
+
+    def test_sondage_expose_l_url_de_suppression_des_seuls_messages_propres(self):
+        conversation, _ = Conversation.pour(self.etudiant, self.formateur)
+        mien = Message.objects.create(
+            conversation=conversation, sender=self.etudiant, body='Le mien',
+        )
+        autre = Message.objects.create(
+            conversation=conversation, sender=self.formateur, body='Le sien',
+        )
+
+        response = self.client_for(self.etudiant).get(
+            self.poll_url(conversation)
+        )
+
+        donnees = json.loads(response.content)
+        relevés = {item['id']: item for item in donnees['messages']}
+        self.assertEqual(
+            relevés[str(mien.id)]['delete_url'],
+            self.delete_url(conversation, mien),
+        )
+        self.assertEqual(relevés[str(autre.id)]['delete_url'], '')
+
+    # ------------------------------------------------------------------
     # Sondage JSON
     # ------------------------------------------------------------------
 
@@ -308,3 +416,60 @@ class MessagerieTest(BusinessTestBase):
         )
 
         self.assertEqual(response.status_code, 405)
+
+
+class MessagerieAdminTest(BusinessTestBase):
+    """Les échanges sont consultables dans l'admin, effaçables avec une trace."""
+
+    def setUp(self):
+        super().setUp()
+        self.tech = User.objects.create_superuser(
+            email='tech@test.local', password=TEST_PASSWORD,
+            first_name='Tech', last_name='Admin',
+        )
+        self.client = self.client_for(self.tech)
+        self.conversation, _ = Conversation.pour(
+            self.etudiant, self.formateur
+        )
+        self.message = Message.objects.create(
+            conversation=self.conversation, sender=self.etudiant,
+            body='Message visible dans ladministration',
+        )
+
+    def test_admin_liste_les_fils_et_les_messages(self):
+        fils = self.client.get(reverse('admin:core_conversation_changelist'))
+        self.assertEqual(fils.status_code, 200)
+        self.assertContains(fils, self.conversation.pair_key)
+
+        messages = self.client.get(reverse('admin:core_message_changelist'))
+        self.assertEqual(messages.status_code, 200)
+        self.assertContains(messages, 'Message visible dans ladministration')
+
+    def test_admin_lit_le_message_complet_en_lecture_seule(self):
+        response = self.client.get(reverse(
+            'admin:core_message_change', args=[self.message.id]
+        ))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Message visible dans ladministration')
+
+    def test_admin_ne_peut_pas_supprimer_un_fil(self):
+        response = self.client.get(reverse(
+            'admin:core_conversation_delete', args=[self.conversation.id]
+        ))
+        self.assertEqual(response.status_code, 403)
+
+    def test_admin_supprime_un_message_et_laudit(self):
+        response = self.client.post(reverse(
+            'admin:core_message_delete', args=[self.message.id]
+        ), {'post': 'yes'})
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(Message.objects.filter(pk=self.message.pk).exists())
+        journal = AuditLog.objects.get(action='MESSAGE_DELETE')
+        self.assertEqual(journal.actor, self.tech)
+        self.assertEqual(journal.entity_id, str(self.message.id))
+        self.assertEqual(
+            journal.before_summary['length'],
+            len('Message visible dans ladministration'),
+        )

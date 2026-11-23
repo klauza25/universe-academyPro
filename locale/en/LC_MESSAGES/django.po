@@ -5882,3 +5882,15 @@ msgstr "Send"
 
 msgid "Maximum %(limite)s caractères."
 msgstr "Maximum %(limite)s characters."
+
+msgid "Supprimer ce message"
+msgstr "Delete this message"
+
+msgid "Vous ne pouvez supprimer que vos propres messages."
+msgstr "You can only delete your own messages."
+
+msgid "Message supprimé."
+msgstr "Message deleted."
+
+msgid "Extrait"
+msgstr "Excerpt"
