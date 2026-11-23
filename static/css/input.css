@@ -1500,13 +1500,21 @@ html[data-son="off"] .ua-son-actif { display: none; }
 
 html[data-theme="dark"] .bg-white,
 html[data-theme="dark"] .bg-gray-50,
-html[data-theme="dark"] .bg-slate-50 { background-color: var(--ua-surface); }
+html[data-theme="dark"] .bg-slate-50,
+html[data-theme="dark"] .bg-slate-50\/60 { background-color: var(--ua-surface); }
 
 html[data-theme="dark"] .bg-slate-100,
 html[data-theme="dark"] .bg-slate-200 { background-color: var(--ua-surface-2); }
 
+/* Ces fonds portent un texte blanc : les garder sombres, sinon le bouton
+   devient blanc sur blanc. Les tokens restent dans la même palette que les
+   cartes, donc le contraste tient sans toucher aux gabarits. */
+html[data-theme="dark"] .bg-slate-700 { background-color: var(--ua-surface-hover); }
 html[data-theme="dark"] .bg-slate-800,
-html[data-theme="dark"] .bg-slate-900 { background-color: var(--ua-ink); }
+html[data-theme="dark"] .bg-slate-900 { background-color: var(--ua-surface-3); }
+
+html[data-theme="dark"] .bg-rose-500\/15 { background-color: var(--ua-tone-rose-bg); }
+html[data-theme="dark"] .bg-sky-500\/15 { background-color: var(--ua-tone-sky-bg); }
 
 html[data-theme="dark"] .bg-rose-50    { background-color: var(--ua-tone-rose-bg); }
 html[data-theme="dark"] .bg-sky-50     { background-color: var(--ua-tone-sky-bg); }
@@ -1514,6 +1522,7 @@ html[data-theme="dark"] .bg-emerald-50 { background-color: var(--ua-tone-green-b
 html[data-theme="dark"] .bg-amber-50   { background-color: var(--ua-tone-amber-bg); }
 
 html[data-theme="dark"] .text-slate-900,
+html[data-theme="dark"] .text-slate-800,
 html[data-theme="dark"] .text-slate-700 { color: var(--ua-ink); }
 
 html[data-theme="dark"] .text-slate-600,
@@ -1521,6 +1530,7 @@ html[data-theme="dark"] .text-slate-500 { color: var(--ua-muted); }
 
 html[data-theme="dark"] .text-slate-400 { color: var(--ua-hint); }
 
+html[data-theme="dark"] .text-rose-100,
 html[data-theme="dark"] .text-rose-500,
 html[data-theme="dark"] .text-rose-600,
 html[data-theme="dark"] .text-rose-700 { color: var(--ua-tone-rose-fg); }
@@ -1529,13 +1539,18 @@ html[data-theme="dark"] .text-indigo-600 { color: var(--ua-brand); }
 html[data-theme="dark"] .text-emerald-600,
 html[data-theme="dark"] .text-emerald-700 { color: var(--ua-tone-green-fg); }
 html[data-theme="dark"] .text-amber-600,
-html[data-theme="dark"] .text-amber-700 { color: var(--ua-tone-amber-fg); }
+html[data-theme="dark"] .text-amber-700,
+html[data-theme="dark"] .text-amber-950 { color: var(--ua-tone-amber-fg); }
+html[data-theme="dark"] .text-blue-100,
+html[data-theme="dark"] .text-blue-200,
+html[data-theme="dark"] .text-blue-800,
 html[data-theme="dark"] .text-sky-700,
 html[data-theme="dark"] .text-sky-100 { color: var(--ua-tone-sky-fg); }
 
 html[data-theme="dark"] .border-slate-200,
 html[data-theme="dark"] .border-slate-300,
 html[data-theme="dark"] .border-slate-400,
+html[data-theme="dark"] .border-slate-700,
 html[data-theme="dark"] .border-indigo-300 { border-color: var(--ua-input-border); }
 
 html[data-theme="dark"] .ring-slate-200,
@@ -1544,9 +1559,61 @@ html[data-theme="dark"] .ring-sky-100,
 html[data-theme="dark"] .ring-emerald-100,
 html[data-theme="dark"] .ring-amber-100 { --tw-ring-color: var(--ua-input-border); }
 
-html[data-theme="dark"] .divide-slate-100 > * + * { border-color: var(--ua-line); }
+html[data-theme="dark"] .divide-slate-100 > * + *,
+html[data-theme="dark"] .divide-slate-200 > * + * { border-color: var(--ua-line); }
 html[data-theme="dark"] .placeholder-slate-400::placeholder { color: var(--ua-hint); }
 html[data-theme="dark"] .shadow-slate-200 { --tw-shadow-color: var(--ua-shadow); }
+
+/* Les listes natives des champs <select> des formulaires publics ne portent
+   pas .ua-form : sans ces règles, les options restent claires sur fond clair. */
+html[data-theme="dark"] select,
+html[data-theme="dark"] select option,
+html[data-theme="dark"] select optgroup {
+    color-scheme: dark;
+    background-color: var(--ua-input-bg);
+    color: var(--ua-input-text);
+}
+
+html[data-theme="dark"] input[type="file"]::file-selector-button {
+    background-color: var(--ua-surface-2);
+    color: var(--ua-ink);
+}
+
+html[data-theme="dark"] input::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.8;
+}
+
+/* Valeurs Tailwind arbitraires utilisées par les filtres et les fiches :
+   `bg-[#fbfbff]` restait blanc sous un texte devenu clair. */
+html[data-theme="dark"] .bg-\[\#fbfbff\] { background-color: var(--ua-input-bg); }
+html[data-theme="dark"] .border-\[\#e6e7f5\],
+html[data-theme="dark"] .border-\[\#eef0fb\] { border-color: var(--ua-input-border); }
+
+/* Couleurs posées en direct dans quelques gabarits. La spécificité d'une
+   déclaration en ligne impose `!important` pour que le thème sombre gagne. */
+html[data-theme="dark"] [style*="border-color:#e6e7f5"],
+html[data-theme="dark"] [style*="border-color:#ececf8"] {
+    border-color: var(--ua-input-border) !important;
+}
+
+html[data-theme="dark"] [style*="color:#1e2044"] { color: var(--ua-ink) !important; }
+html[data-theme="dark"] [style*="color:#6d719b"] { color: var(--ua-muted) !important; }
+html[data-theme="dark"] [style*="color:#5b5f85"] { color: var(--ua-muted) !important; }
+html[data-theme="dark"] [style*="color:#5b5bf6"] { color: var(--ua-brand) !important; }
+html[data-theme="dark"] [style*="color:#e11d48"],
+html[data-theme="dark"] [style*="color:#be123c"] { color: var(--ua-tone-rose-fg) !important; }
+html[data-theme="dark"] [style*="color:#15803d"] { color: var(--ua-tone-green-fg) !important; }
+html[data-theme="dark"] [style*="color:#4338ca"] { color: var(--ua-tone-indigo-fg) !important; }
+html[data-theme="dark"] [style*="color:#7c3aed"] { color: var(--ua-tone-violet-fg) !important; }
+
+html[data-theme="dark"] [style*="background:#f7f7fe"] { background-color: var(--ua-surface-2) !important; }
+html[data-theme="dark"] [style*="background:#f8f8fd"] { background-color: var(--ua-surface-2) !important; }
+html[data-theme="dark"] [style*="background:#eef2ff"] { background-color: var(--ua-tone-indigo-bg) !important; }
+html[data-theme="dark"] [style*="background:#e6f8ef"] { background-color: var(--ua-tone-green-bg) !important; }
+html[data-theme="dark"] [style*="background:#fde9ee"] { background-color: var(--ua-tone-rose-bg) !important; }
+html[data-theme="dark"] [style*="background:#f2e9fe"] { background-color: var(--ua-tone-violet-bg) !important; }
+html[data-theme="dark"] [style*="background:#fff"] { background-color: var(--ua-surface) !important; }
 
 /* ---------------------------------------------------------------------------
    Responsive

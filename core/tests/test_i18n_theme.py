@@ -29,6 +29,48 @@ class DureesNotificationsTest(SimpleTestCase):
         self.assertNotIn('DUREE_SONNERIE = 8000', source)
 
 
+class ContrasteSombreTest(SimpleTestCase):
+    """Les utilitaires Tailwind des formulaires restent lisibles la nuit."""
+
+    @staticmethod
+    def source_css():
+        return (Path(settings.BASE_DIR) / 'static' / 'css'
+                / 'input.css').read_text(encoding='utf-8')
+
+    def test_un_bouton_sombre_ne_devient_pas_blanc_sur_blanc(self):
+        regle = re.search(
+            r'html\[data-theme="dark"\] \.bg-slate-800,\s*'
+            r'html\[data-theme="dark"\] \.bg-slate-900 \{[^}]*\}',
+            self.source_css(),
+        )
+
+        self.assertIsNotNone(regle)
+        self.assertIn('var(--ua-surface-3)', regle.group(0))
+        self.assertNotIn('var(--ua-ink)', regle.group(0))
+
+    def test_les_options_natives_et_les_textes_suivent_le_theme(self):
+        source = self.source_css()
+
+        self.assertIn('html[data-theme="dark"] select option,', source)
+        self.assertIn('html[data-theme="dark"] .text-slate-800,', source)
+        self.assertIn('html[data-theme="dark"] .divide-slate-200 > * + *',
+                      source)
+
+    def test_les_valeurs_tailwind_arbitraires_suivent_le_theme(self):
+        source = self.source_css()
+
+        self.assertIn('html[data-theme="dark"] .bg-\\[\\#fbfbff\\]', source)
+        self.assertIn('html[data-theme="dark"] .border-\\[\\#e6e7f5\\]',
+                      source)
+
+    def test_les_couleurs_en_ligne_claires_sont_remappees(self):
+        source = self.source_css()
+
+        self.assertIn('[style*="color:#1e2044"]', source)
+        self.assertIn('[style*="border-color:#e6e7f5"]', source)
+        self.assertIn('[style*="background:#f7f7fe"]', source)
+
+
 class BasculeDeLangueTest(BusinessTestBase):
     def test_la_langue_par_defaut_reste_le_francais(self):
         page = self.client_for(self.direction).get(reverse('core:dashboard:dashboard-router'), follow=True)
