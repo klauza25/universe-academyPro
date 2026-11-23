@@ -109,7 +109,7 @@ def cloche(context):
     servir de rappel. Ici le compteur reste allumé tant qu'une file n'est pas
     vidée par celui qui doit la traiter.
     """
-    from core.taches import marqueur_evenements
+    from core.taches import marqueur_evenements, marqueur_notifications_non_lues
 
     taches, notifications, total = tableau_des_files(context['user'])
     return {
@@ -117,4 +117,5 @@ def cloche(context):
         'notifications': notifications,
         'total': total,
         'event_cursor': marqueur_evenements(context['user']),
+        'notification_cursor': marqueur_notifications_non_lues(context['user']),
     }

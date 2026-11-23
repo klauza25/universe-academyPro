@@ -16,6 +16,19 @@ from core.models import (
 from core.tests.base import BusinessTestBase
 
 
+class DureesNotificationsTest(SimpleTestCase):
+    """Le popup reste bref et le son s'arrête avec lui, sans secret côté JS."""
+
+    def test_les_durees_demandees_sont_dans_le_script(self):
+        source = (Path(settings.BASE_DIR) / 'static' / 'js'
+                  / 'notifications.js').read_text(encoding='utf-8')
+
+        self.assertIn('const DUREE_TOAST = 2500;', source)
+        self.assertIn('const DUREE_SONNERIE = 3000;', source)
+        self.assertNotIn('success: 12000', source)
+        self.assertNotIn('DUREE_SONNERIE = 8000', source)
+
+
 class BasculeDeLangueTest(BusinessTestBase):
     def test_la_langue_par_defaut_reste_le_francais(self):
         page = self.client_for(self.direction).get(reverse('core:dashboard:dashboard-router'), follow=True)
@@ -291,6 +304,39 @@ class ClocheRappelTest(BusinessTestBase):
         self.assertEqual(etat['notifications'][0]['title'], 'Compte approuvé')
         self.assertEqual(etat['notifications'][0]['message'],
                          'Votre compte vient d’être activé.')
+
+    def test_le_sondage_oublie_les_notifications_deja_lues(self):
+        note = self.notification(self.etudiant)
+        client = self.client_for(self.etudiant)
+        url = reverse('core:dashboard:notifications-poll')
+
+        avant = client.get(url).json()
+        self.assertEqual(avant['notification_cursor'], str(note.pk))
+        self.assertEqual(len(avant['notifications']), 1)
+
+        Notification.objects.filter(pk=note.pk).update(is_read=True)
+        apres = client.get(url).json()
+
+        self.assertEqual(apres['notification_cursor'], '')
+        self.assertEqual(apres['notifications'], [])
+        self.assertEqual(apres['total'], 0)
+
+    def test_le_curseur_du_popup_ignore_les_notifications_dautrui(self):
+        self.notification(self.assistant)
+        client = self.client_for(self.etudiant)
+        url = reverse('core:dashboard:notifications-poll')
+
+        etat = client.get(url).json()
+
+        self.assertEqual(etat['notification_cursor'], '')
+        self.assertEqual(etat['notifications'], [])
+
+    def test_la_cloche_initialise_le_curseur_du_popup(self):
+        note = self.notification(self.etudiant)
+        self.assertContains(
+            self.page(self.etudiant),
+            'data-notification-cursor="%s"' % note.pk,
+        )
 
     def test_le_sondage_est_reserve_aux_comptes_actifs(self):
         reponse = self.client.get(

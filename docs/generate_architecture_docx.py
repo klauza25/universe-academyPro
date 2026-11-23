@@ -2731,8 +2731,9 @@ test_rows = [
      'de bord : tous les comptes, étudiants, encadrement ; un compte sans rôle '
      'ne compte que comme utilisateur, un double rôle compte dans les deux '
      'groupes ; aucune carte d’un gabarit ne reprend l’un de ces trois nombres.'],
-    ['`test_i18n_theme.py`', '23', 'Coquille bilingue, thème neutre, '
-     'notifications empilées.'],
+    ['`test_i18n_theme.py`', '27', 'Coquille bilingue, thème neutre, '
+     'notifications empilées brièvement (son 3 s, popup 2,5 s), cloche '
+     'et sondage sans notifications déjà lues.'],
     ['`test_annee_academique.py`', '40', 'Année posée par la direction : une '
      'seule « en cours » (modèle et base), fenêtre incohérente refusée, service '
      'de filtrage, écran des années (création, réglage, audit, rôles) et les '

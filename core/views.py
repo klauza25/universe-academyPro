@@ -45,7 +45,9 @@ from .utils import (
     salaires_formateurs as calculer_salaires_formateurs,
     students_count,
 )
-from .taches import marqueur_evenements, tableau_des_files
+from .taches import (
+    marqueur_evenements, marqueur_notifications_non_lues, tableau_des_files,
+)
 from .views_profile import changer_avatar
 from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
 
@@ -110,6 +112,7 @@ def notifications_poll(request):
     taches, notifications, total = tableau_des_files(request.user)
     return JsonResponse({
         'event_cursor': marqueur_evenements(request.user),
+        'notification_cursor': marqueur_notifications_non_lues(request.user),
         'total': total,
         'tasks': [
             {

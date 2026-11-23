@@ -2,6 +2,7 @@
 <details class="ua-cloche" id="ua-cloche"
          data-poll-url="{% url 'core:dashboard:notifications-poll' %}"
          data-event-cursor="{{ event_cursor }}"
+         data-notification-cursor="{{ notification_cursor }}"
          data-event-message="{% translate 'De nouvelles tâches ou notifications sont disponibles.' %}"
          data-close-label="{% translate 'Fermer cette notification' %}">
     <summary class="ua-icon-btn ua-cloche-btn"

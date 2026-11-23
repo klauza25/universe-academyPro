@@ -42,6 +42,18 @@ def marqueur_evenements(user):
     return hashlib.sha256(source.encode()).hexdigest()
 
 
+def marqueur_notifications_non_lues(user):
+    """Curseur des seules notifications non lues du compte, pour le popup.
+
+    Contrairement au marqueur global, il change quand une notification est lue :
+    le popup ne doit jamais reparler d'un message déjà traité.
+    """
+    derniere = Notification.objects.filter(
+        user=user, is_read=False,
+    ).order_by('-created_at', '-pk').values_list('pk', flat=True).first()
+    return str(derniere or '')
+
+
 def tableau_des_files(user):
     """Renvoie (tâches à traiter, notifications non lues, total compté).
 

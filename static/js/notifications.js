@@ -10,14 +10,19 @@
 
     const CLE_SON = 'ua-son';
     const MAXI = 5;
+    // Le popup disparaît 2,5 s après son apparition, fondu compris ; la
+    // sonnerie s'arrête à 3 s. Ces deux durées sont volontairement courtes :
+    // une carte déjà lue ne doit pas rester en travers de l'écran.
+    const DUREE_TOAST = 2500;
+    const DUREE_SORTIE = 300; // doit rester égal au Timeout de disparaitre()
     const DUREE = {
-        success: 12000,
-        info: 12000,
-        warning: 12000,
-        error: 12000,
-        danger: 12000,
+        success: DUREE_TOAST,
+        info: DUREE_TOAST,
+        warning: DUREE_TOAST,
+        error: DUREE_TOAST,
+        danger: DUREE_TOAST,
     };
-    const DUREE_SONNERIE = 8000;
+    const DUREE_SONNERIE = 3000;
     const NOTES = {
         success: [784, 988, 1175, 988],
         info: [659, 784, 988, 784],
@@ -151,7 +156,8 @@
         });
         const bouton = toast.querySelector('.ua-toast-fermer');
         if (bouton) { bouton.addEventListener('click', function () { disparaitre(toast); }); }
-        window.setTimeout(function () { disparaitre(toast); }, DUREE[niveauDe(toast)] || DUREE.info);
+        window.setTimeout(function () { disparaitre(toast); },
+            Math.max(0, (DUREE[niveauDe(toast)] || DUREE.info) - DUREE_SORTIE));
     }
 
     function basculerSon() {
@@ -186,7 +192,7 @@
 
         const cloche = document.getElementById('ua-cloche');
         if (cloche) {
-            let curseur = cloche.dataset.eventCursor;
+            let curseurNotifications = cloche.dataset.notificationCursor || '';
             const url = cloche.dataset.pollUrl;
 
             function actualiserCloche() {
@@ -197,10 +203,15 @@
                         return reponse.json();
                     })
                     .then(function (etat) {
-                        if (etat.event_cursor !== curseur) {
-                            curseur = etat.event_cursor;
-                            ajouterToast(cloche.dataset.eventMessage, cloche.dataset.closeLabel);
-                            jouer('info', DUREE_SONNERIE);
+                        // Le popup ne parle que d'une notification non lue du
+                        // compte : ni une notification déjà lue, ni celle d'un
+                        // autre compte, ni un simple mouvement de tâche.
+                        if (etat.notification_cursor !== curseurNotifications) {
+                            curseurNotifications = etat.notification_cursor;
+                            if (curseurNotifications) {
+                                ajouterToast(cloche.dataset.eventMessage, cloche.dataset.closeLabel);
+                                jouer('info', DUREE_SONNERIE);
+                            }
                         }
                         actualiserContenuCloche(cloche, etat);
                         const pastille = cloche.querySelector('.ua-cloche-pastille');
