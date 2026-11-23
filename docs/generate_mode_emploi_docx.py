@@ -14,7 +14,7 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Cm, Pt, RGBColor
 
-TODAY = '3 novembre 2026'
+TODAY = '23 novembre 2026'
 OUT = os.path.join('docs', 'Mode_emploi_Univers_Academy.docx')
 
 INK = RGBColor(0x1E, 0x20, 0x44)

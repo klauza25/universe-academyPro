@@ -6,7 +6,7 @@ donc, pour le Markdown et le Word.
 
 Usage (depuis la racine du projet) :
 
-    .\.venv\Scripts\python.exe docs\generate_cahier_des_charges_docx.py
+    .\\.venv\\Scripts\\python.exe docs\\generate_cahier_des_charges_docx.py
 
 Le script ne touche ni à Django ni à la base : il ne dépend que de
 ``python-docx``. Les éléments Markdown reconnus sont les titres (``#`` à

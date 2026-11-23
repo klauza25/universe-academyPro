@@ -1,7 +1,7 @@
 """Génère le document Word « Architecture métier — Univers Academy ».
 
 Usage (depuis la racine du projet) :
-    .\\env\\Scripts\\python.exe docs\\generate_architecture_docx.py
+    .\\.venv\\Scripts\\python.exe docs\\generate_architecture_docx.py
 
 Le script introspecte les modèles Django pour produire les tableaux de champs
 (annexe D) et le catalogue des routes (annexe B), afin que le document reste
@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import os
 import sys
+from collections import Counter
 from datetime import date
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -22,6 +23,7 @@ import django  # noqa: E402
 django.setup()
 
 from django.apps import apps  # noqa: E402
+from django.test.runner import DiscoverRunner  # noqa: E402
 from django.urls import get_resolver  # noqa: E402
 
 from docx import Document  # noqa: E402
@@ -46,10 +48,36 @@ FILL_ZEBRA = 'F6F7FC'
 FILL_CALLOUT = 'EEF0FB'
 FILL_WARNING = 'FFF4E5'
 
-TODAY = '1er novembre 2026'
+TODAY = '23 novembre 2026'
 VERSION = '1.0'
 
 OUTPUT = os.path.join(BASE_DIR, 'docs', 'Architecture_metier_Univers_Academy.docx')
+
+
+def compter_tests_par_module() -> Counter:
+    """Relevé sur la suite Django : le document ne doit jamais annoncer un total périmé."""
+    suite = DiscoverRunner(verbosity=0).build_suite()
+
+    def parcourir(groupe):
+        for element in groupe:
+            if hasattr(element, '__iter__'):
+                yield from parcourir(element)
+            else:
+                yield element
+
+    return Counter(
+        test.__class__.__module__.rsplit('.', 1)[-1] for test in parcourir(suite)
+    )
+
+
+COMPTES_TESTS = compter_tests_par_module()
+MODULES_TESTS = len(COMPTES_TESTS)
+TOTAL_TESTS_RELEVE = sum(COMPTES_TESTS.values())
+DERNIERE_MIGRATION = max(
+    (nom[:4] for nom in os.listdir(os.path.join(BASE_DIR, 'core', 'migrations'))
+     if nom[:4].isdigit()),
+    default='0000',
+)
 
 core_app = apps.get_app_config('core')
 MODELS = list(core_app.get_models())
@@ -1016,7 +1044,7 @@ h2('3.3', 'Découpage du code')
 add_table(
     ['Élément', 'Contenu', 'Responsabilité'],
     [
-        ['`core/models.py`', '37 modèles, propriétés calculées, contraintes',
+        ['`core/models.py`', f'{len(MODELS)} modèles, propriétés calculées, contraintes',
          'Source de vérité du domaine.'],
         ['`core/views.py`', 'Accueil, authentification, dashboards, '
          'utilisateurs, bourses, audit', 'Pilotage et identité.'],
@@ -2499,7 +2527,7 @@ arborescence = [
     '├── manage.py',
     '├── univers_academy/          réglages, URLs racine, WSGI',
     '├── core/',
-    '│   ├── models.py             37 modèles et propriétés métier',
+    f'│   ├── models.py             {len(MODELS)} modèles et propriétés métier',
     '│   ├── annee_academique.py   service unique de l’année académique',
     '│                             (résoudre, filtrer étudiants, inscrits,',
     '│                              groupes, drapeau)',
@@ -2526,7 +2554,7 @@ arborescence = [
     '│   ├── views_supervision.py',
     '│   ├── views_profile.py',
     '│   ├── urls.py',
-    '│   ├── migrations/          0001 → 0018',
+    f'│   ├── migrations/          0001 → {DERNIERE_MIGRATION}',
     '│   ├── management/commands/ audit_finances, audit_privileges,',
     '│   │                         create_superadmin, seed_demo, seed_roles,',
     '│   │                         importer_etudiants, importer_feuille,',
@@ -2534,7 +2562,7 @@ arborescence = [
     '│   │                         regulariser_dates_caisse,',
     '│   │                         verifier_relations, analyser_donnees,',
     '│   │                         compiler_traductions, verifier_i18n',
-    '│   └── tests/               27 modules, 632 tests',
+    f'│   └── tests/               {MODULES_TESTS} modules, {TOTAL_TESTS_RELEVE} tests',
     '├── templates/',
     '│   ├── public/              accueil, login, register, bourses',
     '│   └── dashboard/           base, partiels, espaces par rôle',
@@ -2645,7 +2673,7 @@ add_paragraph(
 
 h2('13.2', 'Couverture par module')
 test_rows = [
-    ['`test_public.py`', '16', 'Landing, connexion locale, code '
+    ['`test_public.py`', '21', 'Landing, connexion locale, code '
      'interne, inscription, rôles demandés, comptes bloqués.'],
     ['`test_auth_roles.py`', '29', 'Onboarding, approbation/refus, '
      'rôle suggéré, inscription automatique de l’étudiant, anti-doublon.'],
@@ -2657,19 +2685,19 @@ test_rows = [
      'remplacé effacé, statut inchangé, refus.'],
     ['`test_accueil.py`', '16', 'Visites, contacts, prospects, relances, '
      'motifs, recherche.'],
-    ['`test_secretariat.py`', '15', 'Étudiants, conversion, inscriptions, '
+    ['`test_secretariat.py`', '17', 'Étudiants, conversion, inscriptions, '
      'remises, documents.'],
-    ['`test_pedagogie.py`', '62', 'Modules, groupes (dont l’affectation '
+    ['`test_pedagogie.py`', '73', 'Modules, groupes (dont l’affectation '
      'obligatoire d’un formateur et l’exemption des groupes terminés), séances, '
      'présences, ressources, retours, fiches de cours, impressions.'],
-    ['`test_comptabilite.py`', '111', 'Journal, CSV, opérations, transferts, '
+    ['`test_comptabilite.py`', '118', 'Journal, CSV, opérations, transferts, '
      'soldes, clôtures, paiements, reçus, permissions, encaissement '
      'multi-mois, date de recette, solde de caisse jamais négatif, '
      'administration des comptes (état, découvert, archivage, historique), '
      'ajustement et réinitialisation traçables, catégories administrables, '
      'correction d’une écriture, disponible affiché et avertissement avant '
      'sortie.'],
-    ['`test_permissions.py`', '46', 'Routage, accès croisés, rôles '
+    ['`test_permissions.py`', '52', 'Routage, accès croisés, rôles '
      'transversaux, lecture seule du métier sauf la caisse (journal, '
      'encaissement, clôture, comptes et catégories ouverts en écriture et '
      'audités), bourses, historiques, assistant administratif.'],
@@ -2691,7 +2719,7 @@ test_rows = [
     ['`test_dates_caisse.py`', '6', 'Régularisation des dates de caisse : '
      'aperçu qui ne modifie rien, paiement et écriture ramené au jour de '
      'saisie, mois réglé conservé, trace d’audit, seconde passe sans effet.'],
-    ['`test_importer_formations.py`', '15', 'Tarif lu dans les classeurs et '
+    ['`test_importer_formations.py`', '18', 'Tarif lu dans les classeurs et '
      'portique de la vague 1.'],
     ['`test_data_tools.py`', '9', 'Lecteurs de classeurs : en-têtes, dates, '
      'montants, lignes vides.'],
@@ -2703,7 +2731,7 @@ test_rows = [
      'de bord : tous les comptes, étudiants, encadrement ; un compte sans rôle '
      'ne compte que comme utilisateur, un double rôle compte dans les deux '
      'groupes ; aucune carte d’un gabarit ne reprend l’un de ces trois nombres.'],
-    ['`test_i18n_theme.py`', '17', 'Coquille bilingue, thème neutre, '
+    ['`test_i18n_theme.py`', '23', 'Coquille bilingue, thème neutre, '
      'notifications empilées.'],
     ['`test_annee_academique.py`', '40', 'Année posée par la direction : une '
      'seule « en cours » (modèle et base), fenêtre incohérente refusée, service '
@@ -2722,15 +2750,40 @@ test_rows = [
      'mesure prouvée sans écriture, chaque écart semé nommé par son code, '
      'signalements du journal et des groupes sans formateur, portique de '
      '`verifier_relations` (`--maxi`, `--code`, `--json`, `--lignes`).'],
+    ['`test_admin_dashboard.py`', '3', 'Accueil Django personnalisé : identité, '
+     'compteurs lus dans les modèles et page de connexion habillée.'],
+    ['`test_purger_donnees_fictives.py`', '2', 'Aperçu sans écriture, puis purge '
+     'qui conserve les données importées et le super administrateur.'],
+    ['`test_salaire_formateurs.py`', '7', 'Part de 30 % des paiements validés : '
+     'arrondi, groupe partagé compté pour chaque formateur, page dédiée et '
+     'bloc du tableau de bord formateur.'],
+    ['`test_synchronisation.py`', '28', 'Téléchargement des classeurs publics, '
+     'nommage et classement des onglets, sauvegardes et portique de la commande.'],
+    ['`test_synchronisation_vue.py`', '7', 'Bouton de synchro manuelle : réservé '
+     'au super admin, POST, verrou, audit et message d’échec sans trace de succès.'],
 ]
+
+# Les compteurs sont relevés sur la suite Django : les descriptifs restent
+# rédigés à la main, les nombres suivent le code.
+MODULES_COUVERTS = set()
+for ligne in test_rows:
+    module = ligne[0].strip('`').removesuffix('.py')
+    ligne[1] = str(COMPTES_TESTS.get(module, ligne[1]))
+    MODULES_COUVERTS.add(module)
+assert MODULES_COUVERTS == set(COMPTES_TESTS), (
+    'Couverture par module désynchronisée de la suite Django : '
+    f'absents {sorted(set(COMPTES_TESTS) - MODULES_COUVERTS)}, '
+    f'en trop {sorted(MODULES_COUVERTS - set(COMPTES_TESTS))}'
+)
 TOTAL_TESTS = sum(int(ligne[1]) for ligne in test_rows)
+assert TOTAL_TESTS == TOTAL_TESTS_RELEVE
 assert f'{len(test_rows)} modules, {TOTAL_TESTS} tests' in '\n'.join(arborescence), \
     "l'arborescence annonce un compte de tests différent du tableau de couverture"
 add_table(['Fichier', 'Tests', 'Périmètre'], test_rows,
           widths=[4.6, 2.2, 10.2], size=8.6, header_size=8.6,
           first_col_bold=True, align_center={1})
 add_paragraph(
-    f'Total : {TOTAL_TESTS} tests (06/11/2026), 0 échec. `manage.py check` est '
+    f'Total : {TOTAL_TESTS} tests ({TODAY}), 0 échec. `manage.py check` est '
     'sans erreur et `makemigrations --check` ne signale aucun changement en '
     'attente : les modèles et les 19 migrations appliquées sont alignés.',
     bold_lead='Résultat de référence : ', size=10,
