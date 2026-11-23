@@ -126,6 +126,31 @@ class JournalTests(AccountingTestBase):
             [incoming.pk],
         )
 
+    def test_journal_filters_by_category_and_status(self):
+        cible = self.make_tx(label='Recette ciblée', category=self.income_category)
+        self.make_tx(
+            tx_type=CashTransaction.Type.OUT, amount=4000,
+            label='Autre catégorie', category=self.expense_category)
+        self.make_tx(
+            label='Brouillon', status=CashTransaction.Status.DRAFT,
+            category=self.income_category)
+        response = self.client.get(
+            reverse('core:dashboard:journal'),
+            {'category': str(self.income_category.pk), 'status': CashTransaction.Status.VALIDATED})
+        self.assertEqual(
+            [tx.pk for tx in response.context['page'].object_list], [cible.pk])
+
+    def test_journal_ignore_les_filtres_perimes(self):
+        self.make_tx(label='Toujours visible')
+        response = self.client.get(reverse('core:dashboard:journal'), {
+            'type': 'INVALID', 'status': 'INVALID', 'from': 'hier',
+            'category': 'pas-un-uuid', 'account': 'pas-un-uuid',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['page'].paginator.count, 1)
+        self.assertEqual(response.context['type_filter'], '')
+        self.assertEqual(response.context['category_filter'], '')
+
     def test_journal_totals_ignore_cancelled_operations(self):
         self.make_tx(amount=10000)
         self.make_tx(

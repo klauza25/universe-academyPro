@@ -196,6 +196,43 @@ class ReconciliationTests(BusinessTestBase):
                          'la ligne déjà écrite du journal ne se rejoue pas')
 
 
+    def test_une_vente_de_livres_n_est_pas_un_paiement_d_etudiant(self):
+        encaissement = CashTransaction.objects.create(
+            tx_type=CashTransaction.Type.IN, amount=5000,
+            category=self.income_category, account=self.cash,
+            occurred_at=timezone.make_aware(dt.datetime(2026, 3, 4, 12)),
+            status=CashTransaction.Status.VALIDATED,
+            counterparty=self.nom_etudiant,
+        )
+        Payment.objects.create(
+            enrollment=self.enrollment, amount=5000, method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED, recorded_by=self.assistant,
+            transaction=encaissement,
+        )
+        vente = ligne(rang=600, libelle='Vente Livres', intitule='Livre Anglais',
+                      montant=5000, nom='')
+        self.assertEqual(reconcilier([vente]).operations,
+                         [('Autres recettes', vente, None)],
+                         'même jour et même montant ne prouvent pas le même encaissement')
+
+    def test_une_recette_au_nom_du_payeur_deja_en_base_ne_se_rejoue_pas(self):
+        encaissement = CashTransaction.objects.create(
+            tx_type=CashTransaction.Type.IN, amount=5000,
+            category=self.income_category, account=self.cash,
+            occurred_at=timezone.make_aware(dt.datetime(2026, 3, 4, 12)),
+            status=CashTransaction.Status.VALIDATED,
+            counterparty=self.nom_etudiant,
+        )
+        Payment.objects.create(
+            enrollment=self.enrollment, amount=5000, method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED, recorded_by=self.assistant,
+            transaction=encaissement,
+        )
+        doublon = ligne(rang=601, libelle='Frais d’Agence', montant=5000,
+                        nom=self.nom_etudiant)
+        self.assertEqual(reconcilier([doublon]).operations, [])
+
+
 class InstantEcritureTests(BusinessTestBase):
     """Une ligne du classeur ne date jamais une écriture dans l'avenir.
 

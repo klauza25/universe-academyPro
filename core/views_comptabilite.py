@@ -13,6 +13,7 @@ from django.http import FileResponse, Http404, HttpResponse, HttpResponseForbidd
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.utils.translation import gettext_lazy as _
 
 from . import programme_import as programme
@@ -54,6 +55,13 @@ def accounts_with_balance():
 # Journal comptable
 # ---------------------------------------------------------------------------
 
+def _date_filtre(valeur: str) -> str:
+    """Une date mal formée ne doit pas transformer le journal en erreur 500."""
+    if not valeur:
+        return ''
+    return valeur if parse_date(valeur) else ''
+
+
 def _journal_queryset(request):
     qs = CashTransaction.objects.select_related(
         'account', 'destination_account', 'category', 'created_by'
@@ -65,6 +73,23 @@ def _journal_queryset(request):
     status = request.GET.get('status') or ''
     date_from = request.GET.get('from') or ''
     date_to = request.GET.get('to') or ''
+
+    # Une valeur périmée dans un favori ou un lien partagé ne doit pas vider
+    # silencieusement le journal : on l'ignore, comme si le filtre était absent.
+    if tx_type not in {value for value, ___ in CashTransaction.Type.choices}:
+        tx_type = ''
+    if status not in {value for value, ___ in CashTransaction.Status.choices}:
+        status = ''
+    try:
+        if category_id and not TransactionCategory.objects.filter(pk=category_id).exists():
+            category_id = ''
+        if account_id and not CashAccount.objects.filter(pk=account_id).exists():
+            account_id = ''
+    except (ValidationError, ValueError):
+        # Une clé étrangère mal formée est un filtre périmé, pas une erreur.
+        category_id, account_id = '', ''
+    date_from = _date_filtre(date_from)
+    date_to = _date_filtre(date_to)
 
     if query:
         qs = qs.filter(

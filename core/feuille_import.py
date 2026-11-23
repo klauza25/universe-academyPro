@@ -300,6 +300,25 @@ def lignes_deja_ecrites() -> set[int]:
     return deja
 
 
+def _est_deja_payee(ligne: Ligne, par_jour_montant: dict) -> bool:
+    """Une recette n'égale un paiement que si le payeur porte le même nom.
+
+    Jour et montant seuls ne suffisent pas : une « Vente Livres » de 5 000 F
+    n'est pas l'inscription de 5 000 F encaissée le même jour. Sans le nom, le
+    rapprochement écartait des recettes réelles et les perdait silencieusement.
+    """
+    if not ligne.date:
+        return False
+    noms = {mot for mot in normatif(ligne.nom).split() if len(mot) > 2}
+    if not noms:
+        return False
+    for contrepartie in par_jour_montant.get((ligne.date.date(), ligne.montant), ()):
+        payeur = normatif(contrepartie)
+        if any(mot in payeur for mot in noms):
+            return True
+    return False
+
+
 def reconcilier(lignes: list[Ligne]) -> Plan:
     """Ce que la base ignore encore du journal. Aucune écriture ici."""
     plan = Plan()
@@ -379,13 +398,20 @@ def reconcilier(lignes: list[Ligne]) -> Plan:
         if cle_mois:
             mois_retenu.add(cle_mois)
 
-    # Une sortie deja saisie dans l'application porte le meme montant et la meme date.
-    joints = set(CashTransaction.objects.filter(tx_type=CashTransaction.Type.IN)
-                 .exclude(student_payment__isnull=True)
-                 .values_list('occurred_at__date', 'amount'))
+    # Les lignes deja ecrites sont reconnues par leur numero (lignes_deja_ecrites).
+    # Ce dernier garde-fou n'ecarte une recette que si le paiement deja en base
+    # porte le meme nom, le meme jour et le meme montant : une coincidence de
+    # date et de montant ne doit pas faire disparaitre une vente de livres.
+    joints = defaultdict(list)
+    for jour, montant, contrepartie in (
+        CashTransaction.objects.filter(tx_type=CashTransaction.Type.IN)
+        .exclude(student_payment__isnull=True)
+        .values_list('occurred_at__date', 'amount', 'counterparty')
+    ):
+        joints[(jour, montant)].append(contrepartie)
     plan.operations = [(cat, ligne, None) for cat, ligne, ___ in plan.operations
-                       if not (ligne.genre == 'recette' and ligne.date
-                               and (ligne.date.date(), ligne.montant) in joints)]
+                       if not (ligne.genre == 'recette'
+                               and _est_deja_payee(ligne, joints))]
     return plan
 
 
