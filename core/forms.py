@@ -1897,7 +1897,7 @@ class StudentPaymentForm(forms.Form):
     motif = forms.ChoiceField(
         label=_("Motif du paiement"),
         choices=Payment.Motif.choices,
-        initial=Payment.Motif.OTHER,
+        initial=Payment.Motif.ENROLLMENT,
         widget=forms.Select(attrs={'class': INPUT_CLASS}),
         help_text=_("Mensualité : le paiement règle un mois précis. Frais d'inscription : versement unique à l'entrée en formation."),
     )

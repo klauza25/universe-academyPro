@@ -88,14 +88,31 @@
 
 <details class="ua-card ua-card-pad max-w-3xl mt-5" {% if form.errors or selected_student %}open{% endif %}>
     <summary class="ua-section-title cursor-pointer">{% translate "Encaisser sur un dossier existant" %}</summary>
-    <form method="post" class="ua-form mt-4">
+    <form method="post" class="ua-form mt-4" id="existing-payment-form">
         {% csrf_token %}
         {% if form.non_field_errors %}
         <div class="ua-card ua-card-pad text-sm font-semibold text-rose-600 mb-4">
             {{ form.non_field_errors }}
         </div>
         {% endif %}
+        {# L'onglet actif décide du motif : plus de menu déroulant à choisir. #}
+        {{ form.motif.as_hidden }}
+
+        <div class="flex flex-wrap gap-2 mb-5" role="tablist" aria-label="{% translate 'Type de paiement' %}">
+            <button type="button" data-payment-tab="enrollment"
+                    aria-selected="{% if form.motif.value == 'MONTHLY' %}false{% else %}true{% endif %}"
+                    class="ua-btn ua-btn-sm {% if form.motif.value == 'MONTHLY' %}ua-btn-ghost{% else %}ua-btn-primary{% endif %}">
+                {% translate "Inscription" %}
+            </button>
+            <button type="button" data-payment-tab="monthly"
+                    aria-selected="{% if form.motif.value == 'MONTHLY' %}true{% else %}false{% endif %}"
+                    class="ua-btn ua-btn-sm {% if form.motif.value == 'MONTHLY' %}ua-btn-primary{% else %}ua-btn-ghost{% endif %}">
+                {% translate "Frais mensuel" %}
+            </button>
+        </div>
+
         {% for field in form %}
+        {% if field.name != 'motif' and field.name != 'period_month' and field.name != 'period_year' %}
         <div class="mb-4">
             <label for="{{ field.id_for_label }}">
                 {{ field.label }}{% if field.field.required %} <span style="color:#e11d48;">*</span>{% endif %}
@@ -111,7 +128,23 @@
             {% if field.help_text %}<span class="helptext">{{ field.help_text }}</span>{% endif %}
             {{ field.errors }}
         </div>
+        {% endif %}
         {% endfor %}
+
+        <div id="payment-monthly-fields" {% if form.motif.value != 'MONTHLY' %}hidden{% endif %}>
+            {% for field in form %}
+            {% if field.name == 'period_month' or field.name == 'period_year' %}
+            <div class="mb-4">
+                <label for="{{ field.id_for_label }}">
+                    {{ field.label }}{% if field.field.required %} <span style="color:#e11d48;">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {{ field.errors }}
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
         <button type="submit" class="ua-btn ua-btn-primary">{% icon "credit-card" %} {% translate "Enregistrer le paiement" %}</button>
     </form>
 </details>

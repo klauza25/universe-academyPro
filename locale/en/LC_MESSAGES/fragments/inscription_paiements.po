@@ -50,6 +50,15 @@ msgstr "Your account cannot enroll students. You can search for a student and vi
 msgid "Encaisser sur un dossier existant"
 msgstr "Record a payment for an existing student"
 
+msgid "Type de paiement"
+msgstr "Payment type"
+
+msgid "Inscription"
+msgstr "Enrollment"
+
+msgid "Frais mensuel"
+msgstr "Monthly fee"
+
 msgid "Suivi des mensualités"
 msgstr "Monthly payment tracking"
 

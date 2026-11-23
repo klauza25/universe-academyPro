@@ -2695,13 +2695,13 @@ test_rows = [
     ['`test_pedagogie.py`', '73', 'Modules, groupes (dont l’affectation '
      'obligatoire d’un formateur et l’exemption des groupes terminés), séances, '
      'présences, ressources, retours, fiches de cours, impressions.'],
-    ['`test_comptabilite.py`', '118', 'Journal, CSV, opérations, transferts, '
+    ['`test_comptabilite.py`', '121', 'Journal, CSV, opérations, transferts, '
      'soldes, clôtures, paiements, reçus, permissions, encaissement '
-     'multi-mois, date de recette, solde de caisse jamais négatif, '
-     'administration des comptes (état, découvert, archivage, historique), '
-     'ajustement et réinitialisation traçables, catégories administrables, '
-     'correction d’une écriture, disponible affiché et avertissement avant '
-     'sortie.'],
+     'multi-mois, onglets inscription/frais mensuel, date de recette, solde '
+     'de caisse jamais négatif, administration des comptes (état, découvert, '
+     'archivage, historique), ajustement et réinitialisation traçables, '
+     'catégories administrables, correction d’une écriture, disponible affiché '
+     'et avertissement avant sortie.'],
     ['`test_permissions.py`', '52', 'Routage, accès croisés, rôles '
      'transversaux, lecture seule du métier sauf la caisse (journal, '
      'encaissement, clôture, comptes et catégories ouverts en écriture et '

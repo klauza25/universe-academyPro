@@ -5951,3 +5951,6 @@ msgid ""
 msgstr ""
 "This post has been dissolved: assign “Administrative assistant”, which now "
 "covers the front desk, the cash office and the secretariat."
+
+msgid "Frais mensuel"
+msgstr "Monthly fee"

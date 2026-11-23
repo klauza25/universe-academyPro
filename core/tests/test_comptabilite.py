@@ -1321,6 +1321,34 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         self.assertContains(page, 'Choisir un dossier')
         self.assertContains(page, 'Aucune inscription pour cet étudiant')
 
+    def test_les_deux_onglets_inscription_et_frais_mensuel_remplacent_le_menu(self):
+        page = self.client.get(reverse('core:dashboard:payment-create'))
+        self.assertContains(page, 'data-payment-tab="enrollment"')
+        self.assertContains(page, 'data-payment-tab="monthly"')
+        self.assertContains(page, 'Inscription')
+        self.assertContains(page, 'Frais mensuel')
+        self.assertNotContains(page, '<select name="motif"')
+
+    def test_onglet_inscription_actif_par_defaut_sans_champ_de_mois(self):
+        page = self.client.get(reverse('core:dashboard:payment-create'))
+        self.assertEqual(
+            page.context['form'].fields['motif'].initial,
+            Payment.Motif.ENROLLMENT,
+        )
+        self.assertContains(page, 'id="id_motif"')
+        self.assertContains(page, 'id="payment-monthly-fields" hidden')
+
+    def test_paiement_frais_d_inscription_sans_periode(self):
+        response = self.client.post(
+            reverse('core:dashboard:payment-create'),
+            self.payment_payload(motif=Payment.Motif.ENROLLMENT),
+        )
+        self.assertEqual(response.status_code, 302)
+        payment = Payment.objects.get()
+        self.assertEqual(payment.motif, Payment.Motif.ENROLLMENT)
+        self.assertIsNone(payment.period_month)
+        self.assertIsNone(payment.period_year)
+
     def test_inscription_directe_est_active_et_encaissable(self):
         student = self.make_student('en.attente@test.local')
         self.client.post(
