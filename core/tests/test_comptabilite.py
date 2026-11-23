@@ -1321,22 +1321,24 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         self.assertContains(page, 'Choisir un dossier')
         self.assertContains(page, 'Aucune inscription pour cet étudiant')
 
-    def test_les_deux_onglets_inscription_et_frais_mensuel_remplacent_le_menu(self):
-        page = self.client.get(reverse('core:dashboard:payment-create'))
-        self.assertContains(page, 'data-payment-tab="enrollment"')
-        self.assertContains(page, 'data-payment-tab="monthly"')
-        self.assertContains(page, 'Inscription')
-        self.assertContains(page, 'Frais mensuel')
+    def test_mode_inscription_affiche_les_frais_d_inscription(self):
+        page = self.client.get(
+            reverse('core:dashboard:payment-create'), {'mode': 'enrollment'})
+        self.assertEqual(page.context['mode'], 'enrollment')
+        self.assertEqual(
+            page.context['form'].initial['motif'], Payment.Motif.ENROLLMENT)
+        self.assertNotContains(page, 'name="period_month"')
+        self.assertNotContains(page, 'name="period_year"')
         self.assertNotContains(page, '<select name="motif"')
 
-    def test_onglet_inscription_actif_par_defaut_sans_champ_de_mois(self):
-        page = self.client.get(reverse('core:dashboard:payment-create'))
+    def test_mode_mensuel_affiche_mois_et_annee(self):
+        page = self.client.get(
+            reverse('core:dashboard:payment-create'), {'mode': 'monthly'})
+        self.assertEqual(page.context['mode'], 'monthly')
         self.assertEqual(
-            page.context['form'].fields['motif'].initial,
-            Payment.Motif.ENROLLMENT,
-        )
-        self.assertContains(page, 'id="id_motif"')
-        self.assertContains(page, 'id="payment-monthly-fields" hidden')
+            page.context['form'].initial['motif'], Payment.Motif.MONTHLY)
+        self.assertContains(page, 'name="period_month"')
+        self.assertContains(page, 'name="period_year"')
 
     def test_paiement_frais_d_inscription_sans_periode(self):
         response = self.client.post(

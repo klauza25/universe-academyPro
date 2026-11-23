@@ -59,6 +59,18 @@ msgstr "Enrollment"
 msgid "Frais mensuel"
 msgstr "Monthly fee"
 
+msgid "Encaisser un frais mensuel"
+msgstr "Record a monthly fee"
+
+msgid "Encaisser des frais d'inscription"
+msgstr "Record an enrollment fee"
+
+msgid "Encaissez la mensualité d'un étudiant pour le mois réglé."
+msgstr "Record a student's monthly payment for the selected month."
+
+msgid "Enregistrez les frais d'inscription d'un étudiant sur son dossier."
+msgstr "Record a student's enrollment fee on their record."
+
 msgid "Suivi des mensualités"
 msgstr "Monthly payment tracking"
 

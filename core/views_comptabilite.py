@@ -781,6 +781,13 @@ def student_payment_create(request):
     if student_param:
         initial['student'] = student_param
 
+    mode = request.GET.get('mode') or request.POST.get('mode') or 'enrollment'
+    if mode not in ('enrollment', 'monthly'):
+        mode = 'enrollment'
+    initial['motif'] = (
+        Payment.Motif.MONTHLY if mode == 'monthly' else Payment.Motif.ENROLLMENT
+    )
+
     form = StudentPaymentForm(initial=initial, annee_academique=annee)
     counter_initial = {'student': student_param} if student_param else {}
     course_param = request.GET.get('course') or ''
@@ -948,6 +955,7 @@ def student_payment_create(request):
             and request.user.has_any_role(*COUNTER_ENROLL_ROLES)
         ),
         'can_override_tariff': request.user.has_role('DIRECTION'),
+        'mode': mode,
     })
 
 

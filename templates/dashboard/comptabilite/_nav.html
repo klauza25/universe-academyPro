@@ -9,8 +9,11 @@
 <a href="{% url 'core:dashboard:transaction-create' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'transaction-create' %}is-active{% endif %}">
     {% icon "wallet" %}<span>{% translate "Nouvelle opération" %}</span>
 </a>
-<a href="{% url 'core:dashboard:payment-create' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'payment-create' %}is-active{% endif %}">
-    {% icon "user-plus" %}<span>{% translate "Inscrire un étudiant" %}</span>
+<a href="{% url 'core:dashboard:payment-create' %}?mode=enrollment" class="ua-nav-link {% if request.resolver_match.url_name == 'payment-create' and request.GET.mode != 'monthly' %}is-active{% endif %}">
+    {% icon "user-plus" %}<span>{% translate "Inscription" %}</span>
+</a>
+<a href="{% url 'core:dashboard:payment-create' %}?mode=monthly" class="ua-nav-link {% if request.resolver_match.url_name == 'payment-create' and request.GET.mode == 'monthly' %}is-active{% endif %}">
+    {% icon "credit-card" %}<span>{% translate "Frais mensuel" %}</span>
 </a>
 <a href="{% url 'core:dashboard:accounts' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'accounts' or request.resolver_match.url_name == 'account-update' or request.resolver_match.url_name == 'account-adjust' or request.resolver_match.url_name == 'account-reset' %}is-active{% endif %}">
     {% icon "wallet" %}<span>{% translate "Caisses & comptes" %}</span>

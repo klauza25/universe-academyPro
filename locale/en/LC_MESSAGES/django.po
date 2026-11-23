@@ -5041,15 +5041,6 @@ msgstr "Secure sign-in with your e-mail address or internal code."
 msgid "Inscription et paiements étudiants"
 msgstr "Student enrollment and payments"
 
-msgid "Inscription et paiements des étudiants"
-msgstr "Student enrollment and payments"
-
-msgid ""
-"Inscrivez l'étudiant une seule fois, puis suivez ses mensualités dans son "
-"dossier."
-msgstr ""
-"Enroll each student once, then track monthly payments in their record."
-
 msgid "Suivre les étudiants"
 msgstr "Track students"
 
@@ -5081,9 +5072,6 @@ msgid ""
 msgstr ""
 "Your account cannot enroll students. You can search for a student and view "
 "their record."
-
-msgid "Encaisser sur un dossier existant"
-msgstr "Record a payment for an existing student"
 
 msgid "Suivi des mensualités"
 msgstr "Monthly payment tracking"
@@ -5954,3 +5942,15 @@ msgstr ""
 
 msgid "Frais mensuel"
 msgstr "Monthly fee"
+
+msgid "Encaisser un frais mensuel"
+msgstr "Record a monthly fee"
+
+msgid "Encaisser des frais d'inscription"
+msgstr "Record an enrollment fee"
+
+msgid "Encaissez la mensualité d'un étudiant pour le mois réglé."
+msgstr "Record a student's monthly payment for the selected month."
+
+msgid "Enregistrez les frais d'inscription d'un étudiant sur son dossier."
+msgstr "Record a student's enrollment fee on their record."

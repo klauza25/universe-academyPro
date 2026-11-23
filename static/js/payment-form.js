@@ -23,39 +23,7 @@
     bindStudentSearch('student-search-enrollment', 'id_inscription-student');
     bindStudentSearch('student-search-payment', 'id_student');
 
-    // Deux onglets pour un seul formulaire : c'est l'onglet actif qui pose le
-    // motif (frais d'inscription ou mensualité), plus de menu à choisir.
-    var motif = document.getElementById('id_motif');
-    var monthlyFields = document.getElementById('payment-monthly-fields');
-    var tabs = document.querySelectorAll('[data-payment-tab]');
-    if (motif && tabs.length) {
-        var month = document.getElementById('id_period_month');
-        var year = document.getElementById('id_period_year');
-        function activatePaymentTab(kind) {
-            var monthly = kind === 'monthly';
-            motif.value = monthly ? 'MONTHLY' : 'ENROLLMENT';
-            if (monthlyFields) { monthlyFields.hidden = !monthly; }
-            if (month) { month.required = monthly; }
-            if (year) { year.required = monthly; }
-            Array.prototype.forEach.call(tabs, function (tab) {
-                var active = tab.getAttribute('data-payment-tab') === kind;
-                tab.setAttribute('aria-selected', active ? 'true' : 'false');
-                if (active) {
-                    tab.classList.remove('ua-btn-ghost');
-                    tab.classList.add('ua-btn-primary');
-                } else {
-                    tab.classList.remove('ua-btn-primary');
-                    tab.classList.add('ua-btn-ghost');
-                }
-            });
-        }
-        Array.prototype.forEach.call(tabs, function (tab) {
-            tab.addEventListener('click', function () {
-                activatePaymentTab(tab.getAttribute('data-payment-tab'));
-            });
-        });
-        activatePaymentTab(motif.value === 'MONTHLY' ? 'monthly' : 'enrollment');
-    }
+
 
     var student = document.getElementById('id_inscription-student');
     var details = document.getElementById('new-student-fields');
