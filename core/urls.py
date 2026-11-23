@@ -3,7 +3,7 @@ from django.urls import path, include
 from . import (
     views, views_legal, views_accueil, views_comptabilite, views_pedagogie,
     views_profile, views_reglages, views_secretariat, views_supervision,
-    views_synchronisation,
+    views_synchronisation, views_messagerie,
 )
 
 app_name = 'core'
@@ -32,6 +32,17 @@ bourses_urlpatterns = [
 dashboard_urlpatterns = [
     path('', views.dashboard_router, name='dashboard-router'),
     path('notifications/poll/', views.notifications_poll, name='notifications-poll'),
+
+    # Messagerie interne -----------------------------------------------------
+    path('messagerie/', views_messagerie.conversation_list, name='messagerie'),
+    path('messagerie/nouvelle/', views_messagerie.conversation_start,
+         name='messagerie-start'),
+    path('messagerie/<uuid:conversation_id>/', views_messagerie.conversation_detail,
+         name='messagerie-detail'),
+    path('messagerie/<uuid:conversation_id>/envoyer/',
+         views_messagerie.message_create, name='messagerie-send'),
+    path('messagerie/<uuid:conversation_id>/poll/',
+         views_messagerie.messages_poll, name='messagerie-poll'),
 
     # Profil -----------------------------------------------------------------
     path('profil/', views_profile.profile_view, name='profile'),

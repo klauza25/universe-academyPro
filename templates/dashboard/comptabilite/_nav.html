@@ -2,6 +2,7 @@
 <a href="{% url 'core:dashboard:comptabilite-dashboard' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'comptabilite-dashboard' %}is-active{% endif %}">
     {% icon "grid" %}<span>{% translate "Tableau de bord" %}</span>
 </a>
+{% include "dashboard/messagerie/_nav_item.html" %}
 <a href="{% url 'core:dashboard:journal' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'journal' or request.resolver_match.url_name == 'transaction-detail' or request.resolver_match.url_name == 'transaction-edit' %}is-active{% endif %}">
     {% icon "file-text" %}<span>{% translate "Journal comptable" %}</span>
 </a>

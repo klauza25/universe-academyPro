@@ -2,4 +2,5 @@
 <a href="{% url 'core:dashboard:accueil-dashboard' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'accueil-dashboard' %}is-active{% endif %}">
     {% icon "grid" %}<span>{% translate "Tableau de bord" %}</span>
 </a>
+{% include "dashboard/messagerie/_nav_item.html" %}
 {% include "dashboard/accueil/_nav_guichet.html" %}

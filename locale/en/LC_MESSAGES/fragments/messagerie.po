@@ -1,0 +1,99 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: Univers Academy\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en\n"
+
+# core/models.py — modèles de la messagerie interne
+msgid "Participants"
+msgstr "Participants"
+
+msgid "Conversation"
+msgstr "Conversation"
+
+msgid "Conversations"
+msgstr "Conversations"
+
+msgid "Expéditeur"
+msgstr "Sender"
+
+msgid "Texte du message"
+msgstr "Message text"
+
+msgid "Message"
+msgstr "Message"
+
+msgid "Messages"
+msgstr "Messages"
+
+# core/views_messagerie.py
+msgid "Destinataire introuvable."
+msgstr "Recipient not found."
+
+msgid "Vous ne pouvez pas vous écrire à vous-même."
+msgstr "You cannot message yourself."
+
+msgid "Le message ne peut pas être vide."
+msgstr "Message cannot be empty."
+
+msgid "Le message ne peut pas dépasser %(limite)s caractères."
+msgstr "Message cannot exceed %(limite)s characters."
+
+msgid "Nouveau message de %(nom)s"
+msgstr "New message from %(nom)s"
+
+# Interface et gabarits
+msgid "Messagerie"
+msgstr "Messaging"
+
+msgid "Messagerie interne"
+msgstr "Internal messaging"
+
+msgid "Échangez en privé avec un autre membre de l'équipe. Les messages sont conservés dans l'application."
+msgstr "Chat privately with another team member. Messages are stored in the application."
+
+msgid "Nouvelle conversation"
+msgstr "New conversation"
+
+msgid "Rechercher une personne"
+msgstr "Find a person"
+
+msgid "Nom, e-mail ou code interne…"
+msgstr "Name, email or internal code…"
+
+msgid "Rechercher"
+msgstr "Search"
+
+msgid "Aucune personne active ne correspond à cette recherche."
+msgstr "No active user matches this search."
+
+msgid "Aucun message pour le moment."
+msgstr "No messages yet."
+
+msgid "Vous n'avez pas encore de conversation. Recherchez une personne ci-dessus pour commencer."
+msgstr "You don't have any conversation yet. Search for a person above to start."
+
+msgid "Conversation avec"
+msgstr "Conversation with"
+
+msgid "Les nouveaux messages apparaissent automatiquement."
+msgstr "New messages appear automatically."
+
+msgid "← Toutes les conversations"
+msgstr "← All conversations"
+
+msgid "Aucun message. Envoyez le premier !"
+msgstr "No messages. Send the first one!"
+
+msgid "Votre message"
+msgstr "Your message"
+
+msgid "Écrivez votre message…"
+msgstr "Write your message…"
+
+msgid "Envoyer"
+msgstr "Send"
+
+msgid "Maximum %(limite)s caractères."
+msgstr "Maximum %(limite)s characters."

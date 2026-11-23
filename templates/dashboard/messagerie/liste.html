@@ -1,0 +1,61 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load ui i18n %}
+
+{% block title %}{% translate "Messagerie" %} — {{ plateforme.nom }}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/accueil/_nav.html" %}{% endblock %}
+
+{% block hero_title %}{% translate "Messagerie interne" %}{% endblock %}
+{% block hero_text %}{% translate "Échangez en privé avec un autre membre de l'équipe. Les messages sont conservés dans l'application." %}{% endblock %}
+
+{% block dashboard_content %}
+<section class="ua-card ua-card-pad ua-form">
+    <h2 class="ua-section-title">{% translate "Nouvelle conversation" %}</h2>
+    <form method="get" action="{% url 'core:dashboard:messagerie' %}" class="flex flex-wrap items-end gap-3 mt-3">
+        <div class="min-w-[220px] flex-1">
+            <label for="messagerie-q">{% translate "Rechercher une personne" %}</label>
+            <input type="search" id="messagerie-q" name="q" value="{{ recherche }}"
+                   placeholder="{% translate 'Nom, e-mail ou code interne…' %}">
+        </div>
+        <button type="submit" class="ua-btn ua-btn-primary">{% icon "search" %} {% translate "Rechercher" %}</button>
+    </form>
+
+    {% if destinataires %}
+    <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {% for personne in destinataires %}
+        <form method="post" action="{% url 'core:dashboard:messagerie-start' %}">
+            {% csrf_token %}
+            <input type="hidden" name="destinataire_id" value="{{ personne.pk }}">
+            <button type="submit" class="ua-btn ua-btn-light w-full justify-start">
+                {% icon "message" %}
+                <span class="min-w-0 truncate">{{ personne.display_label }}</span>
+            </button>
+        </form>
+        {% endfor %}
+    </div>
+    {% elif recherche %}
+    <p class="ua-muted mt-4">{% translate "Aucune personne active ne correspond à cette recherche." %}</p>
+    {% endif %}
+</section>
+
+<section class="ua-card ua-card-pad mt-5">
+    <h2 class="ua-section-title">{% translate "Conversations" %}</h2>
+    {% if fils %}
+    <div class="mt-3 grid gap-2">
+        {% for fil in fils %}
+        <a href="{% url 'core:dashboard:messagerie-detail' fil.conversation.id %}"
+           class="ua-chat-ligne" style="border:1px solid var(--ua-line);border-radius:14px;">
+            <span class="ua-avatar">{{ fil.interlocuteur.initials|default:fil.interlocuteur.email|slice:":2"|upper }}</span>
+            <span class="ua-chat-ligne-texte">
+                <span class="ua-chat-ligne-nom">{{ fil.interlocuteur.display_label }}</span>
+                <span class="ua-chat-ligne-extrait">{% if fil.dernier %}{{ fil.dernier.body|truncatechars:80 }}{% else %}{% translate "Aucun message pour le moment." %}{% endif %}</span>
+            </span>
+            {% if fil.non_lus %}<span class="ua-badge ua-badge-indigo">{{ fil.non_lus }}</span>{% endif %}
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="ua-muted mt-3">{% translate "Vous n'avez pas encore de conversation. Recherchez une personne ci-dessus pour commencer." %}</p>
+    {% endif %}
+</section>
+{% endblock %}

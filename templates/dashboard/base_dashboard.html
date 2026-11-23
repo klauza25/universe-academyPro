@@ -78,6 +78,12 @@
                     {% endfor %}
                 </form>
 
+                <a href="{% url 'core:dashboard:messagerie' %}" class="ua-icon-btn ua-lien-badge"
+                   title="{% translate 'Messagerie' %}" aria-label="{% translate 'Messagerie' %}">
+                    {% icon "message" %}
+                    {% if unread_messages %}<span class="ua-compte-badge">{{ unread_messages }}</span>{% endif %}
+                </a>
+
                 {% cloche %}
 
                 <button type="button" class="ua-icon-btn" id="ua-son-btn"

@@ -1132,6 +1132,81 @@ class Notification(models.Model):
         ordering = ['-created_at']
 
 
+class Conversation(models.Model):
+    """Fil privé entre deux comptes : une seule conversation par paire.
+
+    La clé de paire range les deux identifiants par ordre alphabétique. Deux
+    personnes qui ouvrent simultanément une discussion tombent donc sur le même
+    fil, sans doublon ni course entre deux écritures.
+    """
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    participants = models.ManyToManyField(
+        User, related_name='conversations', verbose_name=_("Participants")
+    )
+    pair_key = models.CharField(max_length=73, unique=True, editable=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'messagerie_conversations'
+        ordering = ['-updated_at']
+        verbose_name = _("Conversation")
+        verbose_name_plural = _("Conversations")
+
+    @staticmethod
+    def cle_paire(premier, second):
+        return ':'.join(sorted((str(premier.pk), str(second.pk))))
+
+    @classmethod
+    def pour(cls, premier, second):
+        """Retourne le fil existant ou le crée, avec ses deux participants."""
+        cle = cls.cle_paire(premier, second)
+        conversation, cree = cls.objects.get_or_create(pair_key=cle)
+        if cree:
+            conversation.participants.add(premier, second)
+        return conversation, cree
+
+    def interlocuteur(self, user):
+        return self.participants.exclude(pk=user.pk).first()
+
+    def non_lus_pour(self, user):
+        return self.messages.filter(read_at__isnull=True).exclude(
+            sender=user).count()
+
+    def toucher(self):
+        self.save(update_fields=['updated_at'])
+
+
+class Message(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    conversation = models.ForeignKey(
+        Conversation, on_delete=models.CASCADE, related_name='messages',
+        verbose_name=_("Conversation")
+    )
+    sender = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='messages_envoyes',
+        verbose_name=_("Expéditeur")
+    )
+    body = models.TextField(_("Texte du message"))
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = 'messagerie_messages'
+        ordering = ['created_at']
+        verbose_name = _("Message")
+        verbose_name_plural = _("Messages")
+        indexes = [
+            models.Index(fields=['conversation', 'created_at'],
+                         name='idx_messagerie_conv_date'),
+        ]
+
+    def __str__(self):
+        return f'{self.sender.display_label} — ' \
+               f'{timezone.localtime(self.created_at):%d/%m/%Y %H:%M}'
+
+
 class AuditLog(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     actor = models.ForeignKey(

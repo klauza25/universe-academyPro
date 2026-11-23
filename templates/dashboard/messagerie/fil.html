@@ -1,0 +1,42 @@
+{% extends "dashboard/base_dashboard.html" %}
+{% load static ui i18n %}
+
+{% block title %}{% translate "Conversation" %} — {{ plateforme.nom }}{% endblock %}
+
+{% block sidebar_nav %}{% include "dashboard/accueil/_nav.html" %}{% endblock %}
+
+{% block hero_title %}{% translate "Conversation avec" %} {{ interlocuteur.display_label }}{% endblock %}
+{% block hero_text %}{% translate "Les nouveaux messages apparaissent automatiquement." %} <a href="{% url 'core:dashboard:messagerie' %}">{% translate "← Toutes les conversations" %}</a>{% endblock %}
+
+{% block dashboard_content %}
+<section class="ua-card ua-card-pad">
+    <div id="ua-chat-fil" class="ua-chat-fil"
+         data-poll-url="{% url 'core:dashboard:messagerie-poll' conversation.id %}"
+         data-signature="{{ messages|length }}:{{ messages.last.id|default_if_none:'' }}"
+         data-vide-label="{% translate 'Aucun message. Envoyez le premier !' %}">
+        {% for message in messages %}
+        <article class="ua-chat-bulle {% if message.sender_id == request.user.pk %}mien{% endif %}">
+            <p class="ua-chat-corps">{{ message.body }}</p>
+            <span class="ua-chat-meta">{{ message.sender.display_label }} — {{ message.created_at|date:"d/m H:i" }}</span>
+        </article>
+        {% empty %}
+        <p class="ua-chat-vide">{% translate "Aucun message. Envoyez le premier !" %}</p>
+        {% endfor %}
+    </div>
+
+    <form method="post" action="{% url 'core:dashboard:messagerie-send' conversation.id %}" class="ua-chat-compose ua-form" id="ua-chat-form">
+        {% csrf_token %}
+        <div class="flex-1">
+            <label for="ua-chat-corps" class="sr-only">{% translate "Votre message" %}</label>
+            <textarea id="ua-chat-corps" name="body" maxlength="{{ longueur_max }}" required
+                      placeholder="{% translate 'Écrivez votre message…' %}"></textarea>
+        </div>
+        <button type="submit" class="ua-btn ua-btn-primary">{% icon "send" %} {% translate "Envoyer" %}</button>
+    </form>
+    <p class="ua-muted text-xs mt-2">{% blocktrans with limite=longueur_max %}Maximum {{ limite }} caractères.{% endblocktrans %}</p>
+</section>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{% static 'js/messagerie.js' %}"></script>
+{% endblock %}

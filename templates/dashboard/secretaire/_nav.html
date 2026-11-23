@@ -2,6 +2,7 @@
 <a href="{% url 'core:dashboard:secretaire-dashboard' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'secretaire-dashboard' %}is-active{% endif %}">
     {% icon "grid" %}<span>{% translate "Tableau de bord" %}</span>
 </a>
+{% include "dashboard/messagerie/_nav_item.html" %}
 <a href="{% url 'core:dashboard:student-list' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'student-list' or request.resolver_match.url_name == 'student-detail' or request.resolver_match.url_name == 'student-edit' %}is-active{% endif %}">
     {% icon "graduation" %}<span>{% translate "Étudiants" %}</span>
 </a>

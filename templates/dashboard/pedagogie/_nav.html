@@ -2,6 +2,7 @@
 <a href="{% url 'core:dashboard:dashboard-router' %}" class="ua-nav-link">
     {% icon "grid" %}<span>{% translate "Mon tableau de bord" %}</span>
 </a>
+{% include "dashboard/messagerie/_nav_item.html" %}
 <a href="{% url 'core:dashboard:course-sessions' %}" class="ua-nav-link {% if request.resolver_match.url_name == 'course-sessions' or request.resolver_match.url_name == 'course-session-create' or request.resolver_match.url_name == 'course-session-edit' %}is-active{% endif %}">
     {% icon "users" %}<span>{% translate "Groupes" %}</span>
 </a>

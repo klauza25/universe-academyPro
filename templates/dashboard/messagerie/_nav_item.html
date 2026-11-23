@@ -1,0 +1,6 @@
+{% load ui i18n %}
+<a href="{% url 'core:dashboard:messagerie' %}"
+   class="ua-nav-link {% if request.resolver_match.url_name == 'messagerie' or request.resolver_match.url_name == 'messagerie-detail' %}is-active{% endif %}">
+    {% icon "message" %}<span>{% translate "Messagerie" %}</span>
+    {% if unread_messages %}<span class="ua-badge ua-badge-indigo">{{ unread_messages }}</span>{% endif %}
+</a>

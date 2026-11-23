@@ -130,7 +130,7 @@ academy/
 ├── installer_tache_synchronisation.ps1
 ├── univers_academy/          # settings, urls, wsgi
 ├── core/
-│   ├── models.py             # 37 modèles, contraintes, gardes
+│   ├── models.py             # 39 modèles, contraintes, gardes
 │   ├── forms.py              # formulaires et validation métier
 │   ├── decorators.py         # autorisations serveur
 │   ├── middleware.py         # statut de compte
@@ -430,7 +430,7 @@ Ces règles doivent être appliquées **en base** quand c'est possible, et **dan
 
 ## 9. Modèle de données
 
-**37 modèles**, clé primaire `UUID` partout sauf `PlatformSetting` (`BigAutoField`, ligne unique `id = 1`). Tables nommées en `snake_case` pluriel quand c'est naturel. Champs en anglais, libellés en français.
+**39 modèles**, clé primaire `UUID` partout sauf `PlatformSetting` (`BigAutoField`, ligne unique `id = 1`). Tables nommées en `snake_case` pluriel quand c'est naturel. Champs en anglais, libellés en français.
 
 ### 9.1 Comptes et droits
 
@@ -755,7 +755,7 @@ Chaque commande destructrice ou d'import accepte un mode aperçu et affiche un r
 Produire et faire valider :
 
 1. l'arborescence cible et les modules ;
-2. la liste des 37 modèles avec leurs relations et contraintes ;
+2. la liste des 39 modèles avec leurs relations et contraintes ;
 3. la carte des routes et des écrans par rôle ;
 4. la matrice des accès et la liste des 19 permissions ;
 5. les règles de gestion critiques (section 8) ;
@@ -897,7 +897,7 @@ Une fonctionnalité est terminée quand **tout** est vrai :
 
 > Tu es développeur Django senior. Conçois et réalise **Univers Academy**, une plateforme de gestion de centre de formation à Brazzaville : portail public, bourses, accueil/visites/prospects, secrétariat (étudiants, inscriptions, documents), pédagogie (catalogue, modules, leçons, groupes, séances, présences, cahier de texte, ressources), comptabilité (caisse multi-comptes, clôtures, paiements, reçus), réglages, comptes/rôles/audit, et synchronisation horaire de deux Google Sheets privés via compte de service.
 >
-> Pile : Python 3, Django 5.2, SQLite ou PostgreSQL par `DATABASE_URL`, Tailwind compilé, `openpyxl`, `google-auth`, interface française traduisible, 37 modèles en UUID, 8 rôles actifs, 19 permissions fines.
+> Pile : Python 3, Django 5.2, SQLite ou PostgreSQL par `DATABASE_URL`, Tailwind compilé, `openpyxl`, `google-auth`, interface française traduisible, 39 modèles en UUID, 8 rôles actifs, 19 permissions fines.
 >
 > Règles non négociables : contrôle serveur de chaque action, aucune authentification externe, aucune suppression destructive (archiver/annuler/désactiver), sauvegarde avant toute écriture automatisée, migrations idempotentes (`migrer` ne sauvegarde que si une migration attend), jamais de réécriture dans Google, base = source de service, audit de toute action sensible, 684 tests verts et `check` propre avant livraison.
 >

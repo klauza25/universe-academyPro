@@ -23,7 +23,7 @@ def _initials(user):
 def user_profile_context(request):
     ctx = {}
     if request.user.is_authenticated:
-        from .models import RoleKey
+        from .models import Message, RoleKey
 
         primary = request.user.primary_role
         try:
@@ -66,6 +66,14 @@ def user_profile_context(request):
             )
         except Exception:
             ctx['unread_notifications'] = 0
+        try:
+            ctx['unread_messages'] = Message.objects.filter(
+                conversation__participants=request.user,
+                read_at__isnull=True,
+            ).exclude(sender=request.user).count()
+        except Exception:
+            # Le compteur ne doit jamais faire échouer le rendu d'une page.
+            ctx['unread_messages'] = 0
     return ctx
 
 
