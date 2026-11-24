@@ -113,6 +113,26 @@ class FinanceSupervisionTests(BusinessTestBase):
         self.assertContains(response, self.expense.reference)
         self.assertNotContains(response, self.salary.reference)
 
+    def test_supervision_defaults_to_current_year(self):
+        old = self.make_tx(
+            9000, counterparty='Ancienne opération',
+            category=self.income_category,
+        )
+        old.occurred_at = timezone.now() - timedelta(days=400)
+        old.save(update_fields=['occurred_at'])
+
+        response = self.client_for(self.super_admin).get(reverse(SUPERVISION_URL))
+        self.assertNotContains(response, old.reference)
+        self.assertContains(response, self.income.reference)
+        self.assertEqual(response.context['date_from'], timezone.localdate().replace(month=1, day=1).isoformat())
+        self.assertEqual(response.context['date_to'], timezone.localdate().replace(month=12, day=31).isoformat())
+
+        # Un filtre de date explicite vide permet de voir toutes les années.
+        response = self.client_for(self.super_admin).get(
+            reverse(SUPERVISION_URL), {'from': '', 'to': ''},
+        )
+        self.assertContains(response, old.reference)
+
     def test_supervision_csv_export(self):
         response = self.client_for(self.super_admin).get(
             reverse(SUPERVISION_URL), {'export': 'csv', 'type': 'OUT'},

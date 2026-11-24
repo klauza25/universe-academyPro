@@ -5878,3 +5878,32 @@ msgid ""
 msgstr ""
 "Approving an enrollment is reserved for the administrative assistant, "
 "academic supervision and the super administrator."
+
+msgid "Zone dangereuse"
+msgstr "Danger zone"
+
+msgid ""
+"Supprime définitivement ce compte et toutes ses actions d'audit. Les "
+"relations liées seront supprimées ou détachées selon les règles de la base."
+msgstr ""
+"Permanently deletes this account and all its audit actions. Related records "
+"are deleted or detached according to database rules."
+
+msgid ""
+"Supprimer définitivement %(nom)s et toutes ses actions d'audit ? Cette "
+"action est irréversible."
+msgstr ""
+"Permanently delete %(nom)s and all their audit actions? This action cannot "
+"be undone."
+
+msgid "Supprimer l'utilisateur"
+msgstr "Delete user"
+
+msgid "Utilisateur %(nom)s supprimé (%(n)s action(s) d'audit supprimée(s))."
+msgstr "User %(nom)s deleted (%(n)s audit action(s) removed)."
+
+msgid "Impossible de supprimer le dernier super administrateur actif."
+msgstr "The last active super administrator cannot be deleted."
+
+msgid "Vous ne pouvez pas supprimer votre propre compte."
+msgstr "You cannot delete your own account."

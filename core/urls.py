@@ -59,6 +59,7 @@ dashboard_urlpatterns = [
     path('super-admin/users/create/', views.user_create, name='user-create'),
     path('super-admin/users/<uuid:user_id>/', views.user_detail, name='user-detail'),
     path('super-admin/users/<uuid:user_id>/edit/', views.user_edit, name='user-edit'),
+    path('super-admin/users/<uuid:user_id>/supprimer/', views.user_delete, name='user-delete'),
     path('super-admin/users/<uuid:user_id>/photo/', views.user_avatar, name='user-avatar'),
     path('super-admin/users/<uuid:user_id>/roles/', views.user_role_assign, name='user-role-assign'),
     path('super-admin/users/<uuid:user_id>/status/', views.user_status_change, name='user-status-change'),

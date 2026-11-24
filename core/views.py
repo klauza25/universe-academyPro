@@ -617,6 +617,37 @@ def user_edit(request, user_id):
     })
 
 
+@super_admin_required
+def user_delete(request, user_id):
+    user = get_object_or_404(User, id=user_id)
+    if request.method != 'POST':
+        return redirect('core:dashboard:user-detail', user_id=user.id)
+    if user.id == request.user.id:
+        return HttpResponseForbidden(_("Vous ne pouvez pas supprimer votre propre compte."))
+    if _is_last_active_super_admin(user):
+        messages.error(
+            request,
+            _("Impossible de supprimer le dernier super administrateur actif."),
+        )
+        return redirect('core:dashboard:user-detail', user_id=user.id)
+    email = user.email
+    name = user.get_full_name() or email
+    with transaction.atomic():
+        deleted_logs, _ = AuditLog.objects.filter(actor=user).delete()
+        log_audit(
+            request, 'USER_DELETE', 'User', str(user.id),
+            before={'email': email, 'name': name, 'audit_logs_deleted': deleted_logs},
+        )
+        user.delete()
+    messages.success(
+        request,
+        _("Utilisateur %(nom)s supprimé (%(n)s action(s) d'audit supprimée(s)).") % {
+            'nom': name, 'n': deleted_logs,
+        },
+    )
+    return redirect('core:dashboard:user-list')
+
+
 @user_management_required
 def user_avatar(request, user_id):
     """Le gestionnaire du compte pose la photo depuis sa fiche."""

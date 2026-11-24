@@ -35,6 +35,12 @@ def _filtered_transactions(request):
     user_id = request.GET.get('user') or ''
     date_from = request.GET.get('from') or ''
     date_to = request.GET.get('to') or ''
+    # Par défaut, la supervision porte sur l'année en cours. Un filtre de date
+    # explicite (même vide, soumis par le formulaire) remplace ce défaut.
+    if not date_from and not date_to and 'from' not in request.GET and 'to' not in request.GET:
+        today = timezone.localdate()
+        date_from = today.replace(month=1, day=1).isoformat()
+        date_to = today.replace(month=12, day=31).isoformat()
 
     if query:
         qs = qs.filter(
