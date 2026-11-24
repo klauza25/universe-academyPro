@@ -15,14 +15,29 @@
 {% block dashboard_content %}
 <div class="ua-page-head">
     <div>
-        <h1 class="ua-page-title">{% translate "Étudiants" %}</h1>
+        <h1 class="ua-page-title">{% translate "Étudiants" %} <span class="text-base font-semibold ua-muted">({{ page.paginator.count }})</span></h1>
         <p class="ua-page-sub">{% translate "Dossiers administratifs et inscriptions." %}</p>
     </div>
-    {% if not is_elevated %}
-    <a href="{% url 'core:dashboard:student-create' %}" class="ua-btn ua-btn-primary">
-        {% icon "user-plus" %} {% translate "Nouvel étudiant" %}
-    </a>
-    {% endif %}
+    <div class="flex flex-wrap items-center gap-2">
+        <form method="get" class="flex items-center gap-2">
+            {% if query %}<input type="hidden" name="q" value="{{ query }}">{% endif %}
+            {% if course_filter %}<input type="hidden" name="course" value="{{ course_filter }}">{% endif %}
+            {% if status_filter %}<input type="hidden" name="status" value="{{ status_filter }}">{% endif %}
+            <label class="text-xs ua-muted sr-only" for="id_annee_academique_head">{% translate "Année académique" %}</label>
+            <select id="id_annee_academique_head" name="annee_academique" onchange="this.form.submit()"
+                    class="px-3 py-2 rounded-xl border text-sm" style="border-color:#e6e7f5;">
+                <option value="{{ toutes }}" {% if not annee_academique %}selected{% endif %}>{% translate "Toutes les années" %}</option>
+                {% for une_annee in annees %}
+                <option value="{{ une_annee.id }}" {% if annee_academique and annee_academique.id == une_annee.id %}selected{% endif %}>{{ une_annee.label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% if not is_elevated %}
+        <a href="{% url 'core:dashboard:student-create' %}" class="ua-btn ua-btn-primary">
+            {% icon "user-plus" %} {% translate "Nouvel étudiant" %}
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 {% if drapeau %}

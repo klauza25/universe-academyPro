@@ -32,6 +32,8 @@
     {% include "dashboard/_stat.html" with label=lbl_convertis value=converted_prospects icon="user-check" tone="sky" hint=hint_convertis %}
 </div>
 
+{% include "dashboard/_charts.html" %}
+
 <section class="ua-card ua-card-pad mb-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -98,4 +100,8 @@
         </table>
     </div>
 </section>
+{% endblock %}
+
+{% block extra_scripts %}
+{% include "dashboard/_charts_scripts.html" %}
 {% endblock %}

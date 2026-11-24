@@ -41,35 +41,37 @@
 </div>
 
 <div class="flex items-center justify-between gap-3 mb-3 mt-2">
-    <h2 class="ua-section-title">{% blocktrans with m=month_start|date:"F Y" %}Contrôle financier — {{ m }}{% endblocktrans %}</h2>
-    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}"
+    <h2 class="ua-section-title">{% blocktrans with y=year_start|date:"Y" %}Contrôle financier — {{ y }}{% endblocktrans %}</h2>
+    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ year_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}"
        class="ua-btn ua-btn-ghost ua-btn-sm">
         {% translate "Supervision financière" %} {% icon "arrow-right" %}
     </a>
 </div>
-{% translate "Entrées du mois" as lbl_entrees %}
-{% translate "Validés" as hint_valides %}
-{% translate "Sorties du mois" as lbl_sorties %}
+{% translate "Entrées de l'année" as lbl_entrees %}
+{% translate "Validées" as hint_valides %}
+{% translate "Sorties de l'année" as lbl_sorties %}
 {% translate "Paiements étudiants" as lbl_paiements %}
-{% translate "Encaissés ce mois" as hint_encaisses %}
+{% translate "Encaissés cette année" as hint_encaisses %}
 {% translate "Salaires & formateurs" as lbl_salaires %}
-{% translate "Versés ce mois" as hint_verses %}
+{% translate "Versés cette année" as hint_verses %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=IN" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_entrees value=month_income|floatformat:0 icon="trending-up" tone="green" unite=plateforme.devise hint=hint_valides %}
+    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ year_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=IN" class="block">
+        {% include "dashboard/_stat.html" with label=lbl_entrees value=year_income|floatformat:0 icon="trending-up" tone="green" unite=plateforme.devise hint=hint_valides %}
     </a>
-    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=OUT" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_sorties value=month_expense|floatformat:0 icon="wallet" tone="rose" unite=plateforme.devise hint=hint_valides %}
+    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ year_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&type=OUT" class="block">
+        {% include "dashboard/_stat.html" with label=lbl_sorties value=year_expense|floatformat:0 icon="wallet" tone="rose" unite=plateforme.devise hint=hint_valides %}
     </a>
-    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Paiement+étudiant" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_paiements value=month_payment_total|floatformat:0 icon="credit-card" tone="sky" unite=plateforme.devise hint=hint_encaisses %}
+    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ year_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Paiement+étudiant" class="block">
+        {% include "dashboard/_stat.html" with label=lbl_paiements value=year_payment_total|floatformat:0 icon="credit-card" tone="sky" unite=plateforme.devise hint=hint_encaisses %}
     </a>
-    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ month_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Salaires&type=OUT" class="block">
-        {% include "dashboard/_stat.html" with label=lbl_salaires value=month_salaries|floatformat:0 icon="users" tone="amber" unite=plateforme.devise hint=hint_verses %}
+    <a href="{% url 'core:dashboard:finance-supervision' %}?from={{ year_start|date:'Y-m-d' }}&to={{ today|date:'Y-m-d' }}&q=Salaires&type=OUT" class="block">
+        {% include "dashboard/_stat.html" with label=lbl_salaires value=year_salaries|floatformat:0 icon="users" tone="amber" unite=plateforme.devise hint=hint_verses %}
     </a>
 </div>
 
 {% include "dashboard/_validation_queue.html" %}
+
+{% include "dashboard/_charts.html" %}
 
 <div class="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
     <section class="ua-card overflow-hidden xl:col-span-2">
@@ -77,7 +79,7 @@
             <div>
                 <h2 class="ua-section-title">{% translate "Transactions récentes" %}</h2>
                 <p class="text-xs ua-muted mt-1">
-                    {% blocktrans with c=month_transaction_count %}{{ c }} opération(s) validée(s) ce mois · toutes origines confondues{% endblocktrans %}
+                    {% blocktrans with c=year_transaction_count %}{{ c }} opération(s) validée(s) cette année · toutes origines confondues{% endblocktrans %}
                 </p>
             </div>
             <a href="{% url 'core:dashboard:finance-supervision' %}" class="ua-btn ua-btn-ghost ua-btn-sm">
@@ -264,4 +266,8 @@
         </section>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% include "dashboard/_charts_scripts.html" %}
 {% endblock %}

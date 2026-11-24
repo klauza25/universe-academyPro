@@ -36,6 +36,8 @@
     {% include "dashboard/_stat.html" with label=lbl_heures_restantes value=minutes_remaining|duree icon="trending-up" tone="amber" hint=hint_seances_planifiees %}
 </div>
 
+{% include "dashboard/_charts.html" %}
+
 <section class="ua-card ua-card-pad mb-5">
     <div class="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -159,4 +161,8 @@
     </div>
     {% endfor %}
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% include "dashboard/_charts_scripts.html" %}
 {% endblock %}

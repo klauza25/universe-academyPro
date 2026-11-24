@@ -2824,9 +2824,6 @@ msgstr "View users"
 msgid "Consultez l'état de votre dossier de bourse."
 msgstr "View the status of your scholarship record."
 
-msgid "Contrôle financier — %(m)s"
-msgstr "Financial control — %(m)s"
-
 msgid ""
 "Demande envoyée le %(d)s. Aucun accès n'est accordé avant la décision du "
 "super administrateur."
@@ -2893,9 +2890,6 @@ msgstr "Recorded by"
 
 msgid "Entité"
 msgstr "Entity"
-
-msgid "Entrées du mois"
-msgstr "This month's entries"
 
 msgid "Entrées validées"
 msgstr "Validated entries"
@@ -3169,9 +3163,6 @@ msgstr "Total balance"
 msgid "Soldes des caisses"
 msgstr "Cash account balances"
 
-msgid "Sorties du mois"
-msgstr "Exits this month"
-
 msgid "Sorties par catégorie"
 msgstr "Exits by category"
 
@@ -3354,17 +3345,11 @@ msgstr ""
 msgid "%(c)s opération(s) correspondant aux critères"
 msgstr "%(c)s transaction(s) matching these criteria"
 
-msgid "%(c)s opération(s) validée(s) ce mois · toutes origines confondues"
-msgstr "%(c)s validated transaction(s) this month · all sources combined"
-
 msgid "%(c)s événement(s) correspondant aux critères"
 msgstr "%(c)s event(s) matching these criteria"
 
 msgid "%(n)s dossier(s)"
 msgstr "%(n)s record(s)"
-
-msgid "%(n)s nouvelle(s) inscription(s) ce mois-ci"
-msgstr "%(n)s new enrollment(s) this month"
 
 msgid "%(n)s opération(s)"
 msgstr "%(n)s transaction(s)"
@@ -3772,9 +3757,6 @@ msgstr "Fee due minus collected amounts, per enrollment."
 
 msgid "Taux de présence (%)"
 msgstr "Attendance rate (%)"
-
-msgid "Écritures validées, sur %(n)s mois."
-msgstr "Validated entries and exits over %(n)s months."
 
 msgid "Élèves"
 msgstr "Students"
@@ -4752,9 +4734,6 @@ msgstr "Contact e-mail"
 msgid "Encaisser les mensualités"
 msgstr "Collect the monthly payments"
 
-msgid "Encaissés ce mois"
-msgstr "Collected this month"
-
 msgid "Feuille de suivi, cahier de texte et reçu."
 msgstr "Tracking sheet, class register and receipt."
 
@@ -4914,9 +4893,6 @@ msgstr "Current value"
 
 msgid "Validés"
 msgstr "Validated"
-
-msgid "Versés ce mois"
-msgstr "Paid out this month"
 
 msgid "Vous avez demandé à utiliser cette adresse pour votre compte %(nom)s."
 msgstr "You asked to use this address for your %(nom)s account."
@@ -5907,3 +5883,56 @@ msgstr "The last active super administrator cannot be deleted."
 
 msgid "Vous ne pouvez pas supprimer votre propre compte."
 msgstr "You cannot delete your own account."
+
+msgid "Contrôle financier — %(y)s"
+msgstr "Financial overview — %(y)s"
+
+msgid "Entrées de l'année"
+msgstr "Year income"
+
+msgid "Validées"
+msgstr "Validated"
+
+msgid "Sorties de l'année"
+msgstr "Year expenses"
+
+msgid "Encaissés cette année"
+msgstr "Collected this year"
+
+msgid "Versés cette année"
+msgstr "Paid this year"
+
+msgid "%(c)s opération(s) validée(s) cette année · toutes origines confondues"
+msgstr "%(c)s validated transaction(s) this year · all sources combined"
+
+msgid "%(n)s nouvelle(s) inscription(s) cette année"
+msgstr "%(n)s new enrollment(s) this year"
+
+msgid "Visites par mois"
+msgstr "Visits per month"
+
+msgid "Visites enregistrées à l’accueil, sur %(n)s mois."
+msgstr "Reception visits recorded over %(n)s months."
+
+msgid "Assiduité de mes groupes"
+msgstr "My groups' attendance"
+
+msgid "Présences, retards, absences et excuses de vos groupes sur %(n)s mois."
+msgstr ""
+"Attendance, lateness, absences and excuses for your groups over %(n)s "
+"months."
+
+msgid "Mon assiduité"
+msgstr "My attendance"
+
+msgid "Vos présences, retards, absences et excuses sur %(n)s mois."
+msgstr "Your attendance, lateness, absences and excuses over %(n)s months."
+
+msgid "Présences, retards, absences et excuses sur %(n)s mois."
+msgstr "Attendance, lateness, absences and excuses over %(n)s months."
+
+msgid "Total des entrées de caisse validées, mois par mois."
+msgstr "Total validated cash inflows, month by month."
+
+msgid "Staff (tous)"
+msgstr "Staff (all)"

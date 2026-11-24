@@ -89,8 +89,8 @@ def icon(name, css="ua-icon"):
     )
 
 
-@register.inclusion_tag('dashboard/_compteurs.html')
-def compteurs():
+@register.inclusion_tag('dashboard/_compteurs.html', takes_context=True)
+def compteurs(context):
     """La bande de chiffres commune à tous les tableaux de bord.
 
     Elle est appelée depuis chaque page d'accueil de rôle : le calcul reste
@@ -98,7 +98,13 @@ def compteurs():
     """
     from core.utils import platform_counts
 
-    return platform_counts()
+    data = platform_counts()
+    user = context.get('user')
+    roles = set(user.roles.values_list('key', flat=True)) if user and user.is_authenticated else set()
+    data['can_view_users'] = bool(roles & {'SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN'})
+    data['can_view_students'] = 'ASSISTANT_ADMIN' in roles
+    data['can_view_staff'] = data['can_view_users']
+    return data
 
 
 @register.inclusion_tag('dashboard/_cloche.html', takes_context=True)

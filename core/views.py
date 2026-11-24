@@ -43,14 +43,24 @@ from .utils import (
     outstanding_receivables,
     salaire_formateur as calculer_salaire_formateur,
     salaires_formateurs as calculer_salaires_formateurs,
-    students_count,
+    students_count, STAFF_ROLE_KEYS,
 )
 from .taches import (
     marqueur_evenements, marqueur_notifications_non_lues, tableau_des_files,
 )
 from .views_profile import changer_avatar
 from .views_comptabilite import _date_filtre
-from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
+from .graphiques import (
+    pour_accueil,
+    pour_admin,
+    pour_comptabilite,
+    pour_direction,
+    pour_etudiant,
+    pour_formateur,
+    pour_pedagogie,
+    pour_secretaire,
+    pour_super_admin,
+)
 
 # Catégories de dépenses qui représentent un salaire, y compris les avances et
 # les honoraires de formateur : elles viennent du journal de caisse, pas des
@@ -328,22 +338,22 @@ def super_admin_dashboard(request):
     from .views_comptabilite import accounts_with_balance
 
     today = timezone.localdate()
-    month_start = today.replace(day=1)
-    month_transactions = CashTransaction.objects.filter(
+    year_start = today.replace(month=1, day=1)
+    year_transactions = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED,
-        occurred_at__date__gte=month_start,
+        occurred_at__date__gte=year_start,
         occurred_at__date__lte=today,
     )
     salaries_categories = (
         'Salaires', 'Paiements des formateurs', 'Avances sur salaire',  # i18n-exempt: noms de catégories tels qu'enregistrés en base (filtre __in)
     )
-    month_income = month_transactions.filter(
+    year_income = year_transactions.filter(
         tx_type=CashTransaction.Type.IN
     ).aggregate(total=Sum('amount'))['total'] or 0
-    month_expense = month_transactions.filter(
+    year_expense = year_transactions.filter(
         tx_type=CashTransaction.Type.OUT
     ).aggregate(total=Sum('amount'))['total'] or 0
-    month_salaries = month_transactions.filter(
+    year_salaries = year_transactions.filter(
         tx_type=CashTransaction.Type.OUT,
         category__name__in=salaries_categories,
     ).aggregate(total=Sum('amount'))['total'] or 0
@@ -380,16 +390,16 @@ def super_admin_dashboard(request):
         'enrollments_to_validate': enrollments_waiting_validation(),
         # Contrôle financier global.
         'today': today,
-        'month_start': month_start,
-        'month_income': month_income,
-        'month_expense': month_expense,
-        'month_salaries': month_salaries,
-        'month_payment_total': Payment.objects.filter(
+        'year_start': year_start,
+        'year_income': year_income,
+        'year_expense': year_expense,
+        'year_salaries': year_salaries,
+        'year_payment_total': Payment.objects.filter(
             status=Payment.Status.COMPLETED,
-            paid_at__date__gte=month_start,
+            paid_at__date__gte=year_start,
             paid_at__date__lte=today,
         ).aggregate(total=Sum('amount'))['total'] or 0,
-        'month_transaction_count': month_transactions.count(),
+        'year_transaction_count': year_transactions.count(),
         'pending_transactions': CashTransaction.objects.filter(
             status=CashTransaction.Status.DRAFT
         ).count(),
@@ -403,6 +413,7 @@ def super_admin_dashboard(request):
         'recent_transactions': CashTransaction.objects.select_related(
             'account', 'category', 'created_by'
         ).order_by('-occurred_at', '-created_at')[:8],
+        'graphiques': pour_super_admin(),
     }
     return render(request, 'dashboard/super_admin/index.html', context)
 
@@ -424,7 +435,9 @@ def user_list(request):
         )
     if status_filter:
         users = users.filter(account_status=status_filter)
-    if role_filter:
+    if role_filter == '__staff__':
+        users = users.filter(roles__key__in=STAFF_ROLE_KEYS)
+    elif role_filter:
         users = users.filter(roles__key=role_filter)
 
     paginator = Paginator(users.distinct(), 20)
@@ -1203,12 +1216,12 @@ def scholarship_review_detail(request, app_id):
 @role_required('ADMIN')
 def admin_dashboard(request):
     today = timezone.localdate()
-    month_start = today.replace(day=1)
+    year_start = today.replace(month=1, day=1)
     from .views_comptabilite import accounts_with_balance
 
-    month_transactions = CashTransaction.objects.filter(
+    year_transactions = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED,
-        occurred_at__date__gte=month_start,
+        occurred_at__date__gte=year_start,
     )
     cash_rows = accounts_with_balance()
 
@@ -1227,18 +1240,19 @@ def admin_dashboard(request):
         'recent_users': User.objects.prefetch_related('roles').order_by(
             '-date_joined'
         )[:6],
-        'month_income': month_transactions.filter(
+        'year_income': year_transactions.filter(
             tx_type=CashTransaction.Type.IN
         ).aggregate(total=Sum('amount'))['total'] or 0,
-        'month_expense': month_transactions.filter(
+        'year_expense': year_transactions.filter(
             tx_type=CashTransaction.Type.OUT
         ).aggregate(total=Sum('amount'))['total'] or 0,
         'cash_rows': cash_rows,
         'cash_total': sum(row['balance'] for row in cash_rows),
         'outstanding_amount': outstanding_receivables(),
         'new_enrollments': Enrollment.objects.filter(
-            enrolled_at__date__gte=month_start
+            enrolled_at__date__gte=year_start
         ).count(),
+        'graphiques': pour_admin(),
     }
     return render(request, 'dashboard/admin/index.html', context)
 
@@ -1263,6 +1277,7 @@ def secretaire_dashboard(request):
                 Prospect.Status.FOLLOW_UP, Prospect.Status.INTERESTED,
             ]
         ).count(),
+        'graphiques': pour_secretaire(),
     }
     return render(request, 'dashboard/secretaire/index.html', context)
 
@@ -1423,6 +1438,7 @@ def formateur_dashboard(request):
             status=Resource.Status.PUBLISHED,
         ).count(),
         'salaire': calculer_salaire_formateur(request.user),
+        'graphiques': pour_formateur(request.user),
     })
 
 
@@ -1603,6 +1619,7 @@ def etudiant_dashboard(request):
             status=SessionRecord.Status.PLANNED,
         ).select_related('session__course').order_by('date')[:8],
         'monthly_situation': situation_mensuelle,
+        'graphiques': pour_etudiant(request.user),
     })
 
 
@@ -1666,6 +1683,7 @@ def accueil_dashboard(request):
         'recent_prospects': Prospect.objects.select_related(
             'contact', 'course', 'agent'
         )[:8],
+        'graphiques': pour_accueil(),
     })
 
 

@@ -109,7 +109,7 @@
                 interaction: { mode: 'index', intersect: false },
                 plugins: {
                     legend: {
-                        display: series.length > 1,
+                        display: series.length > 0,
                         position: 'bottom',
                         labels: {
                             color: j.encre, usePointStyle: true,

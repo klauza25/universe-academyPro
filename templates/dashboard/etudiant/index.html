@@ -39,6 +39,8 @@
     {% include "dashboard/_stat.html" with label=lbl_absences value=attendance_totals.absents icon="close" tone="rose" hint=hint_justifier %}
 </div>
 
+{% include "dashboard/_charts.html" %}
+
 {% if monthly_situation %}
 <section class="ua-card ua-card-pad mb-6">
     <h2 class="ua-section-title mb-4">{% translate "Situation des mensualités" %}</h2>
@@ -203,4 +205,8 @@
         </div>
     </section>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+{% include "dashboard/_charts_scripts.html" %}
 {% endblock %}

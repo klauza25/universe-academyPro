@@ -251,3 +251,62 @@ msgstr "You cannot delete your own account."
 
 msgid "Impossible de supprimer le dernier super administrateur actif."
 msgstr "The last active super administrator cannot be deleted."
+
+
+msgid "Contrôle financier — %(y)s"
+msgstr "Financial overview — %(y)s"
+
+msgid "Entrées de l'année"
+msgstr "Year income"
+
+msgid "Validées"
+msgstr "Validated"
+
+msgid "Sorties de l'année"
+msgstr "Year expenses"
+
+msgid "Encaissés cette année"
+msgstr "Collected this year"
+
+msgid "Versés cette année"
+msgstr "Paid this year"
+
+msgid "%(c)s opération(s) validée(s) cette année · toutes origines confondues"
+msgstr "%(c)s validated transaction(s) this year · all sources combined"
+
+msgid "%(n)s nouvelle(s) inscription(s) cette année"
+msgstr "%(n)s new enrollment(s) this year"
+
+
+msgid "Visites par mois"
+msgstr "Visits per month"
+
+msgid "Visites enregistrées à l’accueil, sur %(n)s mois."
+msgstr "Reception visits recorded over %(n)s months."
+
+msgid "Visites"
+msgstr "Visits"
+
+msgid "Assiduité de mes groupes"
+msgstr "My groups' attendance"
+
+msgid "Présences, retards, absences et excuses de vos groupes sur %(n)s mois."
+msgstr "Attendance, lateness, absences and excuses for your groups over %(n)s months."
+
+msgid "Mon assiduité"
+msgstr "My attendance"
+
+msgid "Vos présences, retards, absences et excuses sur %(n)s mois."
+msgstr "Your attendance, lateness, absences and excuses over %(n)s months."
+
+msgid "Présences, retards, absences et excuses sur %(n)s mois."
+msgstr "Attendance, lateness, absences and excuses over %(n)s months."
+
+msgid "Aperçu"
+msgstr "Overview"
+
+msgid "Total des entrées de caisse validées, mois par mois."
+msgstr "Total validated cash inflows, month by month."
+
+msgid "Staff (tous)"
+msgstr "Staff (all)"
