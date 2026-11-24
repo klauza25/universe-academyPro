@@ -43,15 +43,25 @@
     {% if fils %}
     <div class="mt-3 grid gap-2">
         {% for fil in fils %}
-        <a href="{% url 'core:dashboard:messagerie-detail' fil.conversation.id %}"
-           class="ua-chat-ligne" style="border:1px solid var(--ua-line);border-radius:14px;">
-            <span class="ua-avatar">{% if fil.interlocuteur %}{{ fil.interlocuteur.initials|default:fil.interlocuteur.email|slice:":2"|upper }}{% else %}?{% endif %}</span>
-            <span class="ua-chat-ligne-texte">
-                <span class="ua-chat-ligne-nom">{% if fil.interlocuteur %}{{ fil.interlocuteur.display_label }}{% else %}{% translate "Utilisateur indisponible" %}{% endif %}</span>
-                <span class="ua-chat-ligne-extrait">{% if fil.dernier %}{{ fil.dernier.body|truncatechars:80 }}{% else %}{% translate "Aucun message pour le moment." %}{% endif %}</span>
-            </span>
-            {% if fil.non_lus %}<span class="ua-badge ua-badge-indigo">{{ fil.non_lus }}</span>{% endif %}
-        </a>
+        {% translate "Supprimer cette conversation ?" as confirmation_supprimer_conversation %}
+        <div class="ua-chat-ligne" style="border:1px solid var(--ua-line);border-radius:14px;">
+            <a href="{% url 'core:dashboard:messagerie-detail' fil.conversation.id %}"
+               style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-decoration:none;color:inherit;">
+                <span class="ua-avatar">{% if fil.interlocuteur %}{{ fil.interlocuteur.initials|default:fil.interlocuteur.email|slice:":2"|upper }}{% else %}?{% endif %}</span>
+                <span class="ua-chat-ligne-texte">
+                    <span class="ua-chat-ligne-nom">{% if fil.interlocuteur %}{{ fil.interlocuteur.display_label }}{% else %}{% translate "Utilisateur indisponible" %}{% endif %}</span>
+                    <span class="ua-chat-ligne-extrait">{% if fil.dernier %}{{ fil.dernier.body|truncatechars:80 }}{% else %}{% translate "Aucun message pour le moment." %}{% endif %}</span>
+                </span>
+                {% if fil.non_lus %}<span class="ua-badge ua-badge-indigo">{{ fil.non_lus }}</span>{% endif %}
+            </a>
+            <form method="post" action="{% url 'core:dashboard:messagerie-conversation-delete' fil.conversation.id %}"
+                  onsubmit="return confirm('{{ confirmation_supprimer_conversation|escapejs }}');">
+                {% csrf_token %}
+                <button type="submit" class="ua-chat-suppr" title="{% translate 'Supprimer la conversation' %}" aria-label="{% translate 'Supprimer la conversation' %}" style="width:34px;height:34px;margin-top:0;">
+                    {% icon "trash" %}
+                </button>
+            </form>
+        </div>
         {% endfor %}
     </div>
     {% else %}

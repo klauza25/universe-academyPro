@@ -208,6 +208,25 @@ def message_delete(request, conversation_id, message_id):
     )
 
 
+@require_POST
+@active_account_required
+def conversation_delete(request, conversation_id):
+    """Retire l'utilisateur de la conversation, et la supprime si elle est vide."""
+    conversation = get_object_or_404(
+        Conversation, pk=conversation_id, participants=request.user
+    )
+    interlocuteur = conversation.interlocuteur(request.user)
+    log_audit(
+        request, 'MESSAGE_CONVERSATION_DELETE', 'Conversation', conversation.id,
+        before={'with': str(interlocuteur.pk) if interlocuteur else ''},
+    )
+    conversation.participants.remove(request.user)
+    if not conversation.participants.exists():
+        conversation.delete()
+    messages.success(request, _("Conversation supprimée."))
+    return redirect('core:dashboard:messagerie')
+
+
 @require_GET
 @never_cache
 @active_account_required

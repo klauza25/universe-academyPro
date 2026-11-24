@@ -313,3 +313,12 @@ msgstr "Staff (all)"
 
 msgid "Utilisateur indisponible"
 msgstr "User unavailable"
+
+msgid "Supprimer cette conversation ?"
+msgstr "Delete this conversation?"
+
+msgid "Supprimer la conversation"
+msgstr "Delete conversation"
+
+msgid "Conversation supprimée."
+msgstr "Conversation deleted."

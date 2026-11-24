@@ -45,6 +45,8 @@ dashboard_urlpatterns = [
          views_messagerie.messages_poll, name='messagerie-poll'),
     path('messagerie/<uuid:conversation_id>/messages/<uuid:message_id>/supprimer/',
          views_messagerie.message_delete, name='messagerie-delete'),
+    path('messagerie/<uuid:conversation_id>/supprimer/',
+         views_messagerie.conversation_delete, name='messagerie-conversation-delete'),
 
     # Profil -----------------------------------------------------------------
     path('profil/', views_profile.profile_view, name='profile'),

@@ -1161,8 +1161,7 @@ class Conversation(models.Model):
         """Retourne le fil existant ou le crée, avec ses deux participants."""
         cle = cls.cle_paire(premier, second)
         conversation, cree = cls.objects.get_or_create(pair_key=cle)
-        if cree:
-            conversation.participants.add(premier, second)
+        conversation.participants.add(premier, second)
         return conversation, cree
 
     def interlocuteur(self, user):
