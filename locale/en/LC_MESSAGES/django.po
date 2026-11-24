@@ -5936,3 +5936,6 @@ msgstr "Total validated cash inflows, month by month."
 
 msgid "Staff (tous)"
 msgstr "Staff (all)"
+
+msgid "Utilisateur indisponible"
+msgstr "User unavailable"

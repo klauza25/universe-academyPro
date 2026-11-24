@@ -45,9 +45,9 @@
         {% for fil in fils %}
         <a href="{% url 'core:dashboard:messagerie-detail' fil.conversation.id %}"
            class="ua-chat-ligne" style="border:1px solid var(--ua-line);border-radius:14px;">
-            <span class="ua-avatar">{{ fil.interlocuteur.initials|default:fil.interlocuteur.email|slice:":2"|upper }}</span>
+            <span class="ua-avatar">{% if fil.interlocuteur %}{{ fil.interlocuteur.initials|default:fil.interlocuteur.email|slice:":2"|upper }}{% else %}?{% endif %}</span>
             <span class="ua-chat-ligne-texte">
-                <span class="ua-chat-ligne-nom">{{ fil.interlocuteur.display_label }}</span>
+                <span class="ua-chat-ligne-nom">{% if fil.interlocuteur %}{{ fil.interlocuteur.display_label }}{% else %}{% translate "Utilisateur indisponible" %}{% endif %}</span>
                 <span class="ua-chat-ligne-extrait">{% if fil.dernier %}{{ fil.dernier.body|truncatechars:80 }}{% else %}{% translate "Aucun message pour le moment." %}{% endif %}</span>
             </span>
             {% if fil.non_lus %}<span class="ua-badge ua-badge-indigo">{{ fil.non_lus }}</span>{% endif %}
