@@ -109,8 +109,6 @@ def login_view(request):
                     messages.error(request, _("Votre compte est désactivé ou suspendu."))
                     return redirect('core:login')
 
-                if user.password_must_change:
-                    return redirect('core:dashboard:password-change-required')
                 return redirect('core:dashboard:dashboard-router')
             else:
                 messages.error(request, _("Identifiant ou mot de passe incorrect."))

@@ -14,12 +14,6 @@
    class="ua-nav-link {% if request.resolver_match.url_name == 'user-list' or request.resolver_match.url_name == 'user-detail' or request.resolver_match.url_name == 'user-edit' %}is-active{% endif %}">
     {% icon "users" %}<span>{% translate "Utilisateurs" %}</span>
 </a>
-{% if 'SUPER_ADMIN' in user_roles or 'ASSISTANT_ADMIN' in user_roles %}
-<a href="{% url 'core:dashboard:identifiants-page' %}"
-   class="ua-nav-link {% if request.resolver_match.url_name == 'identifiants-page' %}is-active{% endif %}">
-    {% icon "mail" %}<span>{% translate "Identifiants étudiants" %}</span>
-</a>
-{% endif %}
 {% include "dashboard/messagerie/_nav_item.html" %}
 
 <p class="ua-nav-label">{% translate "Modules" %}</p>

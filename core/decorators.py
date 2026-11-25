@@ -14,10 +14,6 @@ def active_account_required(view_func):
             return redirect('core:pending-approval')
         if request.user.account_status != AccountStatus.ACTIVE:
             return redirect('core:access-denied')
-        if (request.user.password_must_change and
-                getattr(request.resolver_match, 'url_name', None)
-                != 'password-change-required'):
-            return redirect('core:dashboard:password-change-required')
         return view_func(request, *args, **kwargs)
     return wrapper
 

@@ -137,8 +137,7 @@ def profile_view(request):
             if password_form.is_valid():
                 avant = user.has_usable_password()
                 user.set_password(password_form.cleaned_data['new_password'])
-                user.password_must_change = False
-                user.save(update_fields=['password', 'password_must_change'])
+                user.save(update_fields=['password'])
                 # Sans ceci, Django invalide la session au changement de
                 # hachage et la personne est éjectée de son propre écran.
                 update_session_auth_hash(request, user)
@@ -157,37 +156,6 @@ def profile_view(request):
         'password_form': password_form,
         'account_since': user.date_joined,
         'profile_user': user,
-    })
-
-
-@login_required
-@active_account_required
-def password_change_required(request):
-    """Première connexion après remise d'un identifiant temporaire."""
-    user = request.user
-    if not user.password_must_change:
-        return redirect('core:dashboard:dashboard-router')
-
-    if request.method == 'POST':
-        form = PasswordChangeForm(request.POST, user=user)
-        if form.is_valid():
-            user.set_password(form.cleaned_data['new_password'])
-            user.password_must_change = False
-            user.save(update_fields=['password', 'password_must_change'])
-            update_session_auth_hash(request, user)
-            log_audit(
-                request, 'PROFILE_PASSWORD', 'User', str(user.id),
-                before={'mot_de_passe_temporaire': True},
-                after={'mot_de_passe_temporaire': False},
-            )
-            messages.success(request, _("Mot de passe modifié. Bonne navigation."))
-            return redirect('core:dashboard:dashboard-router')
-    else:
-        form = PasswordChangeForm(user=user)
-
-    return render(request, 'dashboard/profile/password_required.html', {
-        'form': form,
-        'email': user.email,
     })
 
 
