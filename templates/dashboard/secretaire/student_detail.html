@@ -60,7 +60,7 @@
         </div>
         {% endif %}
         <dl class="space-y-3 text-sm">
-            <div><dt class="text-xs ua-muted">{% translate "Téléphone" %}</dt><dd>{{ student.phone|default:"—" }}</dd></div>
+            <div><dt class="text-xs ua-muted">{% translate "Téléphone" %}</dt><dd>{% include "dashboard/_whatsapp.html" with phone=student.phone %}</dd></div>
             <div><dt class="text-xs ua-muted">{% translate "Adresse" %}</dt><dd>{{ student.address|default:"—"|linebreaksbr }}</dd></div>
             <div><dt class="text-xs ua-muted">{% translate "Date de naissance" %}</dt><dd>{{ student.birth_date|date:"d/m/Y"|default:"—" }}</dd></div>
             <div><dt class="text-xs ua-muted">{% translate "Compte" %}</dt><dd>{{ student.get_account_status_display }}</dd></div>

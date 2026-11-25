@@ -55,7 +55,7 @@
             </div>
             <div>
                 <p class="ua-stat-label">{% translate "Téléphone" %}</p>
-                <p class="text-sm font-semibold mt-1" style="color:#1e2044;">{{ profile_user.phone|default:"—" }}</p>
+                <p class="text-sm font-semibold mt-1" style="color:#1e2044;">{% include "dashboard/_whatsapp.html" with phone=profile_user.phone %}</p>
             </div>
             <div>
                 <p class="ua-stat-label">{% translate "Code interne" %}</p>

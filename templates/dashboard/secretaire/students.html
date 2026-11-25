@@ -78,7 +78,7 @@
                             </div>
                         </div>
                     </td>
-                    <td>{{ student.phone|default:"—" }}</td>
+                    <td>{% include "dashboard/_whatsapp.html" with phone=student.phone %}</td>
                     <td>
                         {% for enrollment in student.enrollments.all %}
                         <span class="ua-badge ua-badge-indigo">{{ enrollment.session.course.title }}</span>

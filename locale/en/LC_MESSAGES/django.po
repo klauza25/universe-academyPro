@@ -5957,3 +5957,6 @@ msgstr "Record a student's enrollment fee on their record."
 
 msgid "Mensualités payées"
 msgstr "Monthly fees paid"
+
+msgid "Écrire sur WhatsApp"
+msgstr "Message on WhatsApp"

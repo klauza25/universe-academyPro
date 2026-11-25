@@ -72,7 +72,7 @@
                         <span class="ua-cell-title">{{ prospect.contact.full_name }}</span>
                         {% if prospect.contact.email %}<span class="ua-cell-sub block">{{ prospect.contact.email }}</span>{% endif %}
                     </td>
-                    <td>{{ prospect.contact.phone }}</td>
+                    <td>{% include "dashboard/_whatsapp.html" with phone=prospect.contact.phone %}</td>
                     <td>{{ prospect.course.title|default:prospect.domain|default:"—" }}</td>
                     <td><span class="ua-badge ua-badge-indigo">{{ prospect.get_status_display }}</span></td>
                     <td>
