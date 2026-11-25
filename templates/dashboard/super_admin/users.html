@@ -16,9 +16,14 @@
         </p>
     </div>
     {% if can_manage_users %}
-    <a href="{% url 'core:dashboard:user-create' %}" class="ua-btn ua-btn-primary">
-        {% icon "user-plus" %} {% translate "Créer un compte" %}
-    </a>
+    <div class="flex flex-wrap gap-3">
+        <a href="{% url 'core:dashboard:identifiants-page' %}" class="ua-btn ua-btn-ghost">
+            {% icon "mail" %} {% translate "Identifiants étudiants" %}
+        </a>
+        <a href="{% url 'core:dashboard:user-create' %}" class="ua-btn ua-btn-primary">
+            {% icon "user-plus" %} {% translate "Créer un compte" %}
+        </a>
+    </div>
     {% endif %}
 </div>
 

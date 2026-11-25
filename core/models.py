@@ -168,6 +168,10 @@ class User(AbstractUser):
         default=AccountStatus.PENDING_APPROVAL,
         db_index=True,
     )
+    password_must_change = models.BooleanField(
+        default=False,
+        verbose_name=_("Doit changer son mot de passe à la connexion"),
+    )
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     birth_date = models.DateField(null=True, blank=True)
@@ -1155,6 +1159,7 @@ class Notification(models.Model):
         ACCOUNT_REJECTED = 'ACCOUNT_REJECTED', _("Compte refusé")
         SCHOLARSHIP_STATUS = 'SCHOLARSHIP_STATUS', _("Statut bourse")
         PAYMENT_RECEIVED = 'PAYMENT_RECEIVED', _("Paiement reçu")
+        CREDENTIALS_ISSUED = 'CREDENTIALS_ISSUED', _("Identifiants de connexion")
         GENERAL = 'GENERAL', _("Général")
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
