@@ -61,7 +61,7 @@
                                 <p class="ua-cell-title truncate">
                                     {{ ar.user.get_full_name|default:ar.user.email }}
                                 </p>
-                                {% if ar.user.phone %}<p class="ua-cell-sub">{{ ar.user.phone }}</p>{% endif %}
+                                {% if ar.user.phone %}<p class="ua-cell-sub">{% include "dashboard/_whatsapp.html" with phone=ar.user.phone %}</p>{% endif %}
                             </div>
                         </div>
                     </td>

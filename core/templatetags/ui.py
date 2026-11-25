@@ -1,4 +1,6 @@
 """Small UI helpers for the dashboard templates."""
+import re
+
 from django import template
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -49,6 +51,26 @@ ICONS = {
     "volume": '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M18.5 5.5a9 9 0 0 1 0 13"/>',
     "volume-off": '<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="22" y1="9" x2="16" y2="15"/><line x1="16" y1="9" x2="22" y2="15"/>',
 }
+
+
+@register.filter
+def whatsapp(phone):
+    """Lien ``wa.me`` pour un numéro affiché, chaîne vide si numéro absent.
+
+    Les numéros congolais sont saisis indifféremment ``06…``, ``+242 06…`` ou
+    ``00242 06…`` : WhatsApp n'accepte que les chiffres, avec l'indicatif du
+    pays mais sans signe ``+``. Les autres indicatifs sont conservés tels quels.
+    """
+    chiffres = re.sub(r'\D', '', str(phone or ''))
+    if not chiffres:
+        return ''
+    if chiffres.startswith('00'):
+        chiffres = chiffres[2:]
+    if chiffres.startswith('0'):
+        chiffres = '242' + chiffres[1:]
+    elif len(chiffres) <= 9 and not chiffres.startswith('242'):
+        chiffres = '242' + chiffres
+    return f'https://wa.me/{chiffres}'
 
 
 @register.filter

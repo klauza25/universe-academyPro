@@ -2,21 +2,21 @@
 
 Un compte créé par l'import arrive sans mot de passe utilisable : il existe
 mais personne ne peut s'y connecter. Ce module lui donne une adresse prévisible
-(``prenom.nom-<formation>@universe.academy``), un mot de passe temporaire
-solide, active le compte et force un changement à la première connexion.
+(``prenom.nom-<formation>@universe.academy``), le mot de passe temporaire choisi
+par la direction (``nom-<formation>123``, ex. ``dupont-e123``), active le compte
+et force un changement à la première connexion.
 
-Le mot de passe en clair n'est jamais journalisé : il est remis une seule fois,
-dans le fichier privé téléchargé par le gestionnaire et dans la notification
-interne de l'étudiant.
+Le secret n'est jamais journalisé ni mis dans une notification : il est remis
+une seule fois, dans le fichier CSV privé que le gestionnaire envoie ensuite à
+l'étudiant (notamment par WhatsApp). Le mot de passe temporaire est donc
+volontairement simple : l'obligation de le changer à la première connexion est
+ce qui protège le compte.
 """
 from __future__ import annotations
 
 import re
-import secrets
-import string
 import unicodedata
 
-from django.contrib.auth.password_validation import validate_password
 from django.db import transaction
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
@@ -27,24 +27,23 @@ DOMAINE = 'universe.academy'
 
 # i18n-exempt : libellés de formations stockés en base, utilisés comme clés.
 CODE_FORMATIONS = {
-    'excel avancé': 'e',
-    'informatique générale': 'i',
-    'informatique de gestion': 'g',
+    'excel avancé': 'e',  # i18n-exempt: clé de formation stockée en base
+    'informatique générale': 'i',  # i18n-exempt: clé de formation
+    'informatique de gestion': 'g',  # i18n-exempt: clé de formation
     'maintenance informatique': 'm',
     'bureautique': 'b',
     'anglais': 'a',
-    'développement web': 'd',
+    'développement web': 'd',  # i18n-exempt: clé de formation
 }
 
-ALPHABET = ''.join(
-    sorted(set(string.ascii_lowercase + string.digits) - set('o0il1')))
+SUFFIXE_SECRET = '123'
 
 
 def _mots(texte: str) -> list[str]:
     """Des mots ASCII minuscules, sans accents ni ponctuation."""
     propre = unicodedata.normalize('NFKD', texte or '').encode(
         'ascii', 'ignore').decode().lower()
-    return [mot for mot in re.split(r'[^a-z]+', propre) if mot]
+    return [mot for mot in re.split(r'[^a-z]+', propre) if mot]  # i18n-exempt: regex
 
 
 def code_formation(titre: str | None) -> str:
@@ -85,18 +84,16 @@ def adresse_pour(user, code: str) -> str:
     return candidat
 
 
-def mot_de_passe_pour(user) -> str:
-    """Un secret temporaire qui satisfait les validateurs du projet."""
-    for _ in range(60):
-        secret = ''.join(secrets.choice(ALPHABET) for _ in range(12))
-        try:
-            validate_password(secret, user)
-        except Exception:
-            continue
-        return secret
-    # Ce repli ne devrait jamais servir : il garde la génération utilisable
-    # même si les règles du projet deviennent plus strictes.
-    return f'Ua{secrets.token_hex(8)}9'
+def mot_de_passe_pour(user, code: str) -> str:
+    """Le temporaire convenu : ``nom-lettre123`` (ex. ``dupont-e123``).
+
+    Ce mot de passe est volontairement prévisible pour que la direction puisse
+    le dicter par WhatsApp. Il contourne donc les validateurs de mot de passe
+    (notamment la similarité avec le nom), mais ``password_must_change`` oblige
+    à le remplacer dès la première connexion.
+    """
+    nom = _parties(user)[1]
+    return f'{nom}-{code}{SUFFIXE_SECRET}'
 
 
 def formation_de(user) -> str:
@@ -114,7 +111,7 @@ def emettre(utilisateurs) -> list[dict]:
         formation = formation_de(user)
         code = code_formation(formation)
         email = adresse_pour(user, code)
-        secret = mot_de_passe_pour(user)
+        secret = mot_de_passe_pour(user, code)
 
         user.username = email
         user.email = email
@@ -126,16 +123,15 @@ def emettre(utilisateurs) -> list[dict]:
             'password_must_change',
         ])
 
+        # Aucun secret ici : la notification reste lisible même si l'étudiant
+        # partage son écran. Le mot de passe est envoyé hors application.
         Notification.objects.create(
             user=user,
             notification_type=Notification.Type.CREDENTIALS_ISSUED,
-            title=_("Vos identifiants Univers Academy"),
-            message=(
-                _("Email : %(email)s\n"
-                  "Mot de passe temporaire : %(password)s\n"
-                  "Connectez-vous, puis changez ce mot de passe.")
-                % {'email': email, 'password': secret}
-            ),
+            title=_("Votre compte Univers Academy est activé"),
+            message=_(
+                "Connectez-vous avec %(email)s et le mot de passe transmis par l'administration. Vous devrez le changer dès la première connexion."
+            ) % {'email': email},
             link=reverse('core:dashboard:password-change-required'),
         )
 

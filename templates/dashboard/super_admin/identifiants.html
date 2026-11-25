@@ -19,10 +19,10 @@
     <h2 class="ua-section-title mb-3">{% translate "Ce que fait la génération" %}</h2>
     <ul class="ua-list space-y-2 text-sm">
         <li>{% blocktrans with d=domain %}Crée une adresse « prénom.nom-lettre@{{ d }} » : e pour Excel, i pour Informatique générale, g pour Informatique de gestion, m pour Maintenance, b pour Bureautique, a pour Anglais, d pour Développement Web.{% endblocktrans %}</li>
-        <li>{% translate "Pose un mot de passe temporaire et active le compte." %}</li>
+        <li>{% translate "Pose le mot de passe temporaire « nom-e123 » (nom de famille, lettre de formation, 123) et active le compte." %}</li>
         <li>{% translate "Oblige l'étudiant à changer son mot de passe à sa première connexion." %}</li>
-        <li>{% translate "Dépose ces identifiants dans les notifications internes de l'étudiant." %}</li>
-        <li>{% translate "Télécharge un fichier CSV privé à remettre manuellement aux étudiants." %}</li>
+        <li>{% translate "Prévient l'étudiant par notification interne, sans afficher le mot de passe." %}</li>
+        <li>{% translate "Télécharge un fichier CSV privé : c'est toi qui transmets le mot de passe à chaque étudiant." %}</li>
     </ul>
     <p class="ua-page-sub mt-3">
         {% blocktrans with t=total_etudiants e=en_attente_changement %}{{ t }} étudiant(s) au total · {{ e }} identifiant(s) déjà remis, non encore changés.{% endblocktrans %}

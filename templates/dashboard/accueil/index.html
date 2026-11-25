@@ -57,7 +57,7 @@
                     {% for visit in visits_today %}
                     <tr>
                         <td><a class="ua-cell-title" href="{% url 'core:dashboard:visit-detail' visit.id %}">{{ visit.reference }}</a></td>
-                        <td>{{ visit.contact.full_name }}<span class="ua-cell-sub block">{{ visit.contact.phone }}</span></td>
+                        <td>{{ visit.contact.full_name }}<span class="ua-cell-sub block">{% include "dashboard/_whatsapp.html" with phone=visit.contact.phone %}</span></td>
                         <td>{{ visit.reason|default:"—" }}</td>
                         <td>{{ visit.arrival_at|date:"H:i" }}</td>
                         <td><span class="ua-badge ua-badge-indigo">{{ visit.get_status_display }}</span></td>
@@ -79,7 +79,7 @@
         <div class="ua-list-row">
             <div>
                 <a href="{% url 'core:dashboard:prospect-detail' prospect.id %}" class="ua-cell-title">{{ prospect.contact.full_name }}</a>
-                <span class="ua-cell-sub block">{{ prospect.contact.phone }} · {{ prospect.next_follow_up|date:"d/m/Y" }}</span>
+                <span class="ua-cell-sub block">{% include "dashboard/_whatsapp.html" with phone=prospect.contact.phone %} · {{ prospect.next_follow_up|date:"d/m/Y" }}</span>
             </div>
             <span class="ua-badge ua-badge-amber">{{ prospect.get_status_display }}</span>
         </div>
@@ -123,7 +123,7 @@
                     {% for prospect in recent_prospects %}
                     <tr>
                         <td><a class="ua-cell-title" href="{% url 'core:dashboard:prospect-detail' prospect.id %}">{{ prospect.reference }}</a></td>
-                        <td>{{ prospect.contact.full_name }}<span class="ua-cell-sub block">{{ prospect.contact.phone }}</span></td>
+                        <td>{{ prospect.contact.full_name }}<span class="ua-cell-sub block">{% include "dashboard/_whatsapp.html" with phone=prospect.contact.phone %}</span></td>
                         <td>{{ prospect.course.title|default:"—" }}</td>
                         <td>{{ prospect.next_follow_up|date:"d/m/Y"|default:"—" }}</td>
                         <td><span class="ua-badge ua-badge-indigo">{{ prospect.get_status_display }}</span></td>

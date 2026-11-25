@@ -86,11 +86,13 @@ class IdentifiantsTests(BusinessTestBase):
         self.assertEqual(etudiant.account_status, AccountStatus.ACTIVE)
         self.assertTrue(etudiant.password_must_change)
         self.assertTrue(etudiant.has_usable_password())
+        self.assertEqual(lignes[0]['mot_de_passe'], 'clarisse-e123')
         self.assertTrue(etudiant.check_password(lignes[0]['mot_de_passe']))
         notification = Notification.objects.get(user=etudiant)
         self.assertEqual(
             notification.notification_type, Notification.Type.CREDENTIALS_ISSUED)
-        self.assertIn(lignes[0]['mot_de_passe'], notification.message)
+        self.assertIn(lignes[0]['email'], notification.message)
+        self.assertNotIn(lignes[0]['mot_de_passe'], notification.message)
         self.assertEqual(
             notification.link, reverse('core:dashboard:password-change-required'))
 
@@ -113,6 +115,7 @@ class IdentifiantsTests(BusinessTestBase):
             lignes[0], ['Courriel', 'Mot de passe temporaire', 'Code interne',
                         'Prénom', 'Nom', 'Formation'])
         self.assertEqual(lignes[1][0], 'jean.dupont-x@universe.academy')
+        self.assertEqual(lignes[1][1], 'dupont-x123')
         etudiant.refresh_from_db()
         self.assertEqual(etudiant.email, lignes[1][0])
         self.assertTrue(etudiant.password_must_change)
@@ -136,10 +139,9 @@ class IdentifiantsTests(BusinessTestBase):
     def test_connexion_force_changement_et_deblocage(self):
         etudiant = self.etudiant_sans_mot_de_passe(
             'Jean', 'Dupont', 'jean@test.local')
-        identifiants.emettre([etudiant])
+        secret = identifiants.emettre([etudiant])[0]['mot_de_passe']
+        self.assertEqual(secret, 'dupont-x123')
         etudiant.refresh_from_db()
-        secret = Notification.objects.get(user=etudiant).message.split(
-            'Mot de passe temporaire : ')[1].split('\n')[0]
         client = self.client_class()
         self.assertTrue(client.login(email=etudiant.email, password=secret))
         response = client.get(reverse('core:dashboard:user-list'))

@@ -6,7 +6,7 @@
         {% for contact in contacts %}
         <tr>
             <td class="ua-cell-title">{{ contact.full_name }}</td>
-            <td>{{ contact.phone }}</td>
+            <td>{% include "dashboard/_whatsapp.html" with phone=contact.phone %}</td>
             <td>{{ contact.email|default:"—" }}</td>
         </tr>
         {% endfor %}

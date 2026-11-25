@@ -6002,3 +6002,108 @@ msgstr "Collected during the period"
 
 msgid "Versés sur la période"
 msgstr "Paid during the period"
+
+msgid "%(n)s compte(s) étudiant(s) attendent un identifiant."
+msgstr "%(n)s student account(s) are waiting for credentials."
+
+msgid ""
+"%(t)s étudiant(s) au total · %(e)s identifiant(s) déjà remis, non encore "
+"changés."
+msgstr ""
+"%(t)s student(s) in total · %(e)s credential(s) already issued, not yet "
+"changed."
+
+msgid ""
+"Aucun identifiant à générer : tous les étudiants ont déjà un mot de passe."
+msgstr "No credentials to generate: all students already have a password."
+
+msgid "Ce que fait la génération"
+msgstr "What generation does"
+
+msgid "Changer le mot de passe"
+msgstr "Change password"
+
+msgid ""
+"Connectez-vous avec %(email)s et le mot de passe transmis par "
+"l'administration. Vous devrez le changer dès la première connexion."
+msgstr ""
+"Sign in with %(email)s and the password provided by the administrator. You "
+"will have to change it at first login."
+
+msgid ""
+"Connecté sous « %(e)s ». Choisissez un nouveau mot de passe pour continuer."
+msgstr "Signed in as “%(e)s”. Choose a new password to continue."
+
+msgid ""
+"Crée une adresse « prénom.nom-lettre@%(d)s » : e pour Excel, i pour "
+"Informatique générale, g pour Informatique de gestion, m pour Maintenance, b"
+" pour Bureautique, a pour Anglais, d pour Développement Web."
+msgstr ""
+"Creates a “firstname.lastname-letter@%(d)s” address: e for Excel, i for "
+"General IT, g for Management IT, m for Maintenance, b for Office automation,"
+" a for English, d for Web Development."
+
+msgid "Doit changer son mot de passe à la connexion"
+msgstr "Must change password at login"
+
+msgid "Générer et télécharger les identifiants"
+msgstr "Generate and download credentials"
+
+msgid "Générer les identifiants manquants"
+msgstr "Generate missing credentials"
+
+msgid "Identifiants de connexion"
+msgstr "Login credentials"
+
+msgid "Identifiants étudiants"
+msgstr "Student credentials"
+
+msgid "Mot de passe modifié. Bonne navigation."
+msgstr "Password changed. Happy browsing."
+
+msgid "Mot de passe temporaire"
+msgstr "Temporary password"
+
+msgid "Oblige l'étudiant à changer son mot de passe à sa première connexion."
+msgstr "Requires the student to change the password at first login."
+
+msgid ""
+"Pose le mot de passe temporaire « nom-e123 » (nom de famille, lettre de "
+"formation, 123) et active le compte."
+msgstr ""
+"Sets the temporary “name-e123” password (surname, course letter, 123) and "
+"activates the account."
+
+msgid "Première connexion"
+msgstr "First login"
+
+msgid ""
+"Prévient l'étudiant par notification interne, sans afficher le mot de passe."
+msgstr "Notifies the student internally, without displaying the password."
+
+msgid "Retour aux utilisateurs"
+msgstr "Back to users"
+
+msgid "Tous les comptes étudiants ont déjà un mot de passe : rien à générer."
+msgstr "All student accounts already have a password: nothing to generate."
+
+msgid ""
+"Télécharge un fichier CSV privé : c'est toi qui transmets le mot de passe à "
+"chaque étudiant."
+msgstr "Downloads a private CSV file: you send the password to each student."
+
+msgid "Valider mon nouveau mot de passe"
+msgstr "Save my new password"
+
+msgid "Votre compte Univers Academy est activé"
+msgstr "Your Univers Academy account is active"
+
+msgid ""
+"Votre identifiant temporaire ne doit servir qu'une fois. Le nouveau mot de "
+"passe doit contenir au moins 8 caractères et ne pas être trop simple."
+msgstr ""
+"Your temporary credentials must be used only once. The new password must "
+"contain at least 8 characters and must not be too simple."
+
+msgid "Écrire sur WhatsApp"
+msgstr "Message on WhatsApp"
