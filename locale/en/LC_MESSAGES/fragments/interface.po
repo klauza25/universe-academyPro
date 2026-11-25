@@ -161,3 +161,15 @@ msgstr "Next"
 
 msgid "Page %(p)s / %(t)s"
 msgstr "Page %(p)s of %(t)s"
+
+msgid "%(mois)s %(annee)s"
+msgstr "%(mois)s %(annee)s"
+
+msgid "Changer de période"
+msgstr "Change period"
+
+msgid "Opérations validées sur la période"
+msgstr "Validated transactions for the period"
+
+msgid "Solde du mois"
+msgstr "Monthly balance"

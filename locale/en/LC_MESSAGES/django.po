@@ -3039,9 +3039,6 @@ msgstr "Concept, program, topic…"
 msgid "Opérations en attente"
 msgstr "Pending transactions"
 
-msgid "Opérations validées"
-msgstr "Validated transactions"
-
 msgid "Oui"
 msgstr "Yes"
 
@@ -5992,3 +5989,21 @@ msgid ""
 msgstr ""
 "The preview refreshes after saving. Without an uploaded image, the bundled "
 "visuals remain in place."
+
+msgid "Entrées du mois"
+msgstr "This month's entries"
+
+msgid "Sorties du mois"
+msgstr "Exits this month"
+
+msgid "%(mois)s %(annee)s"
+msgstr "%(mois)s %(annee)s"
+
+msgid "Changer de période"
+msgstr "Change period"
+
+msgid "Opérations validées sur la période"
+msgstr "Validated transactions for the period"
+
+msgid "Solde du mois"
+msgstr "Monthly balance"

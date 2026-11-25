@@ -42,16 +42,16 @@
     {% include "dashboard/_stat.html" with label=lbl_formations value=active_courses icon="book-open" tone="sky" hint=hint_formations %}
 </div>
 
-{% translate "Entrées de l'année" as lbl_entrees %}
-{% translate "Opérations validées" as hint_operations %}
-{% translate "Sorties de l'année" as lbl_sorties %}
+{% include "dashboard/_finance_filter.html" %}
+{% translate "Entrées du mois" as lbl_entrees %}
+{% translate "Sorties du mois" as lbl_sorties %}
 {% translate "Solde des caisses" as lbl_solde %}
 {% translate "Tous comptes actifs" as hint_solde %}
 {% translate "Reste à recouvrer" as lbl_reste %}
 {% translate "Inscriptions en cours" as hint_reste %}
 <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-6">
-    {% include "dashboard/_stat.html" with label=lbl_entrees value=year_income|floatformat:0 icon="wallet" tone="green" hint=hint_operations %}
-    {% include "dashboard/_stat.html" with label=lbl_sorties value=year_expense|floatformat:0 icon="trending-up" tone="rose" hint=hint_operations %}
+    {% include "dashboard/_stat.html" with label=lbl_entrees value=finance_income|floatformat:0 icon="wallet" tone="green" hint=finance_periode %}
+    {% include "dashboard/_stat.html" with label=lbl_sorties value=finance_expense|floatformat:0 icon="trending-up" tone="rose" hint=finance_periode %}
     {% include "dashboard/_stat.html" with label=lbl_solde value=cash_total|floatformat:0 icon="credit-card" tone="indigo" hint=hint_solde %}
     {% include "dashboard/_stat.html" with label=lbl_reste value=outstanding_amount|floatformat:0 icon="chart" tone="amber" hint=hint_reste %}
 </div>
