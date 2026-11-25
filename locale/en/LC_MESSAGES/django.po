@@ -5881,26 +5881,8 @@ msgstr "The last active super administrator cannot be deleted."
 msgid "Vous ne pouvez pas supprimer votre propre compte."
 msgstr "You cannot delete your own account."
 
-msgid "Contrôle financier — %(y)s"
-msgstr "Financial overview — %(y)s"
-
-msgid "Entrées de l'année"
-msgstr "Year income"
-
 msgid "Validées"
 msgstr "Validated"
-
-msgid "Sorties de l'année"
-msgstr "Year expenses"
-
-msgid "Encaissés cette année"
-msgstr "Collected this year"
-
-msgid "Versés cette année"
-msgstr "Paid this year"
-
-msgid "%(c)s opération(s) validée(s) cette année · toutes origines confondues"
-msgstr "%(c)s validated transaction(s) this year · all sources combined"
 
 msgid "%(n)s nouvelle(s) inscription(s) cette année"
 msgstr "%(n)s new enrollment(s) this year"
@@ -6007,3 +5989,16 @@ msgstr "Validated transactions for the period"
 
 msgid "Solde du mois"
 msgstr "Monthly balance"
+
+msgid ""
+"%(c)s opération(s) validée(s) sur la période · toutes origines confondues"
+msgstr "%(c)s validated transaction(s) for the period · all sources combined"
+
+msgid "Contrôle financier — %(periode)s"
+msgstr "Financial control — %(periode)s"
+
+msgid "Encaissés sur la période"
+msgstr "Collected during the period"
+
+msgid "Versés sur la période"
+msgstr "Paid during the period"

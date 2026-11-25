@@ -64,6 +64,23 @@ class DashboardFinancePeriodeTest(BusinessTestBase):
         self.assertEqual(page.context['finance_mois'], self.today.month)
         self.assertEqual(page.context['finance_income'], 5000)
 
+    def test_le_tableau_super_admin_suit_aussi_le_filtre(self):
+        client = self.client_for(self.super_admin)
+        page = client.get(reverse('core:dashboard:super-admin-dashboard'))
+        self.assertEqual(page.context['finance_income'], 5000)
+        self.assertEqual(page.context['finance_expense'], 2000)
+        self.assertEqual(page.context['finance_transaction_count'], 2)
+        self.assertContains(page, 'Entrées du mois')
+        self.assertContains(page, 'id_finance_mois')
+
+        passe = self.entree_passee.occurred_at.date()
+        page = client.get(reverse('core:dashboard:super-admin-dashboard'),
+                          {'annee': passe.year, 'mois': passe.month})
+        self.assertEqual(page.context['finance_income'], 9000)
+        self.assertEqual(page.context['finance_expense'], 0)
+        self.assertEqual(page.context['finance_transaction_count'], 1)
+        self.assertContains(page, 'Sorties du mois')
+
     def test_le_tableau_assistant_a_le_meme_filtre(self):
         client = self.client_for(self.direction)
         page = client.get(reverse('core:dashboard:secretaire-dashboard'))

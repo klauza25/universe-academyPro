@@ -1,3 +1,5 @@
+import calendar
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -358,6 +360,37 @@ def super_admin_dashboard(request):
         category__name__in=salaries_categories,
     ).aggregate(total=Sum('amount'))['total'] or 0
 
+    finance = _finance_periode_context(request, today)
+    periode_debut = today.replace(
+        year=finance['finance_annee'], month=finance['finance_mois'], day=1)
+    dernier_jour = calendar.monthrange(
+        finance['finance_annee'], finance['finance_mois'])[1]
+    periode_fin = periode_debut.replace(day=dernier_jour)
+    if periode_fin > today:
+        periode_fin = today
+    periode_transactions = CashTransaction.objects.filter(
+        status=CashTransaction.Status.VALIDATED,
+        occurred_at__date__gte=periode_debut,
+        occurred_at__date__lte=periode_fin,
+    )
+    finance.update({
+        'finance_debut': periode_debut,
+        'finance_fin': periode_fin,
+        'finance_net': (
+            finance['finance_income'] - finance['finance_expense']
+        ),
+        'finance_payment_total': Payment.objects.filter(
+            status=Payment.Status.COMPLETED,
+            paid_at__date__gte=periode_debut,
+            paid_at__date__lte=periode_fin,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'finance_salaries': periode_transactions.filter(
+            tx_type=CashTransaction.Type.OUT,
+            category__name__in=salaries_categories,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'finance_transaction_count': periode_transactions.count(),
+    })
+
     paid_per_enrollment = Payment.objects.filter(
         enrollment=OuterRef('pk'),
         status=Payment.Status.COMPLETED,
@@ -373,6 +406,7 @@ def super_admin_dashboard(request):
     cash_rows = accounts_with_balance()
 
     context = {
+        **finance,
         'pending_requests': AccessRequest.objects.filter(
             status=AccessRequest.Status.PENDING
         ).count(),
