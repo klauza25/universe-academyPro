@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import (
     FileExtensionValidator, MaxValueValidator, MinValueValidator, RegexValidator
 )
+from django.templatetags.static import static
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -107,6 +109,21 @@ INTERNAL_CODE_PREFIXES = {
 def avatar_path(instance, filename):
     ext = filename.rsplit('.', 1)[-1].lower()
     return f"avatars/{instance.id}/{uuid.uuid4().hex}.{ext}"
+
+
+# Images de marque : même jeu de formats pour la vignette de l'onglet et le
+# logo, validé aussi par ImageField (Pillow vérifie que le fichier est une image).
+BRANDING_EXTENSIONS = ('png', 'jpg', 'jpeg', 'webp', 'ico')
+
+
+def favicon_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()
+    return f"branding/favicon-{uuid.uuid4().hex[:12]}.{ext}"
+
+
+def logo_path(instance, filename):
+    ext = filename.rsplit('.', 1)[-1].lower()
+    return f"branding/logo-{uuid.uuid4().hex[:12]}.{ext}"
 
 
 class UserManager(BaseUserManager):
@@ -500,6 +517,18 @@ class PlatformSetting(models.Model):
         verbose_name=_("Libellé de devise"),
         help_text=_("Le mot écrit à côté des montants. Les montants déjà enregistrés gardent la devise où ils sont entrés."),
     )
+    favicon = models.ImageField(
+        upload_to=favicon_path, null=True, blank=True,
+        validators=[FileExtensionValidator(BRANDING_EXTENSIONS)],
+        verbose_name=_("Favicon"),
+        help_text=_("Icône de l'onglet du navigateur (PNG, JPG, WEBP ou ICO, 2 Mo max)."),
+    )
+    logo = models.ImageField(
+        upload_to=logo_path, null=True, blank=True,
+        validators=[FileExtensionValidator(BRANDING_EXTENSIONS)],
+        verbose_name=_("Logo"),
+        help_text=_("Image de la barre latérale et des documents (PNG, JPG, WEBP ou ICO, 2 Mo max)."),
+    )
     seuil_alerte = models.PositiveSmallIntegerField(
         default=SEUIL_DEFAUT,
         validators=[MinValueValidator(1), MaxValueValidator(100)],
@@ -541,6 +570,23 @@ class PlatformSetting(models.Model):
         return [valeur for valeur in (
             self.adresse, self.telephone, self.email
         ) if valeur]
+
+    def _image_url(self, fichier, repli):
+        """L'URL publique d'une image de marque, ou le fichier d'origine.
+
+        ``MEDIA_URL`` n'est pas servi par Django sur l'hébergement : les images
+        passent par la vue ``core:branding``, qui ne lit que le dossier
+        ``branding``. Le nom court suffit, les sous-dossiers étant refusés.
+        """
+        if fichier and fichier.name:
+            return reverse('core:branding', args=[os.path.basename(fichier.name)])
+        return static(repli)
+
+    def favicon_url(self):
+        return self._image_url(self.favicon, 'img/favicon.svg')
+
+    def logo_url(self):
+        return self._image_url(self.logo, 'img/logo-univers.jpg')
 
 
 class Course(models.Model):

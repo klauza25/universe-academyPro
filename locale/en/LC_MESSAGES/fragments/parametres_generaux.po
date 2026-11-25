@@ -273,3 +273,39 @@ msgstr "academic management platform"
 
 msgid "reste %(amount)s %(dv)s"
 msgstr "balance due %(amount)s %(dv)s"
+
+msgid "Favicon"
+msgstr "Favicon"
+
+msgid "Logo"
+msgstr "Logo"
+
+msgid "Icône de l'onglet du navigateur (PNG, JPG, WEBP ou ICO, 2 Mo max)."
+msgstr "Browser tab icon (PNG, JPG, WEBP or ICO, 2 MB max)."
+
+msgid "Image de la barre latérale et des documents (PNG, JPG, WEBP ou ICO, 2 Mo max)."
+msgstr "Sidebar and document image (PNG, JPG, WEBP or ICO, 2 MB max)."
+
+msgid "L'image ne doit pas dépasser 2 Mo."
+msgstr "Image must not exceed 2 MB."
+
+msgid "Pour changer d'image, choisissez un nouveau fichier. La case « Effacer » retire l'image et revient au logo ou au favicon d'origine."
+msgstr "To change an image, choose a new file. The \"Clear\" checkbox removes it and restores the original logo or favicon."
+
+msgid "Favicon et logo"
+msgstr "Favicon and logo"
+
+msgid "Onglet du navigateur, barre latérale, pages publiques et en-têtes imprimés."
+msgstr "Browser tab, sidebar, public pages and printed headers."
+
+msgid "Identité visuelle en place"
+msgstr "Current visual identity"
+
+msgid "Logo de l’établissement"
+msgstr "School logo"
+
+msgid "Favicon de l’établissement"
+msgstr "School favicon"
+
+msgid "L'aperçu se rafraîchit après enregistrement. Sans image déposée, les visuels fournis avec l'application restent en place."
+msgstr "The preview refreshes after saving. Without an uploaded image, the bundled visuals remain in place."

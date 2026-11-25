@@ -10,7 +10,7 @@
         <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-4 sm:px-6">
             <a href="{% url 'core:home' %}" class="flex items-center gap-3">
                 <div class="flex h-10 w-10 items-center justify-center overflow-hidden rounded-full ring-1 ring-slate-200">
-                    <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}" class="h-10 w-10 object-cover">
+                    <img src="{{ plateforme.logo_url }}" alt="{{ plateforme.nom }}" class="h-10 w-10 object-cover">
                 </div>
                 <div class="leading-tight">
                     <p class="text-sm font-semibold text-slate-900">{{ plateforme.nom }}</p>

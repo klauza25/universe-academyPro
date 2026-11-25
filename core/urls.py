@@ -190,4 +190,5 @@ urlpatterns = [
     path('dashboard/', include((dashboard_urlpatterns, 'dashboard'))),
     path('documents/<uuid:doc_id>/', views.serve_private_file, name='serve-private-file'),
     path('media/avatars/<path:path>', views_profile.serve_avatar, name='avatar'),
+    path('branding/<path:filename>', views_reglages.serve_branding, name='branding'),
 ]

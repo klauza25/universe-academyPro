@@ -130,7 +130,7 @@
 
     <div class="sheet">
         <div class="letterhead">
-            <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}">
+            <img src="{{ plateforme.logo_url }}" alt="{{ plateforme.nom }}">
             <div class="org">
                 <strong>{{ plateforme.nom }}</strong>
                 {% for ligne in plateforme.bloc_legal %}{{ ligne }}<br>{% endfor %}

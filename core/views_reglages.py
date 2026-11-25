@@ -9,9 +9,15 @@ cesse simplement d'être cochée. Tant qu'aucune année n'est écrite, les liste
 affichent toutes les années — l'application n'invente aucun calendrier à la
 place de la direction.
 """
+import os
+
+from django.conf import settings
 from django.contrib import messages
+from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.translation import gettext_lazy as _
+from django.views.decorators.http import require_GET
+from django.views.static import serve
 
 from . import annee_academique
 from .decorators import role_required
@@ -32,6 +38,8 @@ def _etat_reglages(reglages):
         'email': reglages.email,
         'identifiants_legaux': reglages.bloc_legal(),
         'devise': reglages.devise,
+        'favicon': reglages.favicon.name if reglages.favicon else '',
+        'logo': reglages.logo.name if reglages.logo else '',
         'seuil_alerte': reglages.seuil_alerte,
     }
 
@@ -48,7 +56,7 @@ def parametres_generaux(request):
     # L'état d'avant se relève tout de suite : la validation du formulaire écrit
     # déjà les nouvelles valeurs sur l'instance, et l'audit perdrait sa base.
     avant = _etat_reglages(en_place) if en_place else {}
-    form = PlatformSettingForm(request.POST or None,
+    form = PlatformSettingForm(request.POST or None, request.FILES or None,
                                instance=en_place or PlatformSetting(id=1))
     if request.method == 'POST' and form.is_valid():
         reglages = form.save()
@@ -64,6 +72,23 @@ def parametres_generaux(request):
             entity_type='PlatformSetting',
         ).select_related('actor').order_by('-created_at')[:20],
     })
+
+
+@require_GET
+def serve_branding(request, filename):
+    """Sert publiquement le favicon et le logo, sans exposer ``media/``.
+
+    PythonAnywhere gratuit ne mappe pas les fichiers téléversés : cette vue ne
+    lit que le dossier ``branding``, jamais ``media/private``. Les noms sont
+    plats (pas de sous-dossier), ce qui interdit de remonter vers une pièce.
+    """
+    if '/' in filename or '\\' in filename or filename in ('.', '..'):
+        raise Http404
+    racine = os.path.join(settings.MEDIA_ROOT, 'branding')
+    response = serve(request, filename, document_root=racine, show_indexes=False)
+    response['Cache-Control'] = 'public, max-age=3600'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
 
 
 def _etat_annee(annee):

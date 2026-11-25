@@ -2573,7 +2573,7 @@ class PlatformSettingForm(forms.ModelForm):
         model = PlatformSetting
         fields = [
             'nom', 'signature', 'adresse', 'telephone', 'email',
-            'rccm', 'niu', 'cnss', 'devise', 'seuil_alerte',
+            'rccm', 'niu', 'cnss', 'devise', 'favicon', 'logo', 'seuil_alerte',
         ]
         widgets = {
             'nom': forms.TextInput(attrs={'class': INPUT_CLASS}),
@@ -2585,5 +2585,37 @@ class PlatformSettingForm(forms.ModelForm):
             'niu': forms.TextInput(attrs={'class': INPUT_CLASS}),
             'cnss': forms.TextInput(attrs={'class': INPUT_CLASS}),
             'devise': forms.TextInput(attrs={'class': INPUT_CLASS}),
+            'favicon': forms.ClearableFileInput(attrs={
+                'class': FILE_CLASS, 'accept': 'image/png,image/jpeg,image/webp,image/x-icon',
+            }),
+            'logo': forms.ClearableFileInput(attrs={
+                'class': FILE_CLASS, 'accept': 'image/png,image/jpeg,image/webp,image/x-icon',
+            }),
             'seuil_alerte': forms.NumberInput(attrs={'class': INPUT_CLASS}),
         }
+
+    def clean_favicon(self):
+        image = self.cleaned_data.get('favicon')
+        if image and image.size > 2 * 1024 * 1024:
+            raise forms.ValidationError(_("L'image ne doit pas dépasser 2 Mo."))
+        return image
+
+    def clean_logo(self):
+        image = self.cleaned_data.get('logo')
+        if image and image.size > 2 * 1024 * 1024:
+            raise forms.ValidationError(_("L'image ne doit pas dépasser 2 Mo."))
+        return image
+
+    def save(self, commit=True):
+        """Remplace une image sans laisser l'ancienne traîner sur le disque."""
+        avant = None
+        if self.instance.pk:
+            avant = type(self.instance).objects.filter(pk=self.instance.pk).first()
+        reglages = super().save(commit=commit)
+        if commit and avant:
+            for champ in ('favicon', 'logo'):
+                ancien = getattr(avant, champ)
+                nouveau = getattr(reglages, champ)
+                if ancien and ancien.name != nouveau.name:
+                    ancien.delete(save=False)
+        return reglages
