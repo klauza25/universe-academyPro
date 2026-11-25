@@ -13,9 +13,11 @@ class WhatsAppFilterTests(SimpleTestCase):
     def test_formats_congolais(self):
         cas = {
             '+242 06 111 22 33': 'https://wa.me/242061112233',
-            '061112233': 'https://wa.me/24261112233',
+            '061112233': 'https://wa.me/242061112233',
             '00242 06 11 12 23': 'https://wa.me/24206111223',
             '242 06 111 22 33': 'https://wa.me/242061112233',
+            '067813740': 'https://wa.me/242067813740',
+            '67813740': 'https://wa.me/242067813740',
         }
         for numero, attendu in cas.items():
             with self.subTest(numero=numero):

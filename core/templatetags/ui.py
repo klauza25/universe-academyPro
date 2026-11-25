@@ -57,19 +57,23 @@ ICONS = {
 def whatsapp(phone):
     """Lien ``wa.me`` pour un numéro affiché, chaîne vide si numéro absent.
 
-    Les numéros congolais sont saisis indifféremment ``06…``, ``+242 06…`` ou
-    ``00242 06…`` : WhatsApp n'accepte que les chiffres, avec l'indicatif du
-    pays mais sans signe ``+``. Les autres indicatifs sont conservés tels quels.
+    Les numéros congolais sont saisis indifféremment ``06…``, ``6…``,
+    ``+242 06…`` ou ``00242 06…`` : WhatsApp n'accepte que les chiffres, avec
+    l'indicatif du pays mais sans signe ``+``. Le ``0`` national fait partie du
+    numéro : ``067813740`` donne bien ``242067813740``. Les autres indicatifs
+    sont conservés tels quels.
     """
     chiffres = re.sub(r'\D', '', str(phone or ''))
     if not chiffres:
         return ''
     if chiffres.startswith('00'):
         chiffres = chiffres[2:]
-    if chiffres.startswith('0'):
-        chiffres = '242' + chiffres[1:]
-    elif len(chiffres) <= 9 and not chiffres.startswith('242'):
-        chiffres = '242' + chiffres
+    if not chiffres.startswith('242'):
+        if chiffres.startswith('0'):
+            chiffres = '242' + chiffres
+        elif len(chiffres) <= 9:
+            # Numéro local saisi sans le 0 national : on le rétablit.
+            chiffres = '2420' + chiffres
     return f'https://wa.me/{chiffres}'
 
 
