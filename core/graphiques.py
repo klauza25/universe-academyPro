@@ -20,7 +20,7 @@ from django.utils import timezone
 from django.utils.formats import date_format
 from django.utils.translation import gettext as _
 
-from .models import Attendance, CashTransaction, CourseSession, Enrollment, Payment, Visit
+from .models import Attendance, CashTransaction, Enrollment, Payment
 
 INSCRITS = (Enrollment.Status.ACTIVE, Enrollment.Status.COMPLETED)
 PAIEMENTS_ENCAISSES = (Payment.Status.COMPLETED,)
@@ -81,7 +81,7 @@ def encaissements_par_mois(nombre: int = 6) -> dict:
         'id': 'encaissements',
         'type': 'bar',
         'titre': _('Encaissements par mois'),
-        'note': _('Total des entrées de caisse validées, mois par mois.') ,
+        'note': _('Écritures validées, sur %(n)s mois.') % {'n': nombre},
         'unite': 'fcfa',
         'labels': [libelle_mois(m) for m in mois],
         'series': [
@@ -198,78 +198,6 @@ def assiduite_par_mois(nombre: int = 6) -> dict:
     }
 
 
-def visites_par_mois(nombre: int = 6) -> dict:
-    """Visites d'accueil enregistrées, mois par mois."""
-    mois = premiers_du_mois(nombre)
-    lignes = (
-        Visit.objects.filter(arrival_at__date__gte=mois[0])
-        .annotate(mois=TruncMonth('arrival_at'))
-        .values('mois')
-        .annotate(total=Count('id'))
-    )
-    totaux = {}
-    for ligne in lignes:
-        totaux[_normaliser_mois(ligne['mois'])] = ligne['total'] or 0
-    valeurs = [totaux.get(m, 0) for m in mois]
-    return {
-        'id': 'visites',
-        'type': 'bar',
-        'titre': _('Visites par mois'),
-        'note': _('Visites enregistrées à l’accueil, sur %(n)s mois.') % {'n': nombre},
-        'unite': 'personnes',
-        'labels': [libelle_mois(m) for m in mois],
-        'series': [{'nom': _('Visites'), 'valeurs': valeurs, 'couleur': 'indigo'}],
-    }
-
-
-def assiduite_personnelle(user, nombre: int = 6) -> dict:
-    """Assiduité liée à l'utilisateur, mois par mois."""
-    mois = premiers_du_mois(nombre)
-    qs = Attendance.objects.filter(date__gte=mois[0])
-    if user.has_role('FORMATEUR'):
-        qs = qs.filter(enrollment__session__in=CourseSession.objects.filter(formateurs=user))
-        titre = _('Assiduité de mes groupes')
-        note = _('Présences, retards, absences et excuses de vos groupes sur %(n)s mois.')
-    elif user.has_role('ETUDIANT'):
-        qs = qs.filter(enrollment__student=user)
-        titre = _('Mon assiduité')
-        note = _('Vos présences, retards, absences et excuses sur %(n)s mois.')
-    else:
-        titre = _('Assiduité par mois')
-        note = _('Présences, retards, absences et excuses sur %(n)s mois.')
-    lignes = (
-        qs.annotate(mois=TruncMonth('date'))
-        .values('mois', 'status')
-        .annotate(total=Count('id'))
-    )
-    cases: dict = {m: {} for m in mois}
-    for ligne in lignes:
-        jour = _normaliser_mois(ligne['mois'])
-        cases.setdefault(jour, {})[ligne['status']] = ligne['total']
-
-    def colonne(statut):
-        return [cases.get(m, {}).get(statut, 0) for m in mois]
-
-    presents = colonne(Attendance.Status.PRESENT)
-    retards = colonne(Attendance.Status.LATE)
-    absents = colonne(Attendance.Status.ABSENT)
-    excuses = colonne(Attendance.Status.EXCUSED)
-    return {
-        'id': 'assiduite-personnelle',
-        'type': 'bar',
-        'titre': titre,
-        'note': note % {'n': nombre},
-        'unite': 'personnes',
-        'labels': [libelle_mois(m) for m in mois],
-        'series': [
-            {'nom': _('Présents'), 'valeurs': presents, 'couleur': 'green'},
-            {'nom': _('Retards'), 'valeurs': retards, 'couleur': 'amber'},
-            {'nom': _('Absents'), 'valeurs': absents, 'couleur': 'rose'},
-            {'nom': _('Excusés'), 'valeurs': excuses, 'couleur': 'sky'},
-        ],
-    }
-
-
 def pour_direction() -> list:
     return [encaissements_par_mois(), eleves_par_formation(),
             restes_par_formation(), assiduite_par_mois()]
@@ -281,27 +209,3 @@ def pour_comptabilite() -> list:
 
 def pour_pedagogie() -> list:
     return [assiduite_par_mois(), eleves_par_formation()]
-
-
-def pour_super_admin() -> list:
-    return [encaissements_par_mois()]
-
-
-def pour_admin() -> list:
-    return [encaissements_par_mois()]
-
-
-def pour_secretaire() -> list:
-    return [eleves_par_formation()]
-
-
-def pour_accueil() -> list:
-    return [visites_par_mois()]
-
-
-def pour_formateur(user) -> list:
-    return [assiduite_personnelle(user)]
-
-
-def pour_etudiant(user) -> list:
-    return [assiduite_personnelle(user)]

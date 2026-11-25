@@ -71,7 +71,7 @@ class AssistantUserManagementTests(BusinessTestBase):
             if cle
         }
         self.assertNotIn(
-            {'SUPER_ADMIN', 'ADMIN'}, choix)
+            {'SUPER_ADMIN', 'ADMIN', 'DIRECTION'}, choix)
         self.assertNotIn(
             {'SECRETAIRE', 'COMPTABLE', 'ACCUEIL'}, choix)
         self.assertIn(RoleKey.ASSISTANT_ADMIN, choix)
@@ -83,7 +83,7 @@ class AssistantUserManagementTests(BusinessTestBase):
             'last_name': 'Direction',
             'email': 'fausse.direction@test.local',
             'phone': '',
-            'role': RoleKey.ADMIN,
+            'role': RoleKey.DIRECTION,
             'session': '',
             'password': 'AssistantPass123!',
         })
@@ -140,7 +140,7 @@ class AssistantUserManagementTests(BusinessTestBase):
 
     def test_assistant_cannot_grant_a_privileged_role(self):
         for role_key in (
-            RoleKey.SUPER_ADMIN, RoleKey.ADMIN,
+            RoleKey.SUPER_ADMIN, RoleKey.ADMIN, RoleKey.DIRECTION,
         ):
             with self.subTest(role=role_key):
                 response = self.client_assistant.post(
@@ -152,7 +152,7 @@ class AssistantUserManagementTests(BusinessTestBase):
         fiche = self.client_assistant.get(
             reverse(DETAIL_URL, args=[self.etudiant.id]))
         self.assertNotIn(
-            {'SUPER_ADMIN', 'ADMIN'},
+            {'SUPER_ADMIN', 'ADMIN', 'DIRECTION'},
             {role.key for role in fiche.context['available_roles']},
         )
 
@@ -165,7 +165,7 @@ class AssistantUserManagementTests(BusinessTestBase):
         self.assertFalse(self.assistant.has_role(RoleKey.RESPONSABLE_PEDAGOGIQUE))
 
     def test_other_roles_stay_outside_user_management(self):
-        for user in (self.peda, self.formateur, self.etudiant):
+        for user in (self.direction, self.peda, self.formateur, self.etudiant):
             with self.subTest(role=user.primary_role):
                 client = self.client_for(user)
                 self.assertEqual(

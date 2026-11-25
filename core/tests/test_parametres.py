@@ -1,13 +1,8 @@
 """Tests des paramètres généraux : une seule ligne règle toute la plateforme."""
-from io import BytesIO
-
 from django.contrib import admin
-from django.core.files.storage import default_storage
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError, transaction
 from django.test import Client
 from django.urls import reverse
-from PIL import Image
 
 from core import caisse, parametres
 from core.forms import PlatformSettingForm
@@ -42,99 +37,6 @@ class ParametresGenerauxBase(BusinessTestBase):
         }
         data.update(surcharge)
         return data
-
-
-def image_upload(nom='image.png', couleur=(40, 90, 160)):
-    tampon = BytesIO()
-    Image.new('RGB', (8, 8), couleur).save(tampon, format='PNG')
-    return SimpleUploadedFile(nom, tampon.getvalue(), content_type='image/png')
-
-
-class ParametresIdentiteVisuelleTest(ParametresGenerauxBase):
-    """Favicon et logo se posent à l'écran et se lisent partout, sans /media/."""
-
-    def setUp(self):
-        self.client = self.client_for(self.direction)
-
-    def test_les_images_sont_enregistrees_et_tracees(self):
-        page = self.client.post(
-            reverse('core:dashboard:platform-settings'),
-            self.payload(favicon=image_upload('onglet.png'),
-                         logo=image_upload('enseigne.png')))
-        self.assertEqual(page.status_code, 302)
-        self.reglages.refresh_from_db()
-        self.assertTrue(self.reglages.favicon.name.startswith('branding/favicon-'))
-        self.assertTrue(self.reglages.logo.name.startswith('branding/logo-'))
-        entree = self.assert_audited('PLATFORM_SETTINGS_EDIT', self.reglages.pk)
-        self.assertEqual(entree.after_summary['favicon'], self.reglages.favicon.name)
-        self.assertEqual(entree.after_summary['logo'], self.reglages.logo.name)
-
-    def test_les_images_sont_servies_sans_exposer_media(self):
-        self.client.post(
-            reverse('core:dashboard:platform-settings'),
-            self.payload(favicon=image_upload('onglet.png'),
-                         logo=image_upload('enseigne.png')))
-        self.reglages.refresh_from_db()
-        accueil = Client().get(reverse('core:home'))
-        self.assertContains(accueil, f'href="{self.reglages.favicon_url()}"')
-        self.assertContains(accueil, self.reglages.logo_url())
-
-        fichier = self.client.get(self.reglages.logo_url())
-        self.assertEqual(fichier.status_code, 200)
-        self.assertEqual(fichier['Content-Type'], 'image/png')
-        self.assertTrue(b''.join(fichier.streaming_content).startswith(b'\x89PNG'))
-        self.assertEqual(self.client.get('/branding/../private/secret.png').status_code, 404)
-
-    def test_une_mauvaise_extension_est_refusee(self):
-        forme = PlatformSettingForm(
-            instance=self.reglages, data=self.payload(),
-            files={'logo': SimpleUploadedFile('logo.txt', b'pas une image',
-                                              content_type='text/plain')})
-        self.assertFalse(forme.is_valid())
-        self.assertIn('logo', forme.errors)
-
-    def test_une_image_trop_lourde_est_refusee(self):
-        brut = image_upload('logo.png')
-        gros = SimpleUploadedFile('logo.png', brut.read() + b'0' * (2 * 1024 * 1024),
-                                  content_type='image/png')
-        forme = PlatformSettingForm(
-            instance=self.reglages, data=self.payload(), files={'logo': gros})
-        self.assertFalse(forme.is_valid())
-        self.assertIn('logo', forme.errors)
-
-    def test_effacer_les_images_revient_aux_visuels_d_origine(self):
-        self.client.post(
-            reverse('core:dashboard:platform-settings'),
-            self.payload(favicon=image_upload('onglet.png'),
-                         logo=image_upload('enseigne.png')))
-        self.reglages.refresh_from_db()
-        anciens = (self.reglages.favicon.name, self.reglages.logo.name)
-
-        data = self.payload()
-        data.update({'favicon-clear': 'on', 'logo-clear': 'on'})
-        self.assertEqual(self.client.post(
-            reverse('core:dashboard:platform-settings'), data).status_code, 302)
-        self.reglages.refresh_from_db()
-        self.assertFalse(self.reglages.favicon)
-        self.assertFalse(self.reglages.logo)
-        self.assertEqual(self.reglages.favicon_url(), '/static/img/favicon.svg')
-        self.assertEqual(self.reglages.logo_url(), '/static/img/logo-univers.jpg')
-        self.assertFalse(default_storage.exists(anciens[0]))
-        self.assertFalse(default_storage.exists(anciens[1]))
-
-    def test_remplacer_une_image_supprime_l_ancienne(self):
-        self.client.post(
-            reverse('core:dashboard:platform-settings'),
-            self.payload(logo=image_upload('premier.png', (10, 20, 30))))
-        self.reglages.refresh_from_db()
-        premier = self.reglages.logo.name
-
-        self.client.post(
-            reverse('core:dashboard:platform-settings'),
-            self.payload(logo=image_upload('second.png', (210, 40, 60))))
-        self.reglages.refresh_from_db()
-        self.assertNotEqual(self.reglages.logo.name, premier)
-        self.assertFalse(default_storage.exists(premier))
 
 
 class ParametresModeleTest(ParametresGenerauxBase):
@@ -249,14 +151,14 @@ class ParametresEcranTest(ParametresGenerauxBase):
         self.reglages.refresh_from_db()
         self.assertEqual(self.reglages.seuil_alerte, 80)
 
-    def test_l_ecran_est_autorise_a_l_assistant_administratif(self):
+    def test_l_ecran_se_refuse_au_guichet(self):
         client = self.client_for(self.secretaire)
         self.assertEqual(
-            client.get(reverse('core:dashboard:platform-settings')).status_code, 200)
+            client.get(reverse('core:dashboard:platform-settings')).status_code, 403)
         self.assertEqual(
             client.post(reverse('core:dashboard:platform-settings'),
                         {'nom': 'X', 'devise': 'FCFA', 'seuil_alerte': '80'}).status_code,
-            302)
+            403)
 
     def test_l_historique_des_reglages_parait_sous_le_formulaire(self):
         self.client.post(

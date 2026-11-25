@@ -23,12 +23,12 @@ from .models import (
 )
 from .utils import log_audit
 
-PEDAGOGY_ROLES = ('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
-MANAGE_ROLES = ('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+PEDAGOGY_ROLES = ('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ASSISTANT_ADMIN')
+MANAGE_ROLES = ('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 
 
 def _is_manager(user):
-    return user.has_any_role('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+    return user.has_any_role('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION')
 
 
 def _can_access_session(user, session):
@@ -46,7 +46,7 @@ def _my_sessions(user):
 def _can_manage_record(user, record):
     if user.is_elevated:
         return False
-    if user.has_any_role('RESP_PEDA', 'ASSISTANT_ADMIN'):
+    if user.has_any_role('RESP_PEDA', 'DIRECTION'):
         return True
     if user.has_role('FORMATEUR'):
         return record.session.formateurs.filter(id=user.id).exists()
@@ -71,7 +71,7 @@ def program_list(request):
     ).prefetch_related('modules__lessons')  # i18n-exempt: lookup ORM, jamais affiché
     can_manage_courses = (
         not request.user.is_elevated
-        and request.user.has_any_role('RESP_PEDA', 'ASSISTANT_ADMIN')
+        and request.user.has_any_role('RESP_PEDA', 'DIRECTION')
     )
     show_archived = (
         can_manage_courses and request.GET.get('archives') == '1'
@@ -83,14 +83,14 @@ def program_list(request):
     return render(request, 'dashboard/pedagogie/programs.html', {
         'courses': courses,
         'can_manage': not request.user.is_elevated and request.user.has_any_role(
-            'FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN'
+            'FORMATEUR', 'RESP_PEDA', 'DIRECTION'
         ),
         'can_manage_courses': can_manage_courses,
         'show_archived': show_archived,
     })
 
 
-@business_write_required('RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('RESP_PEDA', 'DIRECTION')
 def course_create(request):
     form = CourseForm(
         request.POST if request.method == 'POST' else None)
@@ -107,7 +107,7 @@ def course_create(request):
     })
 
 
-@business_write_required('RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('RESP_PEDA', 'DIRECTION')
 def course_edit(request, course_id):
     course = get_object_or_404(Course, id=course_id)
     form = CourseForm(
@@ -134,7 +134,7 @@ def course_edit(request, course_id):
     })
 
 
-@business_write_required('RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('RESP_PEDA', 'DIRECTION')
 @require_POST
 def course_archive(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -155,7 +155,7 @@ def course_archive(request, course_id):
         f'#formation-{course.id}')
 
 
-@business_write_required('RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('RESP_PEDA', 'DIRECTION')
 @require_POST
 def course_restore(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -172,7 +172,7 @@ def course_restore(request, course_id):
         f'{reverse("core:dashboard:programs")}#formation-{course.id}')
 
 
-@business_write_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def module_create(request):
     course_id = (request.GET.get('course') or '').strip()
     form = ModuleForm(initial={'course': course_id} if course_id else None)
@@ -192,7 +192,7 @@ def module_create(request):
     })
 
 
-@business_write_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def module_edit(request, module_id):
     module = get_object_or_404(Module, id=module_id)
     form = ModuleForm(instance=module)
@@ -211,7 +211,7 @@ def module_edit(request, module_id):
     })
 
 
-@business_write_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def lesson_create(request):
     form = LessonForm()
     module_id = request.GET.get('module')
@@ -233,7 +233,7 @@ def lesson_create(request):
     })
 
 
-@business_write_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@business_write_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def lesson_edit(request, lesson_id):
     lesson = get_object_or_404(Lesson, id=lesson_id)
     form = LessonForm(instance=lesson)
@@ -288,12 +288,12 @@ def course_session_list(request):
         'toutes': annee_academique.TOUTES,
         'drapeau': (annee_academique.drapeau(annee) if annee or not annees else ''),
         'can_manage': request.user.has_any_role(
-            'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'ASSISTANT_ADMIN'
+            'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION'
         ),
     })
 
 
-@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION')
 def course_session_create(request):
     form = CourseSessionForm()
     if request.method == 'POST':
@@ -316,7 +316,7 @@ def course_session_create(request):
     })
 
 
-@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@role_required('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION')
 def course_session_edit(request, session_id):
     session = get_object_or_404(
         CourseSession.objects.select_related('course'), id=session_id
@@ -709,7 +709,7 @@ def progression_overview(request):
 # ---------------------------------------------------------------------------
 
 def _resource_access(user, resource, student=False):
-    if user.has_any_role('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'ASSISTANT_ADMIN'):
+    if user.has_any_role('SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION'):
         return True
     if user.has_role('FORMATEUR'):
         return resource.author_id == user.id or (
@@ -742,7 +742,7 @@ def _resource_access(user, resource, student=False):
     return False
 
 
-@role_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN')
+@role_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION')
 def resource_list(request):
     resources = Resource.objects.select_related(
         'course', 'module', 'lesson', 'session', 'author'
@@ -836,7 +836,7 @@ def resource_edit(request, resource_id):
     })
 
 
-@role_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN', 'ETUDIANT', 'ASSISTANT_ADMIN')
+@role_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ETUDIANT', 'ASSISTANT_ADMIN')
 def resource_download(request, resource_id):
     resource = get_object_or_404(Resource, id=resource_id)
     if not _resource_access(request.user, resource, student=True):
@@ -856,7 +856,7 @@ def resource_download(request, resource_id):
         raise Http404
 
 
-@role_required('FORMATEUR', 'RESP_PEDA', 'ASSISTANT_ADMIN', 'ETUDIANT')
+@role_required('FORMATEUR', 'RESP_PEDA', 'DIRECTION', 'ETUDIANT')
 def resource_view(request, resource_id):
     resource = get_object_or_404(Resource, id=resource_id)
     if not _resource_access(request.user, resource, student=True):
@@ -1024,7 +1024,7 @@ def _can_write_session(user, session):
     """Écriture pédagogique : formateur affecté, responsable ou direction."""
     if user.is_elevated:
         return False
-    if user.has_any_role('RESP_PEDA', 'ASSISTANT_ADMIN'):
+    if user.has_any_role('RESP_PEDA', 'DIRECTION'):
         return True
     return (
         user.has_role('FORMATEUR')

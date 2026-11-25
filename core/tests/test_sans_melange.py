@@ -55,6 +55,7 @@ class RenduAnglaisSansMelangeTest(BusinessTestBase):
         return {
             'SUPER_ADMIN': self.super_admin,
             'ADMIN': self.admin,
+            'DIRECTION': self.direction,
             'ASSISTANT_ADMIN': self.assistant,
             'RESP_PEDA': self.peda,
             'FORMATEUR': self.formateur,

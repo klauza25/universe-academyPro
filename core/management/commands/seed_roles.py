@@ -7,6 +7,13 @@ from core.models import (
 ROLE_PERMISSIONS = {
     'SUPER_ADMIN': [p[0] for p in PERMISSIONS],
     'ADMIN': [p[0] for p in PERMISSIONS],
+    # La direction valide les inscriptions et encaisse : « finance.write » lui
+    # laisse les écrans de paiement étudiant ouverts, comme avant la matrice.
+    'DIRECTION': [
+        'users.read', 'students.read', 'formations.read',
+        'attendance.read', 'finance.read', 'finance.write',
+        'scholarship.read',
+    ],
     # Le guichet encaisse et gère les comptes : inscription du visiteur,
     # dossier étudiant, paiement, utilisateurs et attributions de rôles.
     'ASSISTANT_ADMIN': [

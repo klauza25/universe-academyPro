@@ -215,7 +215,7 @@ html {
 .ua-nav {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     overflow-y: auto;
     padding-right: 2px;
@@ -228,19 +228,14 @@ html {
     text-transform: uppercase;
     color: var(--ua-nav-label);
     padding: 0 12px;
-    margin-top: 10px;
-    margin-bottom: 4px;
-}
-
-.ua-nav-label:first-child {
-    margin-top: 0;
+    margin-bottom: 2px;
 }
 
 .ua-nav-link {
     display: flex;
     align-items: center;
     gap: 13px;
-    padding: 12px 14px;
+    padding: 11px 14px;
     border-radius: 14px;
     color: var(--ua-nav-text);
     font-size: 0.875rem;
@@ -769,35 +764,7 @@ html[data-theme="light"] .ua-icone-sombre { display: none; }
    s'agrandit à chaque repeinture et finit par déborder de la carte. */
 .ua-chart-box {
     position: relative;
-    height: 340px;
-}
-
-.ua-chart-card {
-    overflow: hidden;
-}
-
-.ua-chart-head {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 16px;
-}
-
-.ua-chart-kicker {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--ua-primary);
-    margin-bottom: 4px;
-}
-
-.ua-chart-note {
-    font-size: 0.8rem;
-    color: var(--ua-muted);
-    margin-top: 4px;
-    line-height: 1.45;
+    height: 300px;
 }
 
 @media (max-width: 640px) {
@@ -882,22 +849,9 @@ html[data-theme="light"] .ua-icone-sombre { display: none; }
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 18px;
+    padding: 2px 18px;
     border-left: 1px solid var(--ua-line);
     min-width: 0;
-    text-decoration: none;
-    color: inherit;
-    border-radius: 14px;
-    transition: background-color 0.18s ease, transform 0.18s ease;
-}
-
-a.ua-compteur:hover {
-    background: var(--ua-hover-bg);
-}
-
-a.ua-compteur:focus-visible {
-    outline: 2px solid var(--ua-primary);
-    outline-offset: 2px;
 }
 
 .ua-compteur:first-child {
@@ -1076,16 +1030,6 @@ a.ua-compteur:focus-visible {
 
 .ua-btn-ghost:hover {
     background: var(--ua-brand-soft-hover);
-}
-
-.ua-btn-danger {
-    background: #e11d48;
-    color: #ffffff;
-    box-shadow: 0 12px 24px rgba(225, 29, 72, 0.22);
-}
-
-.ua-btn-danger:hover {
-    background: #be123c;
 }
 
 .ua-btn-sm {
@@ -1755,50 +1699,25 @@ html[data-theme="dark"] [style*="background:#fff"] { background-color: var(--ua-
         display: none;
     }
 
-    /* On garde l'essentiel : menu, langue, messages, cloche, thème et profil. */
+    /* On garde l'essentiel : menu, langue, messages, cloche et profil. */
     .ua-topbar-secondaire {
         display: none;
     }
 
-    .ua-topbar {
-        padding: 12px 12px 0;
-        gap: 8px;
-        flex-wrap: nowrap;
-    }
-
     .ua-topbar-right {
-        gap: 4px;
-        flex-wrap: nowrap;
-        flex: 1 1 auto;
-        justify-content: flex-end;
-        min-width: 0;
-    }
-
-    .ua-icon-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 11px;
-        flex-shrink: 0;
+        gap: 8px;
     }
 
     .ua-switch {
-        padding: 2px;
-        flex-shrink: 0;
+        padding: 3px;
     }
 
     .ua-switch button {
-        padding: 5px 6px;
-        font-size: 0.7rem;
+        padding: 6px 8px;
     }
 
     .ua-profile {
-        padding: 3px;
-        flex-shrink: 0;
-    }
-
-    .ua-avatar-lg {
-        width: 34px;
-        height: 34px;
+        padding: 5px;
     }
 
     .ua-hero-title {

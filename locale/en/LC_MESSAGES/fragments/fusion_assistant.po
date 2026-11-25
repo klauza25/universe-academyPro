@@ -14,5 +14,5 @@ msgid "Ce poste est dissous : attribuez « Assistant administratif », qui repre
 msgstr "This post has been dissolved: assign “Administrative assistant”, which now covers the front desk, the cash office and the secretariat."
 
 # core/decorators.py — périmètre de validation d'une inscription
-msgid "La validation d'une inscription est réservée à l'assistant administratif, à la supervision pédagogique et au super administrateur."
-msgstr "Approving an enrollment is reserved for the administrative assistant, academic supervision and the super administrator."
+msgid "La validation d'une inscription est réservée à la direction, à l'assistant administratif, à la supervision pédagogique et au super administrateur."
+msgstr "Approving an enrollment is reserved for management, the administrative assistant, academic supervision and the super administrator."

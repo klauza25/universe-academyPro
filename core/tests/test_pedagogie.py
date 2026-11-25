@@ -186,6 +186,13 @@ class ProgramTests(PedagogyTestBase):
             403,
         )
         self.assertEqual(
+            self.client_for(self.secretaire).post(
+                reverse('core:dashboard:course-edit', args=[self.course.pk]),
+                {},
+            ).status_code,
+            403,
+        )
+        self.assertEqual(
             self.manager_client.get(
                 reverse('core:dashboard:course-archive',
                         args=[self.course.pk])).status_code,
@@ -461,11 +468,13 @@ class SessionRecordTests(PedagogyTestBase):
         self.assertContains(response, reverse(
             'core:dashboard:session-record-create', args=[self.session.id]))
 
-    def test_secretary_reads_sessions_with_planning_shortcut(self):
+    def test_secretary_reads_sessions_without_planning_shortcut(self):
         response = self.client_for(self.secretaire).get(
             reverse('core:dashboard:session-records'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Planifier une séance')
+        self.assertNotContains(response, 'Planifier une séance')
+        self.assertNotContains(response, reverse(
+            'core:dashboard:session-record-create', args=[self.session.id]))
 
     def test_admin_reads_sessions_without_planning_shortcut(self):
         response = self.client_for(self.admin).get(
@@ -554,7 +563,7 @@ class AttendanceTests(PedagogyTestBase):
         self.assertEqual(attendance.session_record, first)
         self.assertEqual(Attendance.objects.count(), 1)
 
-    def test_secretary_can_read_and_edit_attendance(self):
+    def test_secretary_can_read_but_not_edit_attendance(self):
         record = self.make_record()
         secretary_client = self.client_for(self.secretaire)
         url = reverse('core:dashboard:session-record-attendance',
@@ -563,8 +572,8 @@ class AttendanceTests(PedagogyTestBase):
         self.assertEqual(response.status_code, 200)
         response = secretary_client.post(
             url, {f'status_{self.enrollment.pk}': Attendance.Status.PRESENT})
-        self.assertEqual(response.status_code, 302)
-        self.assertEqual(Attendance.objects.count(), 1)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(Attendance.objects.count(), 0)
 
     def test_attendance_history_filters(self):
         record = self.make_record()

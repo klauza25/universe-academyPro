@@ -16,14 +16,9 @@
         </p>
     </div>
     {% if can_manage_users %}
-    <div class="flex flex-wrap gap-3">
-        <a href="{% url 'core:dashboard:identifiants-page' %}" class="ua-btn ua-btn-ghost">
-            {% icon "mail" %} {% translate "Identifiants étudiants" %}
-        </a>
-        <a href="{% url 'core:dashboard:user-create' %}" class="ua-btn ua-btn-primary">
-            {% icon "user-plus" %} {% translate "Créer un compte" %}
-        </a>
-    </div>
+    <a href="{% url 'core:dashboard:user-create' %}" class="ua-btn ua-btn-primary">
+        {% icon "user-plus" %} {% translate "Créer un compte" %}
+    </a>
     {% endif %}
 </div>
 
@@ -50,7 +45,6 @@
             <select name="role"
                     class="w-full px-3.5 py-2.5 text-sm rounded-xl border border-[#e6e7f5] bg-[#fbfbff] outline-none focus:border-indigo-300">
                 <option value="">{% translate "Tous" %}</option>
-                <option value="__staff__" {% if role_filter == '__staff__' %}selected{% endif %}>{% translate "Staff (tous)" %}</option>
                 {% for val, label in role_choices %}
                 <option value="{{ val }}" {% if role_filter == val %}selected{% endif %}>{{ label }}</option>
                 {% endfor %}

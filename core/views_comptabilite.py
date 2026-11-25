@@ -35,7 +35,7 @@ from .models import (
 )
 from .utils import log_audit
 
-FINANCE_ROLES = ('ASSISTANT_ADMIN',)
+FINANCE_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION')
 
 
 def account_balance(account, until_date=None):
@@ -644,7 +644,7 @@ def closure_create(request):
 # Paiements étudiants
 # ---------------------------------------------------------------------------
 
-COUNTER_ENROLL_ROLES = ('ASSISTANT_ADMIN',)
+COUNTER_ENROLL_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION')
 
 
 def _student_from_id(value):
@@ -795,13 +795,13 @@ def student_payment_create(request):
         counter_initial['course'] = course_param
     counter_form = CounterEnrollmentForm(
         prefix='inscription', initial=counter_initial,
-        can_override_tariff=request.user.has_role('ASSISTANT_ADMIN'),
+        can_override_tariff=request.user.has_role('DIRECTION'),
     )
 
     if request.method == 'POST' and request.POST.get('form_kind') == 'enroll':
         counter_form = CounterEnrollmentForm(
             request.POST, prefix='inscription',
-            can_override_tariff=request.user.has_role('ASSISTANT_ADMIN'),
+            can_override_tariff=request.user.has_role('DIRECTION'),
         )
         if counter_form.is_valid():
             try:
@@ -954,7 +954,7 @@ def student_payment_create(request):
             not request.user.is_elevated
             and request.user.has_any_role(*COUNTER_ENROLL_ROLES)
         ),
-        'can_override_tariff': request.user.has_role('ASSISTANT_ADMIN'),
+        'can_override_tariff': request.user.has_role('DIRECTION'),
         'mode': mode,
     })
 
@@ -1137,7 +1137,7 @@ def payment_receipt(request, payment_id):
     )
     user = request.user
     if not (
-        user.has_any_role('ASSISTANT_ADMIN', 'SUPER_ADMIN', 'ADMIN') or
+        user.has_any_role('ASSISTANT_ADMIN', 'DIRECTION', 'SUPER_ADMIN', 'ADMIN') or
         payment.enrollment.student_id == user.id
     ):
         return HttpResponseForbidden(_("Accès au reçu non autorisé."))

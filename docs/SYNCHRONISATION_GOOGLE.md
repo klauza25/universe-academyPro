@@ -106,11 +106,6 @@ alors autoriser ce partage ou utiliser une feuille publique de démonstration.
 ... --ecrire --importer etudiants --efface
 ```
 
-Sans `--efface`, un dossier déjà saisi dans l'application n'est jamais supprimé : la ligne du
-classeur qui le concerne est ignorée et signalée dans le rapport, et le reste de la synchronisation
-continue. `--efface` reste disponible pour remplacer explicitement ces dossiers par ceux du
-classeur.
-
 Le classement est volontairement prudent :
 
 - `Base Etudiants` → classeur des élèves (`importer_etudiants`) ;

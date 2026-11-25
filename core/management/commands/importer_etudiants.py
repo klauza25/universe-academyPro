@@ -9,10 +9,10 @@ tarif du catalogue, paiements lus dans les cases (frais d'inscription et mensual
     python manage.py importer_etudiants --efface              # montre aussi ce que « effacer » couvre
     python manage.py importer_etudiants --ecrire --efface     # après copie de db.sqlite3 dans backups/
 
-Gardes : sans ``--efface``, une inscription déjà saisie dans l'application n'est jamais
-supprimée — la ligne du classeur qui la concerne est ignorée et signalée ; les lignes posées par
-une importation marquée se retrouvent sous leur marque et ne se dupliquent pas ; un doublon du
-classeur est signalé, jamais écrit ; un intitulé de formation seulement ressemblant est écarté.
+Gardes : sans ``--efface``, une inscription déjà saisie dans l'application fait refuser l'écriture —
+rien n'est supprimé en douce ; les lignes posées par une importation marquée se retrouvent sous
+leur marque et ne se dupliquent pas ; un doublon du classeur est signalé, jamais écrit ; un
+intitulé de formation seulement ressemblant est écarté.
 """
 from __future__ import annotations
 
@@ -88,17 +88,18 @@ class Command(BaseCommand):
                 'puis relancez avec --ecrire' + (' --efface' if purge['inscriptions'] else '')
                 + '.'))
             return
+        if purge['inscriptions'] and not options['efface']:
+            raise CommandError(
+                f'{purge["inscriptions"]} inscription(s) et {purge["paiements"]} paiement(s) '
+                'saisis dans l\'application sont repris par le classeur. Ils ne se fusionnent '
+                'pas : relancez avec --efface pour les supprimer, ou changez de classeur.')
+
         ecrits = self._ecrire(plan, options)
         self.stdout.write(self.style.SUCCESS(
             f'\nÉcrit : {ecrits["comptes"]} compte(s) étudiant(s) créé(s), '
             f'{ecrits["comptes_repris"]} repris, {ecrits["groupes"]} groupe(s), '
             f'{ecrits["inscriptions"]} inscription(s), {ecrits["paiements"]} paiement(s) '
             f'({self._fcfa(ecrits["montant"])}), {ecrits["caisse"]} écriture(s) de caisse.'))
-        if ecrits['conflits']:
-            self.stdout.write(self.style.WARNING(
-                f'{ecrits["conflits"]} inscription(s) du classeur ignorée(s) : l\'élève a déjà '
-                'un dossier saisi dans l\'application. Rien n\'a été supprimé ; avec '
-                '--efface, ces dossiers seraient remplacés par ceux du classeur.'))
         if ecrits['sutes']:
             self.stdout.write(self.style.WARNING(
                 f'{ecrits["sutes"]} ligne(s) déjà en base, non touchée(s) : une écriture '
@@ -202,19 +203,13 @@ class Command(BaseCommand):
         if options['efface']:
             self._executer_effacement(self._inventaire_effacement())
 
-        # Un dossier saisi dans l'application est une écriture engagée : sans
-        # --efface, on ne le touche pas et on écarte la ligne du classeur qui
-        # le concernerait, plutôt que de créer un doublon ou de tout refuser.
-        proteges = set(
-            self._saisies_dans_l_app().values_list('student_id', flat=True))
         ecrits = Counter()
         role = Role.objects.get(key=RoleKey.ETUDIANT)
         par_cle = {compte.cle: self._ecrire_compte(compte, role, ecrits)
                    for compte in plan.comptes}
         sessions = {groupe.cle: self._ecrire_groupe(groupe, ecrits) for groupe in plan.groupes}
-        dossiers = {id(i): self._ecrire_inscription(
-            i, par_cle, sessions, agent, ecrits, proteges)
-            for i in plan.inscriptions}
+        dossiers = {id(i): self._ecrire_inscription(i, par_cle, sessions, agent, ecrits)
+                    for i in plan.inscriptions}
         for paiement in plan.paiements:
             dossier = dossiers.get(id(paiement.inscription))
             if dossier is not None:
@@ -278,14 +273,10 @@ class Command(BaseCommand):
         return session
 
     @staticmethod
-    def _ecrire_inscription(inscription, par_cle, sessions, agent, ecrits,
-                            proteges: set) -> Enrollment | None:
+    def _ecrire_inscription(inscription, par_cle, sessions, agent, ecrits) -> Enrollment | None:
         student = par_cle.get(inscription.compte.cle)
         session = sessions.get(inscription.groupe.cle)
         if not student or not session:
-            return None
-        if student.pk in proteges:
-            ecrits['conflits'] += 1
             return None
         existante = Enrollment.objects.filter(student=student, session=session).first()
         if existante:

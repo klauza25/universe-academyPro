@@ -1116,6 +1116,22 @@ class SingleSourceOfTruthTests(AccountingTestBase):
         self.assertEqual(response.context['total_expenses_month'], 3000)
         self.assertEqual(response.context['net_month'], 7000)
 
+    def test_direction_dashboard_revenue_comes_from_cash_transactions(self):
+        self.make_tx(amount=10000)
+        Payment.objects.create(
+            enrollment=self.enrollment,
+            amount=5000,
+            method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED,
+            recorded_by=self.assistant,
+        )
+
+        client = self.client_for(self.direction)
+        response = client.get(reverse('core:dashboard:direction-dashboard'))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['total_revenue'], 10000)
+
+
 class AssistantStudentListTests(BusinessTestBase):
     """Le poste fusionné consulte et tient les dossiers étudiants."""
 
@@ -1515,6 +1531,7 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
         self.make_pending_enrollment(student)
         for user, route in (
             (self.super_admin, 'core:dashboard:super-admin-dashboard'),
+            (self.direction, 'core:dashboard:direction-dashboard'),
             (self.assistant, 'core:dashboard:comptabilite-dashboard'),
             (self.peda, 'core:dashboard:resp-peda-dashboard'),
         ):
@@ -1582,6 +1599,17 @@ class PaymentEnrollmentFlowTests(AccountingTestBase):
             reverse('core:dashboard:enrollment-detail', args=[enrollment.pk]),
         )
         self.assertContains(page, 'Inscription en attente de validation')
+
+    def test_direction_dashboard_lists_pending_enrollments(self):
+        student = self.make_student('tableau.direction@test.local')
+        enrollment = self.make_pending_enrollment(student)
+        page = self.client_for(self.direction).get(
+            reverse('core:dashboard:direction-dashboard'))
+        self.assertEqual(page.status_code, 200)
+        self.assertContains(page, 'Inscriptions en attente de validation')
+        self.assertContains(page, enrollment.student.get_full_name())
+        self.assertContains(page, reverse(
+            'core:dashboard:enrollment-validate', args=[enrollment.pk]))
 
 
 class GrilleDesMoisTests(AccountingTestBase):

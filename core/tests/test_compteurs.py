@@ -87,6 +87,7 @@ class PlatformCountsTest(BusinessTestBase):
         return [
             (self.super_admin, 'core:dashboard:super-admin-dashboard'),
             (self.admin, 'core:dashboard:admin-dashboard'),
+            (self.direction, 'core:dashboard:direction-dashboard'),
             (self.assistant, 'core:dashboard:comptabilite-dashboard'),
             (self.secretaire, 'core:dashboard:secretaire-dashboard'),
             (self.peda, 'core:dashboard:resp-peda-dashboard'),

@@ -417,6 +417,9 @@ msgstr "Super administrator"
 msgid "Administrateur"
 msgstr "Administrator"
 
+msgid "Direction"
+msgstr "Management"
+
 msgid "Secrétaire"
 msgstr "Secretary"
 
@@ -2661,6 +2664,9 @@ msgstr "-- Class group (required for a student) --"
 msgid "-- Rôle à attribuer --"
 msgstr "-- Role to assign --"
 
+msgid "7 derniers jours"
+msgstr "Last 7 days"
+
 msgid "Accueil & visites"
 msgstr "Reception & visits"
 
@@ -2731,6 +2737,9 @@ msgstr "No sheet filled in for this program."
 msgid "Aucune formation en cours"
 msgstr "No program in progress"
 
+msgid "Aucune opération sur la période."
+msgstr "No transaction over the period."
+
 msgid "Aucune présence enregistrée"
 msgstr "No attendance recorded"
 
@@ -2739,6 +2748,9 @@ msgstr "No resource published yet."
 
 msgid "Aucune ressource publiée pour vos formations."
 msgstr "No resource published for your programs."
+
+msgid "Aucune session active."
+msgstr "No active class group."
 
 msgid "Aucune sortie validée pour ces critères."
 msgstr "No validated exit for these criteria."
@@ -2824,6 +2836,9 @@ msgstr "View users"
 msgid "Consultez l'état de votre dossier de bourse."
 msgstr "View the status of your scholarship record."
 
+msgid "Contrôle financier — %(m)s"
+msgstr "Financial control — %(m)s"
+
 msgid ""
 "Demande envoyée le %(d)s. Aucun accès n'est accordé avant la décision du "
 "super administrateur."
@@ -2849,6 +2864,9 @@ msgstr "Requester"
 msgid "Derniers comptes créés"
 msgstr "Recently created accounts"
 
+msgid "Derniers paiements"
+msgstr "Recent payments"
+
 msgid "Dernière mise à jour : %(d)s"
 msgstr "Last updated: %(d)s"
 
@@ -2870,11 +2888,23 @@ msgstr "Record %(r)s · %(d)s"
 msgid "Dossiers, inscriptions, documents"
 msgstr "Records, enrollments, documents"
 
+msgid "Début"
+msgstr "Start"
+
 msgid "Décision"
 msgstr "Decision"
 
+msgid "Dépenses"
+msgstr "Expenses"
+
 msgid "Détails & avis"
 msgstr "Details & reviews"
+
+msgid "Effectif"
+msgstr "Headcount"
+
+msgid "Effectifs par session active"
+msgstr "Headcount per active class group"
 
 msgid "En attente de validation"
 msgstr "Awaiting validation"
@@ -2890,6 +2920,9 @@ msgstr "Recorded by"
 
 msgid "Entité"
 msgstr "Entity"
+
+msgid "Entrées du mois"
+msgstr "This month's entries"
 
 msgid "Entrées validées"
 msgstr "Validated entries"
@@ -2933,6 +2966,9 @@ msgstr "Program / concepts"
 msgid "Formation%(fp)s"
 msgstr "Program%(fp)s"
 
+msgid "Formations en cours"
+msgstr "Programs in progress"
+
 msgid "Gérer les utilisateurs"
 msgstr "Manage users"
 
@@ -2957,6 +2993,9 @@ msgstr "Enrollments in progress"
 
 msgid "J'ai déjà un compte"
 msgstr "I already have an account"
+
+msgid "Jour"
+msgstr "Day"
 
 msgid "Journal d'audit"
 msgstr "Audit log"
@@ -3015,8 +3054,14 @@ msgstr "My payments"
 msgid "Mes présences"
 msgstr "My attendance"
 
+msgid "Mois en cours"
+msgstr "Current month"
+
 msgid "Motif (facultatif)"
 msgstr "Reason (optional)"
+
+msgid "Mouvements validés de la période"
+msgstr "Validated transactions for the period"
 
 msgid "Moyen"
 msgstr "Method"
@@ -3036,14 +3081,23 @@ msgstr "Internal note"
 msgid "Notion, formation, sujet…"
 msgstr "Concept, program, topic…"
 
+msgid "Nouvelles inscriptions"
+msgstr "New enrollments"
+
 msgid "Opérations en attente"
 msgstr "Pending transactions"
+
+msgid "Opérations validées"
+msgstr "Validated transactions"
 
 msgid "Oui"
 msgstr "Yes"
 
 msgid "PDF, JPG ou PNG — 10 Mo maximum par fichier."
 msgstr "PDF, JPG or PNG — 10 MB maximum per file."
+
+msgid "Paiements effectués"
+msgstr "Payments made"
 
 msgid "Paiements incomplets"
 msgstr "Incomplete payments"
@@ -3057,6 +3111,9 @@ msgstr "Programs in progress"
 msgid "Pilotage de la vie académique"
 msgstr "Oversight of academic life"
 
+msgid "Pilotage financier et académique"
+msgstr "Financial and academic oversight"
+
 msgid "Programme"
 msgstr "Program"
 
@@ -3069,11 +3126,20 @@ msgstr "Programs, sessions, attendance"
 msgid "Projet d'études"
 msgstr "Study project"
 
+msgid "Prospects en base"
+msgstr "Prospects in the database"
+
 msgid "Présence"
 msgstr "Attendance"
 
 msgid "Pédagogie"
 msgstr "Academics"
+
+msgid "Période personnalisée"
+msgstr "Custom period"
+
+msgid "Recettes"
+msgstr "Income"
 
 msgid "Refuser"
 msgstr "Reject"
@@ -3151,6 +3217,9 @@ msgstr "Sign in"
 msgid "Secrétariat"
 msgstr "Secretary"
 
+msgid "Sessions actives"
+msgstr "Active sessions"
+
 msgid "Solde net (filtre)"
 msgstr "Net balance (filter)"
 
@@ -3159,6 +3228,9 @@ msgstr "Total balance"
 
 msgid "Soldes des caisses"
 msgstr "Cash account balances"
+
+msgid "Sorties du mois"
+msgstr "Exits this month"
 
 msgid "Sorties par catégorie"
 msgstr "Exits by category"
@@ -3174,6 +3246,9 @@ msgstr "Submitted on"
 
 msgid "Suivi de candidature"
 msgstr "Application tracking"
+
+msgid "Suivi des encaissements récents"
+msgstr "Recent collections tracking"
 
 msgid "Suivre ma candidature"
 msgstr "Track my application"
@@ -3201,6 +3276,9 @@ msgstr "Total"
 
 msgid "Tous comptes actifs"
 msgstr "All active accounts"
+
+msgid "Tous cursus"
+msgstr "All curricula"
 
 msgid "Tous les modules"
 msgstr "All modules"
@@ -3272,6 +3350,9 @@ msgstr "Your training path"
 msgid "Vue d'ensemble de la plateforme"
 msgstr "Platform overview"
 
+msgid "Vue direction"
+msgstr "Management view"
+
 msgid "en attente"
 msgstr "pending"
 
@@ -3342,11 +3423,17 @@ msgstr ""
 msgid "%(c)s opération(s) correspondant aux critères"
 msgstr "%(c)s transaction(s) matching these criteria"
 
+msgid "%(c)s opération(s) validée(s) ce mois · toutes origines confondues"
+msgstr "%(c)s validated transaction(s) this month · all sources combined"
+
 msgid "%(c)s événement(s) correspondant aux critères"
 msgstr "%(c)s event(s) matching these criteria"
 
 msgid "%(n)s dossier(s)"
 msgstr "%(n)s record(s)"
+
+msgid "%(n)s nouvelle(s) inscription(s) ce mois-ci"
+msgstr "%(n)s new enrollment(s) this month"
 
 msgid "%(n)s opération(s)"
 msgstr "%(n)s transaction(s)"
@@ -3755,6 +3842,9 @@ msgstr "Fee due minus collected amounts, per enrollment."
 msgid "Taux de présence (%)"
 msgstr "Attendance rate (%)"
 
+msgid "Écritures validées, sur %(n)s mois."
+msgstr "Validated entries and exits over %(n)s months."
+
 msgid "Élèves"
 msgstr "Students"
 
@@ -3941,6 +4031,13 @@ msgstr "— None —"
 
 msgid "Assistant administratif"
 msgstr "Administrative assistant"
+
+msgid ""
+"La validation d'une inscription est réservée à la direction, à l'assistant "
+"administratif, à la supervision pédagogique et au super administrateur."
+msgstr ""
+"Approving an enrollment is reserved for management, the administrative "
+"assistant, academic supervision and the super administrator."
 
 msgid "%(d)s droit(s) accordé(s) sur %(p)s poste(s) éditable(s)."
 msgstr "%(d)s right(s) granted across %(p)s editable post(s)."
@@ -4682,6 +4779,13 @@ msgstr ""
 msgid "%(r)s %(dv)s de recettes pour %(d)s %(dv)s de dépenses enregistrées."
 msgstr "%(r)s %(dv)s of income against %(d)s %(dv)s of recorded expenses."
 
+msgid ""
+"%(t)s étudiant(s) actif(s), %(s)s session(s) en cours et %(r)s %(dv)s de "
+"recettes encaissées."
+msgstr ""
+"%(t)s active student(s), %(s)s ongoing class group(s) and %(r)s %(dv)s of "
+"income collected."
+
 msgid "Aperçu de l'en-tête imprimé"
 msgstr "Printed header preview"
 
@@ -4730,6 +4834,9 @@ msgstr "Contact e-mail"
 
 msgid "Encaisser les mensualités"
 msgstr "Collect the monthly payments"
+
+msgid "Encaissés ce mois"
+msgstr "Collected this month"
 
 msgid "Feuille de suivi, cahier de texte et reçu."
 msgstr "Tracking sheet, class register and receipt."
@@ -4891,6 +4998,9 @@ msgstr "Current value"
 msgid "Validés"
 msgstr "Validated"
 
+msgid "Versés ce mois"
+msgstr "Paid out this month"
+
 msgid "Vous avez demandé à utiliser cette adresse pour votre compte %(nom)s."
 msgstr "You asked to use this address for your %(nom)s account."
 
@@ -4902,6 +5012,9 @@ msgstr "balance due %(amount)s %(dv)s"
 
 msgid "Clôtures aujourd'hui : %(c)s"
 msgstr "Closings today: %(c)s"
+
+msgid "%(dv)s de recettes"
+msgstr "%(dv)s of income"
 
 msgid "%(dv)s de solde des caisses"
 msgstr "%(dv)s across cash accounts"
@@ -5844,266 +5957,3 @@ msgstr "Record a student's enrollment fee on their record."
 
 msgid "Mensualités payées"
 msgstr "Monthly fees paid"
-
-msgid ""
-"La validation d'une inscription est réservée à l'assistant administratif, à "
-"la supervision pédagogique et au super administrateur."
-msgstr ""
-"Approving an enrollment is reserved for the administrative assistant, "
-"academic supervision and the super administrator."
-
-msgid "Zone dangereuse"
-msgstr "Danger zone"
-
-msgid ""
-"Supprime définitivement ce compte et toutes ses actions d'audit. Les "
-"relations liées seront supprimées ou détachées selon les règles de la base."
-msgstr ""
-"Permanently deletes this account and all its audit actions. Related records "
-"are deleted or detached according to database rules."
-
-msgid ""
-"Supprimer définitivement %(nom)s et toutes ses actions d'audit ? Cette "
-"action est irréversible."
-msgstr ""
-"Permanently delete %(nom)s and all their audit actions? This action cannot "
-"be undone."
-
-msgid "Supprimer l'utilisateur"
-msgstr "Delete user"
-
-msgid "Utilisateur %(nom)s supprimé (%(n)s action(s) d'audit supprimée(s))."
-msgstr "User %(nom)s deleted (%(n)s audit action(s) removed)."
-
-msgid "Impossible de supprimer le dernier super administrateur actif."
-msgstr "The last active super administrator cannot be deleted."
-
-msgid "Vous ne pouvez pas supprimer votre propre compte."
-msgstr "You cannot delete your own account."
-
-msgid "Validées"
-msgstr "Validated"
-
-msgid "%(n)s nouvelle(s) inscription(s) cette année"
-msgstr "%(n)s new enrollment(s) this year"
-
-msgid "Visites par mois"
-msgstr "Visits per month"
-
-msgid "Visites enregistrées à l’accueil, sur %(n)s mois."
-msgstr "Reception visits recorded over %(n)s months."
-
-msgid "Assiduité de mes groupes"
-msgstr "My groups' attendance"
-
-msgid "Présences, retards, absences et excuses de vos groupes sur %(n)s mois."
-msgstr ""
-"Attendance, lateness, absences and excuses for your groups over %(n)s "
-"months."
-
-msgid "Mon assiduité"
-msgstr "My attendance"
-
-msgid "Vos présences, retards, absences et excuses sur %(n)s mois."
-msgstr "Your attendance, lateness, absences and excuses over %(n)s months."
-
-msgid "Présences, retards, absences et excuses sur %(n)s mois."
-msgstr "Attendance, lateness, absences and excuses over %(n)s months."
-
-msgid "Total des entrées de caisse validées, mois par mois."
-msgstr "Total validated cash inflows, month by month."
-
-msgid "Staff (tous)"
-msgstr "Staff (all)"
-
-msgid "Utilisateur indisponible"
-msgstr "User unavailable"
-
-msgid "Supprimer cette conversation ?"
-msgstr "Delete this conversation?"
-
-msgid "Supprimer la conversation"
-msgstr "Delete conversation"
-
-msgid "Conversation supprimée."
-msgstr "Conversation deleted."
-
-msgid "Favicon"
-msgstr "Favicon"
-
-msgid "Logo"
-msgstr "Logo"
-
-msgid "Icône de l'onglet du navigateur (PNG, JPG, WEBP ou ICO, 2 Mo max)."
-msgstr "Browser tab icon (PNG, JPG, WEBP or ICO, 2 MB max)."
-
-msgid ""
-"Image de la barre latérale et des documents (PNG, JPG, WEBP ou ICO, 2 Mo "
-"max)."
-msgstr "Sidebar and document image (PNG, JPG, WEBP or ICO, 2 MB max)."
-
-msgid ""
-"Pour changer d'image, choisissez un nouveau fichier. La case « Effacer » "
-"retire l'image et revient au logo ou au favicon d'origine."
-msgstr ""
-"To change an image, choose a new file. The \"Clear\" checkbox removes it and"
-" restores the original logo or favicon."
-
-msgid "Favicon et logo"
-msgstr "Favicon and logo"
-
-msgid ""
-"Onglet du navigateur, barre latérale, pages publiques et en-têtes imprimés."
-msgstr "Browser tab, sidebar, public pages and printed headers."
-
-msgid "Identité visuelle en place"
-msgstr "Current visual identity"
-
-msgid "Logo de l’établissement"
-msgstr "School logo"
-
-msgid "Favicon de l’établissement"
-msgstr "School favicon"
-
-msgid ""
-"L'aperçu se rafraîchit après enregistrement. Sans image déposée, les visuels"
-" fournis avec l'application restent en place."
-msgstr ""
-"The preview refreshes after saving. Without an uploaded image, the bundled "
-"visuals remain in place."
-
-msgid "Entrées du mois"
-msgstr "This month's entries"
-
-msgid "Sorties du mois"
-msgstr "Exits this month"
-
-msgid "%(mois)s %(annee)s"
-msgstr "%(mois)s %(annee)s"
-
-msgid "Changer de période"
-msgstr "Change period"
-
-msgid "Opérations validées sur la période"
-msgstr "Validated transactions for the period"
-
-msgid "Solde du mois"
-msgstr "Monthly balance"
-
-msgid ""
-"%(c)s opération(s) validée(s) sur la période · toutes origines confondues"
-msgstr "%(c)s validated transaction(s) for the period · all sources combined"
-
-msgid "Contrôle financier — %(periode)s"
-msgstr "Financial control — %(periode)s"
-
-msgid "Encaissés sur la période"
-msgstr "Collected during the period"
-
-msgid "Versés sur la période"
-msgstr "Paid during the period"
-
-msgid "%(n)s compte(s) étudiant(s) attendent un identifiant."
-msgstr "%(n)s student account(s) are waiting for credentials."
-
-msgid ""
-"%(t)s étudiant(s) au total · %(e)s identifiant(s) déjà remis, non encore "
-"changés."
-msgstr ""
-"%(t)s student(s) in total · %(e)s credential(s) already issued, not yet "
-"changed."
-
-msgid ""
-"Aucun identifiant à générer : tous les étudiants ont déjà un mot de passe."
-msgstr "No credentials to generate: all students already have a password."
-
-msgid "Ce que fait la génération"
-msgstr "What generation does"
-
-msgid "Changer le mot de passe"
-msgstr "Change password"
-
-msgid ""
-"Connectez-vous avec %(email)s et le mot de passe transmis par "
-"l'administration. Vous devrez le changer dès la première connexion."
-msgstr ""
-"Sign in with %(email)s and the password provided by the administrator. You "
-"will have to change it at first login."
-
-msgid ""
-"Connecté sous « %(e)s ». Choisissez un nouveau mot de passe pour continuer."
-msgstr "Signed in as “%(e)s”. Choose a new password to continue."
-
-msgid ""
-"Crée une adresse « prénom.nom-lettre@%(d)s » : e pour Excel, i pour "
-"Informatique générale, g pour Informatique de gestion, m pour Maintenance, b"
-" pour Bureautique, a pour Anglais, d pour Développement Web."
-msgstr ""
-"Creates a “firstname.lastname-letter@%(d)s” address: e for Excel, i for "
-"General IT, g for Management IT, m for Maintenance, b for Office automation,"
-" a for English, d for Web Development."
-
-msgid "Doit changer son mot de passe à la connexion"
-msgstr "Must change password at login"
-
-msgid "Générer et télécharger les identifiants"
-msgstr "Generate and download credentials"
-
-msgid "Générer les identifiants manquants"
-msgstr "Generate missing credentials"
-
-msgid "Identifiants de connexion"
-msgstr "Login credentials"
-
-msgid "Identifiants étudiants"
-msgstr "Student credentials"
-
-msgid "Mot de passe modifié. Bonne navigation."
-msgstr "Password changed. Happy browsing."
-
-msgid "Mot de passe temporaire"
-msgstr "Temporary password"
-
-msgid "Oblige l'étudiant à changer son mot de passe à sa première connexion."
-msgstr "Requires the student to change the password at first login."
-
-msgid ""
-"Pose le mot de passe temporaire « nom-e123 » (nom de famille, lettre de "
-"formation, 123) et active le compte."
-msgstr ""
-"Sets the temporary “name-e123” password (surname, course letter, 123) and "
-"activates the account."
-
-msgid "Première connexion"
-msgstr "First login"
-
-msgid ""
-"Prévient l'étudiant par notification interne, sans afficher le mot de passe."
-msgstr "Notifies the student internally, without displaying the password."
-
-msgid "Retour aux utilisateurs"
-msgstr "Back to users"
-
-msgid "Tous les comptes étudiants ont déjà un mot de passe : rien à générer."
-msgstr "All student accounts already have a password: nothing to generate."
-
-msgid ""
-"Télécharge un fichier CSV privé : c'est toi qui transmets le mot de passe à "
-"chaque étudiant."
-msgstr "Downloads a private CSV file: you send the password to each student."
-
-msgid "Valider mon nouveau mot de passe"
-msgstr "Save my new password"
-
-msgid "Votre compte Univers Academy est activé"
-msgstr "Your Univers Academy account is active"
-
-msgid ""
-"Votre identifiant temporaire ne doit servir qu'une fois. Le nouveau mot de "
-"passe doit contenir au moins 8 caractères et ne pas être trop simple."
-msgstr ""
-"Your temporary credentials must be used only once. The new password must "
-"contain at least 8 characters and must not be too simple."
-
-msgid "Écrire sur WhatsApp"
-msgstr "Message on WhatsApp"

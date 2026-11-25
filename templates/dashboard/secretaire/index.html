@@ -32,19 +32,6 @@
     {% include "dashboard/_stat.html" with label=lbl_convertis value=converted_prospects icon="user-check" tone="sky" hint=hint_convertis %}
 </div>
 
-{% include "dashboard/_finance_filter.html" %}
-{% translate "Entrées du mois" as lbl_entrees_mois %}
-{% translate "Sorties du mois" as lbl_sorties_mois %}
-{% translate "Solde du mois" as lbl_solde_mois %}
-{% translate "Opérations validées sur la période" as hint_finance_mois %}
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-6">
-    {% include "dashboard/_stat.html" with label=lbl_entrees_mois value=finance_income|floatformat:0 icon="wallet" tone="green" hint=hint_finance_mois %}
-    {% include "dashboard/_stat.html" with label=lbl_sorties_mois value=finance_expense|floatformat:0 icon="trending-up" tone="rose" hint=hint_finance_mois %}
-    {% include "dashboard/_stat.html" with label=lbl_solde_mois value=finance_net|floatformat:0 icon="chart" tone="indigo" hint=finance_periode %}
-</div>
-
-{% include "dashboard/_charts.html" %}
-
 <section class="ua-card ua-card-pad mb-5">
     <div class="flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -111,8 +98,4 @@
         </table>
     </div>
 </section>
-{% endblock %}
-
-{% block extra_scripts %}
-{% include "dashboard/_charts_scripts.html" %}
 {% endblock %}

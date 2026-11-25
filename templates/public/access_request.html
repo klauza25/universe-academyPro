@@ -9,7 +9,7 @@
         <div class="mb-8 text-center">
             <a href="{% url 'core:home' %}" class="inline-block">
                 <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full shadow-sm ring-1 ring-slate-200">
-                    <img src="{{ plateforme.logo_url }}" alt="{{ plateforme.nom }}" class="h-14 w-14 object-cover">
+                    <img src="{% static 'img/logo-univers.jpg' %}" alt="{{ plateforme.nom }}" class="h-14 w-14 object-cover">
                 </div>
             </a>
             <h1 class="text-2xl font-semibold text-slate-900">{{ plateforme.nom }}</h1>

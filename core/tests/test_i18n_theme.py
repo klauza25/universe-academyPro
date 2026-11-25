@@ -110,10 +110,10 @@ class BasculeDeLangueTest(BusinessTestBase):
             net_amount=self.course.fee_amount,
             registered_by=self.secretaire,
         )
-        client = self.client_for(self.super_admin)
+        client = self.client_for(self.direction)
         client.post(reverse('set_language'), {'language': 'en', 'next': '/'})
 
-        page = client.get(reverse('core:dashboard:super-admin-dashboard'))
+        page = client.get(reverse('core:dashboard:direction-dashboard'))
         self.assertContains(page, 'Enrollments awaiting validation')
         self.assertContains(page, 'Validate</button>')
         self.assertNotContains(page, 'Inscriptions en attente de validation')

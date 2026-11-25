@@ -8,6 +8,7 @@ import io
 from dataclasses import dataclass, field
 
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
 
 from core import data_tools as outils
@@ -397,36 +398,17 @@ class EcritureEnBaseTests(TestCase):
         self.importer([Ligne(mois=[])], [fiche()], '--ecrire', '--efface')
         self.assertEqual(Enrollment.objects.count(), 2)
 
-    def test_sans_efface_un_dossier_saisi_a_la_main_ne_bloque_pas_le_reste(self):
+    def test_efface_refuse_de_supprimer_sans_le_dire(self):
         eleve = User.objects.create_user(email='demo@x.com', password='x', first_name='Alice',
                                          last_name='Mabiala')
         session = CourseSession.objects.create(
             course=self.cours, starts_at=dt.date(2026, 10, 12), ends_at=dt.date(2027, 7, 12),
             schedule='Lun-Ven', status='ACTIVE')
         Enrollment.objects.create(student=eleve, session=session, net_amount=225000)
-
-        self.importer([Ligne(mois=[])], [fiche()], '--ecrire')
-
-        self.assertEqual(Enrollment.objects.count(), 2)
-        self.assertTrue(Enrollment.objects.filter(student=eleve).exists())
-        self.assertTrue(Enrollment.objects.filter(student__email='brivah@test.local').exists())
-
-    def test_sans_efface_la_ligne_d_un_eleve_deja_inscrit_est_ignoree(self):
-        """Le dossier saisi dans l'app reste seul : ni suppression, ni doublon."""
-        eleve = User.objects.create_user(email='brivah@test.local', password='x',
-                                         first_name='Brivah', last_name='LOUAMBA',
-                                         account_status=AccountStatus.ACTIVE)
-        session = CourseSession.objects.create(
-            course=self.cours, starts_at=dt.date(2026, 10, 12), ends_at=dt.date(2027, 7, 12),
-            schedule='Lun-Ven', status='ACTIVE')
-        Enrollment.objects.create(student=eleve, session=session, net_amount=225000)
-
-        self.importer([Ligne(mois=[une_case_mois(11, 'NOVEMBRE', 25000)])],
-                      [fiche()], '--ecrire')
-
+        with self.assertRaises(CommandError) as refuse:
+            self.importer([Ligne(mois=[])], [fiche()], '--ecrire')
+        self.assertIn('--efface', str(refuse.exception))
         self.assertEqual(Enrollment.objects.count(), 1)
-        self.assertEqual(Payment.objects.count(), 0)
-        self.assertEqual(self.solde(), 0)
 
     def test_efface_supprime_inscriptions_et_entrees_de_caisse_sauf_les_sorties(self):
         eleve = User.objects.create_user(email='demo@x.com', password='x', first_name='Alice',

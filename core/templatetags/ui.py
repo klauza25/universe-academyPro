@@ -1,6 +1,4 @@
 """Small UI helpers for the dashboard templates."""
-import re
-
 from django import template
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
@@ -54,26 +52,6 @@ ICONS = {
 
 
 @register.filter
-def whatsapp(phone):
-    """Lien ``wa.me`` pour un numéro affiché, chaîne vide si numéro absent.
-
-    Les numéros congolais sont saisis indifféremment ``06…``, ``+242 06…`` ou
-    ``00242 06…`` : WhatsApp n'accepte que les chiffres, avec l'indicatif du
-    pays mais sans signe ``+``. Les autres indicatifs sont conservés tels quels.
-    """
-    chiffres = re.sub(r'\D', '', str(phone or ''))
-    if not chiffres:
-        return ''
-    if chiffres.startswith('00'):
-        chiffres = chiffres[2:]
-    if chiffres.startswith('0'):
-        chiffres = '242' + chiffres[1:]
-    elif len(chiffres) <= 9 and not chiffres.startswith('242'):
-        chiffres = '242' + chiffres
-    return f'https://wa.me/{chiffres}'
-
-
-@register.filter
 def duree(minutes):
     """Formate une durée en minutes : « 1 h 30 », « 0 h 05 », « — » si inconnue.
 
@@ -111,8 +89,8 @@ def icon(name, css="ua-icon"):
     )
 
 
-@register.inclusion_tag('dashboard/_compteurs.html', takes_context=True)
-def compteurs(context):
+@register.inclusion_tag('dashboard/_compteurs.html')
+def compteurs():
     """La bande de chiffres commune à tous les tableaux de bord.
 
     Elle est appelée depuis chaque page d'accueil de rôle : le calcul reste
@@ -120,13 +98,7 @@ def compteurs(context):
     """
     from core.utils import platform_counts
 
-    data = platform_counts()
-    user = context.get('user')
-    roles = set(user.roles.values_list('key', flat=True)) if user and user.is_authenticated else set()
-    data['can_view_users'] = bool(roles & {'SUPER_ADMIN', 'ADMIN', 'ASSISTANT_ADMIN'})
-    data['can_view_students'] = 'ASSISTANT_ADMIN' in roles
-    data['can_view_staff'] = data['can_view_users']
-    return data
+    return platform_counts()
 
 
 @register.inclusion_tag('dashboard/_cloche.html', takes_context=True)

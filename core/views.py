@@ -1,5 +1,3 @@
-import calendar
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -45,24 +43,14 @@ from .utils import (
     outstanding_receivables,
     salaire_formateur as calculer_salaire_formateur,
     salaires_formateurs as calculer_salaires_formateurs,
-    students_count, STAFF_ROLE_KEYS,
+    students_count,
 )
 from .taches import (
     marqueur_evenements, marqueur_notifications_non_lues, tableau_des_files,
 )
 from .views_profile import changer_avatar
 from .views_comptabilite import _date_filtre
-from .graphiques import (
-    pour_accueil,
-    pour_admin,
-    pour_comptabilite,
-    pour_direction,
-    pour_etudiant,
-    pour_formateur,
-    pour_pedagogie,
-    pour_secretaire,
-    pour_super_admin,
-)
+from .graphiques import pour_comptabilite, pour_direction, pour_pedagogie
 
 # Catégories de dépenses qui représentent un salaire, y compris les avances et
 # les honoraires de formateur : elles viennent du journal de caisse, pas des
@@ -121,8 +109,6 @@ def login_view(request):
                     messages.error(request, _("Votre compte est désactivé ou suspendu."))
                     return redirect('core:login')
 
-                if user.password_must_change:
-                    return redirect('core:dashboard:password-change-required')
                 return redirect('core:dashboard:dashboard-router')
             else:
                 messages.error(request, _("Identifiant ou mot de passe incorrect."))
@@ -342,56 +328,25 @@ def super_admin_dashboard(request):
     from .views_comptabilite import accounts_with_balance
 
     today = timezone.localdate()
-    year_start = today.replace(month=1, day=1)
-    year_transactions = CashTransaction.objects.filter(
+    month_start = today.replace(day=1)
+    month_transactions = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED,
-        occurred_at__date__gte=year_start,
+        occurred_at__date__gte=month_start,
         occurred_at__date__lte=today,
     )
     salaries_categories = (
         'Salaires', 'Paiements des formateurs', 'Avances sur salaire',  # i18n-exempt: noms de catégories tels qu'enregistrés en base (filtre __in)
     )
-    year_income = year_transactions.filter(
+    month_income = month_transactions.filter(
         tx_type=CashTransaction.Type.IN
     ).aggregate(total=Sum('amount'))['total'] or 0
-    year_expense = year_transactions.filter(
+    month_expense = month_transactions.filter(
         tx_type=CashTransaction.Type.OUT
     ).aggregate(total=Sum('amount'))['total'] or 0
-    year_salaries = year_transactions.filter(
+    month_salaries = month_transactions.filter(
         tx_type=CashTransaction.Type.OUT,
         category__name__in=salaries_categories,
     ).aggregate(total=Sum('amount'))['total'] or 0
-
-    finance = _finance_periode_context(request, today)
-    periode_debut = today.replace(
-        year=finance['finance_annee'], month=finance['finance_mois'], day=1)
-    dernier_jour = calendar.monthrange(
-        finance['finance_annee'], finance['finance_mois'])[1]
-    periode_fin = periode_debut.replace(day=dernier_jour)
-    if periode_fin > today:
-        periode_fin = today
-    periode_transactions = CashTransaction.objects.filter(
-        status=CashTransaction.Status.VALIDATED,
-        occurred_at__date__gte=periode_debut,
-        occurred_at__date__lte=periode_fin,
-    )
-    finance.update({
-        'finance_debut': periode_debut,
-        'finance_fin': periode_fin,
-        'finance_net': (
-            finance['finance_income'] - finance['finance_expense']
-        ),
-        'finance_payment_total': Payment.objects.filter(
-            status=Payment.Status.COMPLETED,
-            paid_at__date__gte=periode_debut,
-            paid_at__date__lte=periode_fin,
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'finance_salaries': periode_transactions.filter(
-            tx_type=CashTransaction.Type.OUT,
-            category__name__in=salaries_categories,
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'finance_transaction_count': periode_transactions.count(),
-    })
 
     paid_per_enrollment = Payment.objects.filter(
         enrollment=OuterRef('pk'),
@@ -408,7 +363,6 @@ def super_admin_dashboard(request):
     cash_rows = accounts_with_balance()
 
     context = {
-        **finance,
         'pending_requests': AccessRequest.objects.filter(
             status=AccessRequest.Status.PENDING
         ).count(),
@@ -426,16 +380,16 @@ def super_admin_dashboard(request):
         'enrollments_to_validate': enrollments_waiting_validation(),
         # Contrôle financier global.
         'today': today,
-        'year_start': year_start,
-        'year_income': year_income,
-        'year_expense': year_expense,
-        'year_salaries': year_salaries,
-        'year_payment_total': Payment.objects.filter(
+        'month_start': month_start,
+        'month_income': month_income,
+        'month_expense': month_expense,
+        'month_salaries': month_salaries,
+        'month_payment_total': Payment.objects.filter(
             status=Payment.Status.COMPLETED,
-            paid_at__date__gte=year_start,
+            paid_at__date__gte=month_start,
             paid_at__date__lte=today,
         ).aggregate(total=Sum('amount'))['total'] or 0,
-        'year_transaction_count': year_transactions.count(),
+        'month_transaction_count': month_transactions.count(),
         'pending_transactions': CashTransaction.objects.filter(
             status=CashTransaction.Status.DRAFT
         ).count(),
@@ -449,7 +403,6 @@ def super_admin_dashboard(request):
         'recent_transactions': CashTransaction.objects.select_related(
             'account', 'category', 'created_by'
         ).order_by('-occurred_at', '-created_at')[:8],
-        'graphiques': pour_super_admin(),
     }
     return render(request, 'dashboard/super_admin/index.html', context)
 
@@ -471,9 +424,7 @@ def user_list(request):
         )
     if status_filter:
         users = users.filter(account_status=status_filter)
-    if role_filter == '__staff__':
-        users = users.filter(roles__key__in=STAFF_ROLE_KEYS)
-    elif role_filter:
+    if role_filter:
         users = users.filter(roles__key=role_filter)
 
     paginator = Paginator(users.distinct(), 20)
@@ -664,37 +615,6 @@ def user_edit(request, user_id):
         'form': form, 'editing': True, 'profile_user': user,
         'can_manage_users': True,
     })
-
-
-@super_admin_required
-def user_delete(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if request.method != 'POST':
-        return redirect('core:dashboard:user-detail', user_id=user.id)
-    if user.id == request.user.id:
-        return HttpResponseForbidden(_("Vous ne pouvez pas supprimer votre propre compte."))
-    if _is_last_active_super_admin(user):
-        messages.error(
-            request,
-            _("Impossible de supprimer le dernier super administrateur actif."),
-        )
-        return redirect('core:dashboard:user-detail', user_id=user.id)
-    email = user.email
-    name = user.get_full_name() or email
-    with transaction.atomic():
-        deleted_logs, _ = AuditLog.objects.filter(actor=user).delete()
-        log_audit(
-            request, 'USER_DELETE', 'User', str(user.id),
-            before={'email': email, 'name': name, 'audit_logs_deleted': deleted_logs},
-        )
-        user.delete()
-    messages.success(
-        request,
-        _("Utilisateur %(nom)s supprimé (%(n)s action(s) d'audit supprimée(s)).") % {
-            'nom': name, 'n': deleted_logs,
-        },
-    )
-    return redirect('core:dashboard:user-list')
 
 
 @user_management_required
@@ -1249,59 +1169,15 @@ def scholarship_review_detail(request, app_id):
     })
 
 
-def _finance_periode_context(request, today):
-    """Période financière des tableaux de bord : mois en cours par défaut.
-
-    L'année et le mois viennent de la query string ; une valeur absurde revient
-    à la période courante plutôt que de transformer un tableau de bord en 500.
-    Les années proposées incluent celles où une opération existe, même si elle
-    est passée, et toujours l'année en cours.
-    """
-    def entier(valeur, defaut, bornes):
-        try:
-            nombre = int(valeur)
-        except (TypeError, ValueError):
-            return defaut
-        return nombre if nombre in bornes else defaut
-
-    annee = entier(request.GET.get('annee'), today.year, range(1900, 2201))
-    mois = entier(request.GET.get('mois'), today.month, range(1, 13))
-    annees = sorted(
-        {d.year for d in CashTransaction.objects.dates('occurred_at', 'year')}
-        | {today.year, annee},
-        reverse=True,
-    )
-    transactions = CashTransaction.objects.filter(
-        status=CashTransaction.Status.VALIDATED,
-        occurred_at__year=annee,
-        occurred_at__month=mois,
-    )
-    return {
-        'finance_annee': annee,
-        'finance_mois': mois,
-        'finance_annees': annees,
-        'finance_mois_choices': MOIS,
-        'finance_periode': _("%(mois)s %(annee)s") % {
-            'mois': dict(MOIS)[mois], 'annee': annee,
-        },
-        'finance_income': transactions.filter(
-            tx_type=CashTransaction.Type.IN
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-        'finance_expense': transactions.filter(
-            tx_type=CashTransaction.Type.OUT
-        ).aggregate(total=Sum('amount'))['total'] or 0,
-    }
-
-
 @role_required('ADMIN')
 def admin_dashboard(request):
     today = timezone.localdate()
-    year_start = today.replace(month=1, day=1)
+    month_start = today.replace(day=1)
     from .views_comptabilite import accounts_with_balance
 
-    year_transactions = CashTransaction.objects.filter(
+    month_transactions = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED,
-        occurred_at__date__gte=year_start,
+        occurred_at__date__gte=month_start,
     )
     cash_rows = accounts_with_balance()
 
@@ -1320,33 +1196,116 @@ def admin_dashboard(request):
         'recent_users': User.objects.prefetch_related('roles').order_by(
             '-date_joined'
         )[:6],
-        'year_income': year_transactions.filter(
+        'month_income': month_transactions.filter(
             tx_type=CashTransaction.Type.IN
         ).aggregate(total=Sum('amount'))['total'] or 0,
-        'year_expense': year_transactions.filter(
+        'month_expense': month_transactions.filter(
             tx_type=CashTransaction.Type.OUT
         ).aggregate(total=Sum('amount'))['total'] or 0,
         'cash_rows': cash_rows,
         'cash_total': sum(row['balance'] for row in cash_rows),
         'outstanding_amount': outstanding_receivables(),
         'new_enrollments': Enrollment.objects.filter(
-            enrolled_at__date__gte=year_start
+            enrolled_at__date__gte=month_start
         ).count(),
-        'graphiques': pour_admin(),
     }
-    finance = _finance_periode_context(request, today)
-    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
-    context.update(finance)
     return render(request, 'dashboard/admin/index.html', context)
 
 
-@role_required('ASSISTANT_ADMIN')
-def secretaire_dashboard(request):
+@role_required('DIRECTION')
+def direction_dashboard(request):
     today = timezone.localdate()
-    finance = _finance_periode_context(request, today)
-    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
+    month_start = today.replace(day=1)
+    period = request.GET.get('period') or 'month'
+    date_from = request.GET.get('from') or ''
+    date_to = request.GET.get('to') or ''
+
+    payments = Payment.objects.filter(status=Payment.Status.COMPLETED)
+    transactions = CashTransaction.objects.filter(
+        status=CashTransaction.Status.VALIDATED
+    )
+    if period == 'day':
+        payments = payments.filter(paid_at__date=today)
+        transactions = transactions.filter(occurred_at__date=today)
+    elif period == 'week':
+        from datetime import timedelta
+        start = today - timedelta(days=7)
+        payments = payments.filter(paid_at__date__gte=start)
+        transactions = transactions.filter(occurred_at__date__gte=start)
+    elif period == 'year':
+        payments = payments.filter(paid_at__year=today.year)
+        transactions = transactions.filter(occurred_at__year=today.year)
+    elif period == 'custom' and date_from and date_to:
+        payments = payments.filter(paid_at__date__gte=date_from,
+                                   paid_at__date__lte=date_to)
+        transactions = transactions.filter(
+            occurred_at__date__gte=date_from,
+            occurred_at__date__lte=date_to,
+        )
+    else:
+        payments = payments.filter(paid_at__date__gte=month_start)
+        transactions = transactions.filter(occurred_at__date__gte=month_start)
+
+    from .views_comptabilite import accounts_with_balance
+
     context = {
-        **finance,
+        'period': period,
+        'date_from': date_from,
+        'date_to': date_to,
+        'total_revenue': transactions.filter(
+            tx_type=CashTransaction.Type.IN
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'active_students': students_count(only_active=True),
+        'active_sessions': CourseSession.objects.filter(
+            status=CourseSession.Status.ACTIVE
+        ).count(),
+        'new_enrollments': Enrollment.objects.filter(
+            enrolled_at__date__gte=month_start
+        ).count(),
+        'recent_payments': payments.select_related(
+            'enrollment__student'
+        ).order_by('-paid_at')[:8],
+        'visits_count': Visit.objects.filter(
+            arrival_at__date__gte=month_start
+        ).count(),
+        'prospects_count': Prospect.objects.count(),
+        'converted_count': Prospect.objects.filter(
+            converted_student__isnull=False
+        ).count(),
+        'total_expenses': transactions.filter(
+            tx_type=CashTransaction.Type.OUT
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'cash_rows': accounts_with_balance(),
+        'recent_transactions': transactions.select_related(
+            'account', 'category'
+        ).order_by('-occurred_at')[:8],
+        'students_by_session': CourseSession.objects.filter(
+            status=CourseSession.Status.ACTIVE
+        ).annotate(effectif=Count('enrollments')).select_related('course')[:8],
+        'attendance_stats': Attendance.objects.filter(
+            date__gte=month_start
+        ).aggregate(
+            total=Count('id'),
+            presents=Count('id', filter=Q(status='PRESENT')),
+            absents=Count('id', filter=Q(status='ABSENT')),
+        ),
+        'records_stats': SessionRecord.objects.filter(
+            date__gte=month_start
+        ).aggregate(
+            total=Count('id'),
+            completed=Count('id', filter=Q(status='COMPLETED')),
+        ),
+        # Inscriptions ouvertes au guichet : elles attendent une validation
+        # avant de pouvoir être encaissées.
+        'enrollments_to_validate': enrollments_waiting_validation(),
+        'graphiques': pour_direction(),
+    }
+    return render(request, 'dashboard/direction/index.html', context)
+
+
+@role_required('ASSISTANT_ADMIN', 'DIRECTION')
+def secretaire_dashboard(request):
+    context = {
         'pending_enrollments': Enrollment.objects.filter(
             status=Enrollment.Status.PENDING
         ).count(),
@@ -1364,7 +1323,6 @@ def secretaire_dashboard(request):
                 Prospect.Status.FOLLOW_UP, Prospect.Status.INTERESTED,
             ]
         ).count(),
-        'graphiques': pour_secretaire(),
     }
     return render(request, 'dashboard/secretaire/index.html', context)
 
@@ -1377,16 +1335,21 @@ def comptabilite_dashboard(request):
     validated = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED
     )
-    finance = _finance_periode_context(request, today)
-    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
+    month_transactions = validated.filter(
+        occurred_at__month=today.month,
+        occurred_at__year=today.year,
+    )
     cash_rows = accounts_with_balance()
     context = {
-        **finance,
-        'total_revenue_month': finance['finance_income'],
+        'total_revenue_month': month_transactions.filter(
+            tx_type=CashTransaction.Type.IN,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
         'recent_payments': Payment.objects.select_related(
             'enrollment__student', 'recorded_by'
         ).order_by('-paid_at')[:10],
-        'total_expenses_month': finance['finance_expense'],
+        'total_expenses_month': month_transactions.filter(
+            tx_type=CashTransaction.Type.OUT,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
         'today_in': validated.filter(
             tx_type=CashTransaction.Type.IN,
             occurred_at__date=today,
@@ -1520,11 +1483,10 @@ def formateur_dashboard(request):
             status=Resource.Status.PUBLISHED,
         ).count(),
         'salaire': calculer_salaire_formateur(request.user),
-        'graphiques': pour_formateur(request.user),
     })
 
 
-@role_required('ASSISTANT_ADMIN', 'COMPTABLE')
+@role_required('DIRECTION', 'ASSISTANT_ADMIN', 'COMPTABLE')
 def salaires_formateurs(request):
     """Part estimée par formateur et salaires réellement sortis de la caisse."""
     salaires = calculer_salaires_formateurs()
@@ -1701,7 +1663,6 @@ def etudiant_dashboard(request):
             status=SessionRecord.Status.PLANNED,
         ).select_related('session__course').order_by('date')[:8],
         'monthly_situation': situation_mensuelle,
-        'graphiques': pour_etudiant(request.user),
     })
 
 
@@ -1765,7 +1726,6 @@ def accueil_dashboard(request):
         'recent_prospects': Prospect.objects.select_related(
             'contact', 'course', 'agent'
         )[:8],
-        'graphiques': pour_accueil(),
     })
 
 

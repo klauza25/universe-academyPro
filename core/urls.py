@@ -3,7 +3,7 @@ from django.urls import path, include
 from . import (
     views, views_legal, views_accueil, views_comptabilite, views_pedagogie,
     views_profile, views_reglages, views_secretariat, views_supervision,
-    views_synchronisation, views_messagerie, views_identifiants,
+    views_synchronisation, views_messagerie,
 )
 
 app_name = 'core'
@@ -33,12 +33,6 @@ dashboard_urlpatterns = [
     path('', views.dashboard_router, name='dashboard-router'),
     path('notifications/poll/', views.notifications_poll, name='notifications-poll'),
 
-    # Identifiants étudiants --------------------------------------------------
-    path('super-admin/identifiants/',
-         views_identifiants.page_identifiants, name='identifiants-page'),
-    path('super-admin/identifiants/generer/',
-         views_identifiants.generer_identifiants, name='identifiants-generer'),
-
     # Messagerie interne -----------------------------------------------------
     path('messagerie/', views_messagerie.conversation_list, name='messagerie'),
     path('messagerie/nouvelle/', views_messagerie.conversation_start,
@@ -51,14 +45,9 @@ dashboard_urlpatterns = [
          views_messagerie.messages_poll, name='messagerie-poll'),
     path('messagerie/<uuid:conversation_id>/messages/<uuid:message_id>/supprimer/',
          views_messagerie.message_delete, name='messagerie-delete'),
-    path('messagerie/<uuid:conversation_id>/supprimer/',
-         views_messagerie.conversation_delete, name='messagerie-conversation-delete'),
 
     # Profil -----------------------------------------------------------------
     path('profil/', views_profile.profile_view, name='profile'),
-    path('profil/mot-de-passe-a-changer/',
-         views_profile.password_change_required,
-         name='password-change-required'),
     path('profil/email/<str:token>/', views_profile.profile_email_confirm,
          name='profile-email-confirm'),
     path('profil/notifications/lues/', views_profile.notifications_marquer_lues,
@@ -70,7 +59,6 @@ dashboard_urlpatterns = [
     path('super-admin/users/create/', views.user_create, name='user-create'),
     path('super-admin/users/<uuid:user_id>/', views.user_detail, name='user-detail'),
     path('super-admin/users/<uuid:user_id>/edit/', views.user_edit, name='user-edit'),
-    path('super-admin/users/<uuid:user_id>/supprimer/', views.user_delete, name='user-delete'),
     path('super-admin/users/<uuid:user_id>/photo/', views.user_avatar, name='user-avatar'),
     path('super-admin/users/<uuid:user_id>/roles/', views.user_role_assign, name='user-role-assign'),
     path('super-admin/users/<uuid:user_id>/status/', views.user_status_change, name='user-status-change'),
@@ -89,6 +77,7 @@ dashboard_urlpatterns = [
     path('super-admin/scholarships/', views.scholarship_review_list, name='scholarship-review-list'),
     path('super-admin/scholarships/<uuid:app_id>/', views.scholarship_review_detail, name='scholarship-review-detail'),
     path('admin/', views.admin_dashboard, name='admin-dashboard'),
+    path('direction/', views.direction_dashboard, name='direction-dashboard'),
 
     # Réglages de l'établissement --------------------------------------------
     path('reglages/parametres-generaux/', views_reglages.parametres_generaux,
@@ -199,5 +188,4 @@ urlpatterns = [
     path('dashboard/', include((dashboard_urlpatterns, 'dashboard'))),
     path('documents/<uuid:doc_id>/', views.serve_private_file, name='serve-private-file'),
     path('media/avatars/<path:path>', views_profile.serve_avatar, name='avatar'),
-    path('branding/<path:filename>', views_reglages.serve_branding, name='branding'),
 ]

@@ -39,6 +39,7 @@ class DashboardRoutingTests(BusinessTestBase):
         pairs = (
             (self.super_admin, 'core:dashboard:super-admin-dashboard'),
             (self.admin, 'core:dashboard:admin-dashboard'),
+            (self.direction, 'core:dashboard:direction-dashboard'),
             (self.secretaire, 'core:dashboard:secretaire-dashboard'),
             (self.assistant, 'core:dashboard:comptabilite-dashboard'),
             (self.peda, 'core:dashboard:resp-peda-dashboard'),
@@ -144,6 +145,7 @@ class AdminTransversalAccessTests(BusinessTestBase):
         'core:dashboard:audit-log',
         'core:dashboard:access-requests',
         'core:dashboard:scholarship-review-list',
+        'core:dashboard:direction-dashboard',
         'core:dashboard:secretaire-dashboard',
         'core:dashboard:comptabilite-dashboard',
         'core:dashboard:accueil-dashboard',

@@ -14,10 +14,6 @@ def active_account_required(view_func):
             return redirect('core:pending-approval')
         if request.user.account_status != AccountStatus.ACTIVE:
             return redirect('core:access-denied')
-        if (request.user.password_must_change and
-                getattr(request.resolver_match, 'url_name', None)
-                != 'password-change-required'):
-            return redirect('core:dashboard:password-change-required')
         return view_func(request, *args, **kwargs)
     return wrapper
 
@@ -111,9 +107,9 @@ def cash_write_required(*role_keys):
     return decorator
 
 
-ENROLLMENT_VALIDATION_ROLES = ('SUPER_ADMIN', 'ASSISTANT_ADMIN', 'RESP_PEDA')
+ENROLLMENT_VALIDATION_ROLES = ('DIRECTION', 'SUPER_ADMIN', 'ASSISTANT_ADMIN', 'RESP_PEDA')
 ACCESS_REQUEST_REVIEW_ROLES = (
-    'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA',
+    'SUPER_ADMIN', 'ADMIN', 'RESP_PEDA', 'DIRECTION',
     'ASSISTANT_ADMIN',
 )
 
@@ -129,7 +125,7 @@ def roles_attribuables(user):
         return set(REQUESTABLE_ROLES)
     if user.has_role('RESP_PEDA'):
         return set(RESP_PEDA_ROLES_ATTRIBUABLES)
-    if user.has_role('ASSISTANT_ADMIN'):
+    if user.has_any_role('DIRECTION', 'ASSISTANT_ADMIN'):
         return {'ETUDIANT'}
     return set()
 
@@ -137,12 +133,12 @@ def roles_attribuables(user):
 def enrollment_validation_required(view_func):
     """Validation d'un dossier d'inscription.
 
-    Trois rôles peuvent valider depuis leur propre tableau de bord : l'assistant
-    administratif, la supervision pédagogique et le super administrateur. La
-    chaîne « inscription au guichet → validation → encaissement » ne doit jamais
-    s'arrêter faute de valideur disponible. L'ADMIN reste en consultation seule
-    (politique transversale) et chaque validation laisse sa trace dans l'audit
-    (ENROLLMENT_VALIDATE).
+    Quatre rôles peuvent valider depuis leur propre tableau de bord : la
+    direction (référente), l'assistant administratif, la supervision
+    pédagogique et le super administrateur. La chaîne « inscription au guichet →
+    validation → encaissement » ne doit jamais s'arrêter faute de valideur
+    disponible. L'ADMIN reste en consultation seule (politique transversale) et
+    chaque validation laisse sa trace dans l'audit (ENROLLMENT_VALIDATE).
     """
     @wraps(view_func)
     @active_account_required
@@ -150,7 +146,7 @@ def enrollment_validation_required(view_func):
         if request.user.has_any_role(*ENROLLMENT_VALIDATION_ROLES):
             return view_func(request, *args, **kwargs)
         return HttpResponseForbidden(
-            _("La validation d'une inscription est réservée à l'assistant administratif, à la supervision pédagogique et au super administrateur.")
+            _("La validation d'une inscription est réservée à la direction, à l'assistant administratif, à la supervision pédagogique et au super administrateur.")
         )
     return wrapper
 

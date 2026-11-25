@@ -113,26 +113,6 @@ class FinanceSupervisionTests(BusinessTestBase):
         self.assertContains(response, self.expense.reference)
         self.assertNotContains(response, self.salary.reference)
 
-    def test_supervision_defaults_to_current_year(self):
-        old = self.make_tx(
-            9000, counterparty='Ancienne opération',
-            category=self.income_category,
-        )
-        old.occurred_at = timezone.now() - timedelta(days=400)
-        old.save(update_fields=['occurred_at'])
-
-        response = self.client_for(self.super_admin).get(reverse(SUPERVISION_URL))
-        self.assertNotContains(response, old.reference)
-        self.assertContains(response, self.income.reference)
-        self.assertEqual(response.context['date_from'], timezone.localdate().replace(month=1, day=1).isoformat())
-        self.assertEqual(response.context['date_to'], timezone.localdate().replace(month=12, day=31).isoformat())
-
-        # Un filtre de date explicite vide permet de voir toutes les années.
-        response = self.client_for(self.super_admin).get(
-            reverse(SUPERVISION_URL), {'from': '', 'to': ''},
-        )
-        self.assertContains(response, old.reference)
-
     def test_supervision_csv_export(self):
         response = self.client_for(self.super_admin).get(
             reverse(SUPERVISION_URL), {'export': 'csv', 'type': 'OUT'},
@@ -150,10 +130,10 @@ class FinanceSupervisionTests(BusinessTestBase):
             reverse(DASHBOARD_URL)
         )
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.context['year_income'], 50000)
-        self.assertEqual(response.context['year_expense'], 50000)
-        self.assertEqual(response.context['year_salaries'], 30000)
-        self.assertEqual(response.context['year_payment_total'], 0)
+        self.assertEqual(response.context['month_income'], 50000)
+        self.assertEqual(response.context['month_expense'], 50000)
+        self.assertEqual(response.context['month_salaries'], 30000)
+        self.assertEqual(response.context['month_payment_total'], 0)
         self.assertEqual(response.context['pending_transactions'], 1)
         self.assertEqual(response.context['incomplete_enrollments'], 1)
         self.assertEqual(response.context['outstanding_amount'], 90000)

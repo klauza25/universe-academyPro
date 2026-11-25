@@ -16,7 +16,7 @@
 <div class="ua-page-head">
     <div>
         <h1 class="ua-page-title">{{ prospect.reference }}</h1>
-        <p class="ua-page-sub">{{ prospect.contact.full_name }} · {% include "dashboard/_whatsapp.html" with phone=prospect.contact.phone %}</p>
+        <p class="ua-page-sub">{{ prospect.contact.full_name }} · {{ prospect.contact.phone }}</p>
     </div>
     <div class="flex flex-wrap gap-2">
         {% if can_convert and not prospect.converted_student %}

@@ -55,7 +55,7 @@
             </div>
             <div>
                 <p class="ua-stat-label">{% translate "Téléphone" %}</p>
-                <p class="text-sm font-semibold mt-1" style="color:#1e2044;">{% include "dashboard/_whatsapp.html" with phone=profile_user.phone %}</p>
+                <p class="text-sm font-semibold mt-1" style="color:#1e2044;">{{ profile_user.phone|default:"—" }}</p>
             </div>
             <div>
                 <p class="ua-stat-label">{% translate "Code interne" %}</p>
@@ -204,21 +204,6 @@
     <p class="text-sm ua-muted">
         {% translate "Vous consultez votre propre fiche : vos rôles et votre statut ne peuvent pas être modifiés ici. Utilisez un autre compte gestionnaire." %}
     </p>
-</section>
-{% endif %}
-
-{% if 'SUPER_ADMIN' in user_roles and not is_self %}
-<section class="ua-card ua-card-pad mt-6 border border-rose-200">
-    {% blocktrans with nom=profile_user.get_full_name|default:profile_user.email asvar var_supprimer_question %}Supprimer définitivement {{ nom }} et toutes ses actions d'audit ? Cette action est irréversible.{% endblocktrans %}
-    <h2 class="ua-section-title" style="color:#e11d48;">{% translate "Zone dangereuse" %}</h2>
-    <p class="text-sm ua-muted mt-1 mb-4">{% translate "Supprime définitivement ce compte et toutes ses actions d'audit. Les relations liées seront supprimées ou détachées selon les règles de la base." %}</p>
-    <form method="post" action="{% url 'core:dashboard:user-delete' profile_user.id %}"
-          onsubmit="return confirm('{{ var_supprimer_question|escapejs }}');">
-        {% csrf_token %}
-        <button type="submit" class="ua-btn ua-btn-danger">
-            {% icon "trash" %} {% translate "Supprimer l'utilisateur" %}
-        </button>
-    </form>
 </section>
 {% endif %}
 {% endblock %}

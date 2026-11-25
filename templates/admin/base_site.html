@@ -4,7 +4,7 @@
 {% block title %}{% if subtitle %}{{ subtitle }} | {% endif %}{{ title }} | {{ site_title|default:_('Univers Academy — administration') }}{% endblock %}
 
 {% block extrahead %}{{ block.super }}
-<link rel="icon" href="{{ plateforme.favicon_url }}">
+<link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
 {% endblock %}
 
 {% block extrastyle %}{{ block.super }}
@@ -13,7 +13,7 @@
 
 {% block branding %}
 <div id="ua-admin-brand">
-    <img src="{{ plateforme.logo_url }}" alt="" class="ua-admin-logo">
+    <img src="{% static 'img/logo-univers.jpg' %}" alt="" class="ua-admin-logo">
     <span class="ua-admin-brand-texte">
         <strong>{{ site_header|default:_('Univers Academy — administration') }}</strong>
         <small>{% translate "Centre de formation — Brazzaville" %}</small>

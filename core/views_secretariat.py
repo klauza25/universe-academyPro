@@ -24,7 +24,7 @@ from .models import (
 from .utils import log_audit
 from .views_profile import changer_avatar
 
-SECRETARIAT_ROLES = ('ASSISTANT_ADMIN',)
+SECRETARIAT_ROLES = ('ASSISTANT_ADMIN', 'DIRECTION')
 
 
 def _students_queryset():
@@ -246,7 +246,7 @@ def student_detail(request, student_id):
         'avatar_form': AvatarForm(),
         'can_manage_documents': (
             not request.user.is_elevated
-            and request.user.has_role('ASSISTANT_ADMIN')
+            and request.user.has_any_role('ASSISTANT_ADMIN', 'DIRECTION')
         ),
         # La photo se pose aux mêmes conditions que l'écriture sur la fiche.
         'peut_changer_photo': (
@@ -549,7 +549,7 @@ def student_document_download(request, doc_id):
     user = request.user
     is_owner = document.student_id == user.id
     allowed = is_owner or user.has_any_role(
-        'ASSISTANT_ADMIN', 'SUPER_ADMIN', 'ADMIN'
+        'DIRECTION', 'ASSISTANT_ADMIN', 'SUPER_ADMIN', 'ADMIN'
     )
     if not allowed:
         log_audit(request, 'UNAUTHORIZED_FILE_ACCESS', 'StudentDocument',

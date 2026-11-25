@@ -7,17 +7,18 @@
     <meta name="description" content="{% block meta_description %}{{ plateforme.nom }} — {% translate "plateforme de gestion académique" %}{% endblock %}">
     <title>{% block title %}{{ plateforme.nom }}{% endblock %}</title>
     <link rel="canonical" href="{{ request.scheme }}://{{ request.get_host }}{{ request.path }}">
-    <link rel="icon" href="{{ plateforme.favicon_url }}">
+    {% static 'img/logo-univers.jpg' as social_image %}
+    <link rel="icon" href="{% static 'img/favicon.svg' %}" type="image/svg+xml">
     <meta property="og:title" content="{% block social_title %}{{ plateforme.nom }}{% endblock %}">
     <meta property="og:description" content="{{ plateforme.nom }} — {{ plateforme.signature }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.build_absolute_uri }}">
-    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ plateforme.logo_url }}">
+    <meta property="og:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_image }}">
     <meta property="og:image:alt" content="{{ plateforme.nom }}">
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="{% block twitter_title %}{{ plateforme.nom }}{% endblock %}">
     <meta name="twitter:description" content="{{ plateforme.nom }} — {{ plateforme.signature }}">
-    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ plateforme.logo_url }}">
+    <meta name="twitter:image" content="{{ request.scheme }}://{{ request.get_host }}{{ social_image }}">
     <meta name="devise" content="{{ plateforme.devise }}">
 
     <!-- Thème résolu avant la peinture : sans ce bloc, la page s'affiche claire

@@ -73,7 +73,7 @@
                         <span class="ua-cell-title">{{ visit.contact.full_name|default:visit.contact.phone }}</span>
                         {% if visit.contact.email %}<span class="ua-cell-sub block">{{ visit.contact.email }}</span>{% endif %}
                     </td>
-                    <td>{% include "dashboard/_whatsapp.html" with phone=visit.contact.phone %}</td>
+                    <td>{{ visit.contact.phone }}</td>
                     <td>{{ visit.reason|default:"—" }}</td>
                     <td>{{ visit.arrival_at|date:"d/m/Y H:i" }}</td>
                     <td>{{ visit.departure_at|date:"d/m/Y H:i"|default:"—" }}</td>

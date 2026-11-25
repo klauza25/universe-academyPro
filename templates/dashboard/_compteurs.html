@@ -4,25 +4,25 @@
 {% translate "Étudiants" as lbl_etudiants %}
 {% translate "Staff" as lbl_staff %}
 <section class="ua-card ua-compteurs" aria-label="{{ aria_compteurs }}">
-    {% if can_view_users %}<a href="{% url 'core:dashboard:user-list' %}" class="ua-compteur">{% else %}<div class="ua-compteur">{% endif %}
+    <div class="ua-compteur">
         <span class="ua-compteur-icon ua-tone-indigo">{% icon "users" %}</span>
         <div class="min-w-0">
             <p class="ua-compteur-value">{{ total_users }}</p>
             <p class="ua-compteur-label">{{ lbl_utilisateurs }}</p>
         </div>
-    {% if can_view_users %}</a>{% else %}</div>{% endif %}
-    {% if can_view_students %}<a href="{% url 'core:dashboard:student-list' %}" class="ua-compteur">{% else %}<div class="ua-compteur">{% endif %}
+    </div>
+    <div class="ua-compteur">
         <span class="ua-compteur-icon ua-tone-green">{% icon "graduation" %}</span>
         <div class="min-w-0">
             <p class="ua-compteur-value">{{ total_students }}</p>
             <p class="ua-compteur-label">{{ lbl_etudiants }}</p>
         </div>
-    {% if can_view_students %}</a>{% else %}</div>{% endif %}
-    {% if can_view_staff %}<a href="{% url 'core:dashboard:user-list' %}" class="ua-compteur">{% else %}<div class="ua-compteur">{% endif %}
+    </div>
+    <div class="ua-compteur">
         <span class="ua-compteur-icon ua-tone-sky">{% icon "presentation" %}</span>
         <div class="min-w-0">
             <p class="ua-compteur-value">{{ total_staff }}</p>
             <p class="ua-compteur-label">{{ lbl_staff }}</p>
         </div>
-    {% if can_view_staff %}</a>{% else %}</div>{% endif %}
+    </div>
 </section>
