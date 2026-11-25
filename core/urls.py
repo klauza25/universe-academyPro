@@ -3,7 +3,7 @@ from django.urls import path, include
 from . import (
     views, views_legal, views_accueil, views_comptabilite, views_pedagogie,
     views_profile, views_reglages, views_secretariat, views_supervision,
-    views_synchronisation, views_messagerie,
+    views_synchronisation, views_messagerie, views_identifiants,
 )
 
 app_name = 'core'
@@ -33,6 +33,12 @@ dashboard_urlpatterns = [
     path('', views.dashboard_router, name='dashboard-router'),
     path('notifications/poll/', views.notifications_poll, name='notifications-poll'),
 
+    # Identifiants étudiants --------------------------------------------------
+    path('super-admin/identifiants/',
+         views_identifiants.page_identifiants, name='identifiants-page'),
+    path('super-admin/identifiants/generer/',
+         views_identifiants.generer_identifiants, name='identifiants-generer'),
+
     # Messagerie interne -----------------------------------------------------
     path('messagerie/', views_messagerie.conversation_list, name='messagerie'),
     path('messagerie/nouvelle/', views_messagerie.conversation_start,
@@ -48,6 +54,9 @@ dashboard_urlpatterns = [
 
     # Profil -----------------------------------------------------------------
     path('profil/', views_profile.profile_view, name='profile'),
+    path('profil/mot-de-passe-a-changer/',
+         views_profile.password_change_required,
+         name='password-change-required'),
     path('profil/email/<str:token>/', views_profile.profile_email_confirm,
          name='profile-email-confirm'),
     path('profil/notifications/lues/', views_profile.notifications_marquer_lues,

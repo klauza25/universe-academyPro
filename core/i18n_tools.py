@@ -139,7 +139,10 @@ def sources_python() -> list[Path]:
                 core / 'groupes.py',
                 # Le service des réglages lit la ligne de la direction : s'il
                 # venait à nommer lui-même un libellé, le portique doit le voir.
-                core / 'parametres.py']
+                core / 'parametres.py',
+                # La remise privée rédige elle aussi un titre et un message
+                # visibles par l'étudiant : ils doivent passer au portique.
+                core / 'identifiants.py']
     fichiers += sorted(core.glob('views*.py'))
     return sorted({f for f in fichiers if f.exists() and not f.is_dir()})
 
