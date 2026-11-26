@@ -63,6 +63,9 @@ msgstr "Email or internal code"
 msgid "Mot de passe"
 msgstr "Password"
 
+msgid "Doit changer son mot de passe à la connexion"
+msgstr "Must change password at login"
+
 msgid "Minimum 8 caractères"
 msgstr "Minimum 8 characters"
 
@@ -84,6 +87,12 @@ msgstr "First name"
 
 msgid "Nom"
 msgstr "Last name"
+
+msgid "Trier par"
+msgstr "Sort by"
+
+msgid "Plus récents"
+msgstr "Newest first"
 
 msgid "email@exemple.com"
 msgstr "email@example.com"

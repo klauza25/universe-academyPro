@@ -1,4 +1,5 @@
 import calendar
+from uuid import UUID
 
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
@@ -29,6 +30,7 @@ from .models import (
     CashAccount, CashTransaction, CashClosure, TransactionCategory,
     MOIS,
 )
+from .annee_academique import STATUTS_SUIVIS
 from .forms import (
     LoginForm, RegisterForm, UserCreateForm, UserEditForm,
     AccessApprovalForm, AccessRequestCompletionForm, enrollable_sessions,
@@ -446,8 +448,44 @@ def user_list(request):
     query = request.GET.get('q', '')
     status_filter = request.GET.get('status', '')
     role_filter = request.GET.get('role', '')
+    course_filter = request.GET.get('course', '')
+    sort_filter = request.GET.get('sort', 'recent')
+    est_etudiant = role_filter == RoleKey.ETUDIANT.value
 
-    users = User.objects.prefetch_related('roles').all()
+    tri_choices = [
+        ('recent', _("Plus récents")),
+        ('name', _("Nom")),
+        ('formation', _("Formation")),
+    ]
+    if sort_filter not in {valeur for valeur, _label in tri_choices}:
+        sort_filter = 'recent'
+    if sort_filter == 'formation' and not est_etudiant:
+        sort_filter = 'recent'
+
+    # Un identifiant invalide ne doit pas transformer la liste en 500.
+    if course_filter:
+        try:
+            course_filter = str(UUID(course_filter))
+        except (ValueError, TypeError, AttributeError):
+            course_filter = ''
+        else:
+            if not Course.objects.filter(pk=course_filter, active=True).exists():
+                course_filter = ''
+
+    formation_condition = Q(status__in=STATUTS_SUIVIS)
+    if est_etudiant and course_filter:
+        formation_condition &= Q(session__course_id=course_filter)
+    formation = Enrollment.objects.filter(
+        student=OuterRef('pk')
+    ).filter(
+        formation_condition
+    ).order_by(
+        'session__course__title', '-start_date'
+    ).values('session__course__title')[:1]
+
+    users = User.objects.prefetch_related('roles').annotate(
+        formation=Subquery(formation)
+    )
 
     if query:
         users = users.filter(
@@ -460,6 +498,18 @@ def user_list(request):
         users = users.filter(account_status=status_filter)
     if role_filter:
         users = users.filter(roles__key=role_filter)
+    if est_etudiant and course_filter:
+        users = users.filter(
+            enrollments__session__course_id=course_filter,
+            enrollments__status__in=STATUTS_SUIVIS,
+        )
+
+    if sort_filter == 'formation':
+        users = users.order_by('formation', 'last_name', 'first_name')
+    elif sort_filter == 'name':
+        users = users.order_by('last_name', 'first_name')
+    else:
+        users = users.order_by('-date_joined')
 
     paginator = Paginator(users.distinct(), 20)
     page = paginator.get_page(request.GET.get('page', 1))
@@ -470,6 +520,11 @@ def user_list(request):
         'query': query,
         'status_filter': status_filter,
         'role_filter': role_filter,
+        'course_filter': course_filter,
+        'sort_filter': sort_filter,
+        'sort_choices': tri_choices,
+        'courses': Course.objects.filter(active=True).order_by('title'),
+        'show_formation': est_etudiant,
         'status_choices': AccountStatus.choices,
         'role_choices': [(valeur, label) for valeur, label in RoleKey.choices
                          if valeur not in ROLES_DISSOUS],
