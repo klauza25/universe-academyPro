@@ -154,6 +154,13 @@ class User(AbstractUser):
         default=AccountStatus.PENDING_APPROVAL,
         db_index=True,
     )
+    # Conservé pour compatibilité avec la base de production : l'ancienne
+    # migration 0028 a créé une colonne NOT NULL. Le champ reste à False et
+    # aucun écran n'impose plus de changement de mot de passe.
+    password_must_change = models.BooleanField(
+        default=False,
+        verbose_name=_("Doit changer son mot de passe à la connexion"),
+    )
     phone = models.CharField(max_length=20, blank=True)
     address = models.TextField(blank=True)
     birth_date = models.DateField(null=True, blank=True)

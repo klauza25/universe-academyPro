@@ -145,6 +145,25 @@ class LocalLoginTests(BusinessTestBase):
 
 
 class RegistrationTests(BusinessTestBase):
+    def test_inscription_remplit_la_colonne_heritee_de_production(self):
+        """La base en ligne garde une colonne NOT NULL héritée de l'ancien 0028."""
+        self.assertFalse(User._meta.get_field('password_must_change').default)
+        response = self.client.post(reverse('core:register'), {
+            'first_name': 'Compat',
+            'last_name': 'Production',
+            'email': 'compat.production@test.local',
+            'requested_role': RoleKey.ETUDIANT,
+            'password': 'CompatPass123!',
+            'password_confirm': 'CompatPass123!',
+        })
+        self.assertRedirects(
+            response, reverse('core:pending-approval'),
+            fetch_redirect_response=False,
+        )
+        self.assertFalse(
+            User.objects.get(email='compat.production@test.local').password_must_change
+        )
+
     def test_registration_honeypot_rejects_automated_submission(self):
         response = self.client.post(reverse('core:register'), {
             'first_name': 'Robot',
