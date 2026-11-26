@@ -1,3 +1,5 @@
+import calendar
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
@@ -348,6 +350,37 @@ def super_admin_dashboard(request):
         category__name__in=salaries_categories,
     ).aggregate(total=Sum('amount'))['total'] or 0
 
+    finance = _finance_periode_context(request, today)
+    periode_debut = today.replace(
+        year=finance['finance_annee'], month=finance['finance_mois'], day=1)
+    dernier_jour = calendar.monthrange(
+        finance['finance_annee'], finance['finance_mois'])[1]
+    periode_fin = periode_debut.replace(day=dernier_jour)
+    if periode_fin > today:
+        periode_fin = today
+    periode_transactions = CashTransaction.objects.filter(
+        status=CashTransaction.Status.VALIDATED,
+        occurred_at__date__gte=periode_debut,
+        occurred_at__date__lte=periode_fin,
+    )
+    finance.update({
+        'finance_debut': periode_debut,
+        'finance_fin': periode_fin,
+        'finance_net': (
+            finance['finance_income'] - finance['finance_expense']
+        ),
+        'finance_payment_total': Payment.objects.filter(
+            status=Payment.Status.COMPLETED,
+            paid_at__date__gte=periode_debut,
+            paid_at__date__lte=periode_fin,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'finance_salaries': periode_transactions.filter(
+            tx_type=CashTransaction.Type.OUT,
+            category__name__in=salaries_categories,
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'finance_transaction_count': periode_transactions.count(),
+    })
+
     paid_per_enrollment = Payment.objects.filter(
         enrollment=OuterRef('pk'),
         status=Payment.Status.COMPLETED,
@@ -363,6 +396,7 @@ def super_admin_dashboard(request):
     cash_rows = accounts_with_balance()
 
     context = {
+        **finance,
         'pending_requests': AccessRequest.objects.filter(
             status=AccessRequest.Status.PENDING
         ).count(),
@@ -1169,6 +1203,51 @@ def scholarship_review_detail(request, app_id):
     })
 
 
+def _finance_periode_context(request, today):
+    """Période financière des tableaux de bord : mois en cours par défaut.
+
+    L'année et le mois viennent de la query string ; une valeur absurde revient
+    à la période courante plutôt que de transformer un tableau de bord en 500.
+    Les années proposées incluent celles où une opération existe, même si elle
+    est passée, et toujours l'année en cours. Les autres paramètres, notamment
+    un intervalle ``from``/``to`` explicite, sont conservés par le partial.
+    """
+    def entier(valeur, defaut, bornes):
+        try:
+            nombre = int(valeur)
+        except (TypeError, ValueError):
+            return defaut
+        return nombre if nombre in bornes else defaut
+
+    annee = entier(request.GET.get('annee'), today.year, range(1900, 2201))
+    mois = entier(request.GET.get('mois'), today.month, range(1, 13))
+    annees = sorted(
+        {d.year for d in CashTransaction.objects.dates('occurred_at', 'year')}
+        | {today.year, annee},
+        reverse=True,
+    )
+    transactions = CashTransaction.objects.filter(
+        status=CashTransaction.Status.VALIDATED,
+        occurred_at__year=annee,
+        occurred_at__month=mois,
+    )
+    return {
+        'finance_annee': annee,
+        'finance_mois': mois,
+        'finance_annees': annees,
+        'finance_mois_choices': MOIS,
+        'finance_periode': _("%(mois)s %(annee)s") % {
+            'mois': dict(MOIS)[mois], 'annee': annee,
+        },
+        'finance_income': transactions.filter(
+            tx_type=CashTransaction.Type.IN
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'finance_expense': transactions.filter(
+            tx_type=CashTransaction.Type.OUT
+        ).aggregate(total=Sum('amount'))['total'] or 0,
+    }
+
+
 @role_required('ADMIN')
 def admin_dashboard(request):
     today = timezone.localdate()
@@ -1209,6 +1288,9 @@ def admin_dashboard(request):
             enrolled_at__date__gte=month_start
         ).count(),
     }
+    finance = _finance_periode_context(request, today)
+    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
+    context.update(finance)
     return render(request, 'dashboard/admin/index.html', context)
 
 
@@ -1305,7 +1387,10 @@ def direction_dashboard(request):
 
 @role_required('ASSISTANT_ADMIN', 'DIRECTION')
 def secretaire_dashboard(request):
+    finance = _finance_periode_context(request, timezone.localdate())
+    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
     context = {
+        **finance,
         'pending_enrollments': Enrollment.objects.filter(
             status=Enrollment.Status.PENDING
         ).count(),
@@ -1335,21 +1420,16 @@ def comptabilite_dashboard(request):
     validated = CashTransaction.objects.filter(
         status=CashTransaction.Status.VALIDATED
     )
-    month_transactions = validated.filter(
-        occurred_at__month=today.month,
-        occurred_at__year=today.year,
-    )
+    finance = _finance_periode_context(request, today)
+    finance['finance_net'] = finance['finance_income'] - finance['finance_expense']
     cash_rows = accounts_with_balance()
     context = {
-        'total_revenue_month': month_transactions.filter(
-            tx_type=CashTransaction.Type.IN,
-        ).aggregate(total=Sum('amount'))['total'] or 0,
+        **finance,
+        'total_revenue_month': finance['finance_income'],
         'recent_payments': Payment.objects.select_related(
             'enrollment__student', 'recorded_by'
         ).order_by('-paid_at')[:10],
-        'total_expenses_month': month_transactions.filter(
-            tx_type=CashTransaction.Type.OUT,
-        ).aggregate(total=Sum('amount'))['total'] or 0,
+        'total_expenses_month': finance['finance_expense'],
         'today_in': validated.filter(
             tx_type=CashTransaction.Type.IN,
             occurred_at__date=today,

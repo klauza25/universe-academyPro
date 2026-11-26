@@ -161,3 +161,31 @@ msgstr "Next"
 
 msgid "Page %(p)s / %(t)s"
 msgstr "Page %(p)s of %(t)s"
+
+# Filtre Année / Mois des tableaux de bord financiers.
+msgid "%(mois)s %(annee)s"
+msgstr "%(mois)s %(annee)s"
+
+msgid "Changer de période"
+msgstr "Change period"
+
+msgid "Opérations validées sur la période"
+msgstr "Validated transactions for the period"
+
+msgid "Solde du mois"
+msgstr "Monthly balance"
+
+msgid "%(c)s opération(s) validée(s) sur la période · toutes origines confondues"
+msgstr "%(c)s validated transaction(s) for the period · all sources combined"
+
+msgid "Contrôle financier — %(periode)s"
+msgstr "Financial control — %(periode)s"
+
+msgid "Encaissés sur la période"
+msgstr "Collected during the period"
+
+msgid "Versés sur la période"
+msgstr "Paid during the period"
+
+msgid "Validées"
+msgstr "Validated"
