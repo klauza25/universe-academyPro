@@ -143,6 +143,10 @@ class ThemeSombreTest(BusinessTestBase):
         self.assertIn('data-theme=dark', contenu)
         self.assertIn('--ua-surface', contenu)
 
+    def test_la_feuille_compilee_est_versionnee_pour_le_cache(self):
+        page = self.client.get(reverse('core:home'))
+        self.assertContains(page, 'css/output.css?v=20261126-theme-mobile')
+
     def test_le_bouton_de_theme_reste_visible_sur_mobile(self):
         page = self.client_for(self.direction).get(
             reverse('core:dashboard:dashboard-router'), follow=True)
