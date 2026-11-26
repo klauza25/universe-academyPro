@@ -143,6 +143,22 @@ class ThemeSombreTest(BusinessTestBase):
         self.assertIn('data-theme=dark', contenu)
         self.assertIn('--ua-surface', contenu)
 
+    def test_le_bouton_de_theme_reste_visible_sur_mobile(self):
+        page = self.client_for(self.direction).get(
+            reverse('core:dashboard:dashboard-router'), follow=True)
+        self.assertContains(page, 'ua-theme-toggle')
+
+        source = (Path(settings.BASE_DIR) / 'static' / 'css'
+                  / 'input.css').read_text(encoding='utf-8')
+        self.assertIn(
+            '    .ua-theme-toggle {\n        display: inline-grid;\n    }',
+            source,
+        )
+
+        css = (Path(settings.STATICFILES_DIRS[0]) / 'css'
+               / 'output.css').read_text(encoding='utf-8', errors='replace')
+        self.assertIn('.ua-theme-toggle{display:inline-grid}', css)
+
 
 # Par défaut, FallbackStorage lit le cookie avant la session et s'arrête dès que
 # le cookie est absent : les messages préparés ci-dessous passent donc par le

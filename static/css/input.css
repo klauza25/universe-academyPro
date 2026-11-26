@@ -1699,9 +1699,15 @@ html[data-theme="dark"] [style*="background:#fff"] { background-color: var(--ua-
         display: none;
     }
 
-    /* On garde l'essentiel : menu, langue, messages, cloche et profil. */
+    /* On garde l'essentiel : menu, langue, messages, cloche, thème et profil. */
     .ua-topbar-secondaire {
         display: none;
+    }
+
+    /* Le thème reste joignable sur petit écran, contrairement aux liens
+       secondaires (admin, accueil, sons) qui sont masqués. */
+    .ua-theme-toggle {
+        display: inline-grid;
     }
 
     .ua-topbar-right {
