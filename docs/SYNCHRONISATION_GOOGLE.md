@@ -113,6 +113,18 @@ Le classement est volontairement prudent :
   (`importer_feuille`) ;
 - tout le reste → `inconnu`, signalé sans être importé.
 
+Règles d'argent retenues pour les élèves :
+
+- un mois rempli du classeur crée un paiement, y compris dans le passé : l'historique
+  est importé, pas effacé ;
+- le montant enregistré est le tarif manuel du dossier, jamais le chiffre ambigu de
+  la case ; un écart entre les deux est signalé dans le rapport ;
+- les frais d'inscription ne sont pas importés : ils s'encaissent au guichet, une
+  seule fois par dossier ;
+- aucun mois antérieur à novembre 2026 ne devient une échéance à régler. Les
+  paiements déjà réglés avant cette date restent en base, mais le calcul du reste
+  à payer démarre en novembre 2026.
+
 Les fichiers sont reçus dans `docs/donnees/import_<date>/` (dossier ignoré par
 git) et le rapport dans `RAPPORT_ANALYSE.md` du même dossier. Au passage
 suivant, les classeurs et le rapport précédents sont rangés dans

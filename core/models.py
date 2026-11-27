@@ -9,6 +9,8 @@ from django.core.validators import (
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
+from core.periodes import DEBUT_FACTURATION
+
 
 class AccountStatus(models.TextChoices):
     PENDING_APPROVAL = 'PENDING_APPROVAL', _("En attente d'approbation")
@@ -622,7 +624,10 @@ class CourseSession(models.Model):
         return self.name or self.course.title
 
     def billing_periods(self, starts_at=None, ends_at=None):
-        start = max(starts_at or self.starts_at, self.starts_at)
+        # L'import garde les paiements déjà encaissés avant novembre 2026, mais
+        # ces mois-là ne sont pas facturés : la borne s'applique à toutes les
+        # échéances calculées par l'application, quel que soit le début du groupe.
+        start = max(starts_at or self.starts_at, self.starts_at, DEBUT_FACTURATION)
         end = min(ends_at or self.ends_at, self.ends_at)
         if end < start:
             return []

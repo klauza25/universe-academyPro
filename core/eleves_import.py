@@ -7,7 +7,10 @@ ressemblants, cases de mois douteuses.
 
 Règles validées par la direction (rapport ``docs/donnees``, section 10) : une fiche = un compte ;
 un onglet, ou un de ses blocs, = un groupe ; le tarif vient du catalogue posé par la vague 1 ;
-l'argent vient des cases remplies, jamais d'une moyenne.
+la présence d'un encaissement vient des cases remplies, jamais d'une moyenne. Le montant de la
+mensualité reste celui du tarif manuel de l'application ; les frais d'inscription ne sont pas
+créés par l'import. Les mois antérieurs à novembre 2026 sont importés quand ils sont réglés,
+mais ne deviennent pas des échéances (voir ``core.periodes``).
 """
 from __future__ import annotations
 
@@ -372,10 +375,12 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
         plan.inscriptions.append(inscription)
 
         if ligne.frais_inscription:
-            plan.paiements.append(Paiement(
-                inscription=inscription, montant=ligne.frais_inscription,
-                jour=ligne.date_inscription or groupe.debut, motif="Frais d'inscription",
-                note=f'{MARQUE} — {groupe.onglet} ligne {ligne.ligne}'))
+            # Les frais d'inscription sont encaissés au guichet, pas inférés du
+            # classeur : la colonne sert seulement d'information pour la direction.
+            ecarts.append(('frais d\'inscription non importés', groupe.onglet,
+                           f'{ligne.nom} — {ligne.frais_inscription:,} FCFA'.replace(',', ' ')
+                           + ' à saisir manuellement'))
+        mensuel_manuel = tarifs[titre]['mensuel']
         for numero, libelle, montant, statut_montant, brut in ligne.mois:
             if montant is None:
                 if statut_montant in ('ambigu', 'texte') and brut:
@@ -397,8 +402,14 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
                                f'{montant:,} FCFA'.replace(',', ' ')
                                + ' ne sont pas encore encaissés'))
                 continue
+            if montant != mensuel_manuel:
+                ecarts.append(('montant du Sheet remplacé', groupe.onglet,
+                               f'{ligne.nom} — {libelle} {annee} : '
+                               f'{montant:,} FCFA lus, '.replace(',', ' ')
+                               + f'{mensuel_manuel:,} FCFA retenus au tarif manuel'
+                               .replace(',', ' ')))
             plan.paiements.append(Paiement(
-                inscription=inscription, montant=montant, jour=jour,
+                inscription=inscription, montant=mensuel_manuel, jour=jour,
                 motif='Mensualité', annee=annee, mois=numero,
                 note=f'{MARQUE} — {libelle} {annee} — {groupe.onglet} ligne {ligne.ligne}'))
 

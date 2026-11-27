@@ -2,8 +2,10 @@
 
 Relit ``docs/donnees`` avec les règles de ``analyser_donnees``, prépare les lignes avec
 ``core.eleves_import`` puis écrit : comptes étudiants, groupes par onglet, inscriptions au
-tarif du catalogue, paiements lus dans les cases (frais d'inscription et mensualités) et leur
-écriture de caisse. Les décisions sont dans ``core/eleves_import.py``, pas ici.
+tarif du catalogue et mensualités repérées dans les cases, au montant du tarif manuel. Les frais
+d'inscription restent à la saisie manuelle au guichet ; les mois antérieurs à novembre 2026
+peuvent être importés quand ils sont réglés, sans devenir des échéances. Les décisions sont dans
+``core/eleves_import.py``, pas ici.
 
     python manage.py importer_etudiants                       # prévisualisation, rien n'est écrit
     python manage.py importer_etudiants --efface              # montre aussi ce que « effacer » couvre

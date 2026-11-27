@@ -1623,10 +1623,12 @@ class GrilleDesMoisTests(AccountingTestBase):
         super().setUp()
         self.url = reverse('core:dashboard:payment-months')
         self.annee = self.today.year
-        self.session.starts_at = dt.date(self.annee, 1, 1)
-        self.session.ends_at = dt.date(self.annee + 1, 12, 31)
+        # La facturation démarre en novembre 2026 : les mois précédents ne sont
+        # pas éligibles, même si le dossier a été ouvert plus tôt.
+        self.session.starts_at = dt.date(2026, 11, 1)
+        self.session.ends_at = dt.date(2027, 12, 31)
         self.session.save(update_fields=['starts_at', 'ends_at'])
-        self.enrollment.start_date = dt.date(self.annee, 1, 1)
+        self.enrollment.start_date = dt.date(2026, 11, 1)
         self.enrollment.save(update_fields=['start_date'])
 
     def test_la_grille_propose_la_mensualite_pratiquee_par_le_dossier(self):
@@ -1634,15 +1636,15 @@ class GrilleDesMoisTests(AccountingTestBase):
         self.assertEqual(page.status_code, 200)
         self.assertEqual(page.context['mensualite'], 30000)
         self.assertEqual(len(page.context['lignes']), 12)
-        self.assertContains(page, 'Mensualité de mars')
+        self.assertContains(page, 'Mensualité de novembre')
 
     def test_deux_mois_coches_font_deux_paiements_et_deux_ecritures(self):
         page = self.client.post(self.url, self.mois_payload(
-            mois=['3', '4'], montant_3='30000', montant_4='25000'))
+            mois=['11', '12'], montant_11='30000', montant_12='25000'))
         self.assertEqual(page.status_code, 302)
         regles = Payment.objects.filter(
             motif=Payment.Motif.MONTHLY).order_by('period_month')
-        self.assertEqual([p.period_month for p in regles], [3, 4])
+        self.assertEqual([p.period_month for p in regles], [11, 12])
         self.assertEqual([p.amount for p in regles], [30000, 25000])
         for paiement in regles:
             self.assertIsNotNone(paiement.transaction)
@@ -1716,15 +1718,15 @@ class GrilleDesMoisTests(AccountingTestBase):
         student = self.make_user(RoleKey.ETUDIANT, 'tariff-snapshot@test.local')
         session = CourseSession.objects.create(
             course=self.course,
-            starts_at=dt.date(self.annee, 1, 1),
-            ends_at=dt.date(self.annee, 2, 28),
+            starts_at=dt.date(2026, 11, 1),
+            ends_at=dt.date(2026, 12, 31),
             status=CourseSession.Status.ACTIVE,
         )
         enrollment = Enrollment.objects.create(
             student=student,
             session=session,
             status=Enrollment.Status.ACTIVE,
-            start_date=dt.date(self.annee, 1, 1),
+            start_date=dt.date(2026, 11, 1),
             monthly_tariff_amount=20000,
             tariff_amount=40000,
             net_amount=40000,
@@ -1733,7 +1735,7 @@ class GrilleDesMoisTests(AccountingTestBase):
         self.course.save(update_fields=['monthly_fee_amount'])
 
         self.assertEqual(
-            enrollment.monthly_amount_due(self.annee, 1), 20000
+            enrollment.monthly_amount_due(2026, 11), 20000
         )
         self.assertEqual(enrollment.total_due, 40000)
 
@@ -1741,24 +1743,56 @@ class GrilleDesMoisTests(AccountingTestBase):
         student = self.make_user(RoleKey.ETUDIANT, 'period-boundary@test.local')
         session = CourseSession.objects.create(
             course=self.course,
-            starts_at=dt.date(self.annee, 1, 1),
-            ends_at=dt.date(self.annee, 4, 30),
+            starts_at=dt.date(2026, 11, 1),
+            ends_at=dt.date(2027, 1, 31),
             status=CourseSession.Status.ACTIVE,
         )
         enrollment = Enrollment.objects.create(
             student=student,
             session=session,
             status=Enrollment.Status.ACTIVE,
-            start_date=dt.date(self.annee, 3, 15),
+            start_date=dt.date(2026, 12, 15),
             monthly_tariff_amount=20000,
             tariff_amount=40000,
             net_amount=40000,
         )
 
-        self.assertEqual(enrollment.monthly_amount_due(self.annee, 2), 0)
-        self.assertEqual(enrollment.monthly_amount_due(self.annee, 3), 20000)
-        self.assertEqual(enrollment.monthly_amount_due(self.annee, 4), 20000)
-        self.assertEqual(enrollment.monthly_amount_due(self.annee, 5), 0)
+        self.assertEqual(enrollment.monthly_amount_due(2026, 11), 0)
+        self.assertEqual(enrollment.monthly_amount_due(2026, 12), 20000)
+        self.assertEqual(enrollment.monthly_amount_due(2027, 1), 20000)
+        self.assertEqual(enrollment.monthly_amount_due(2027, 2), 0)
+
+    def test_aucune_echeance_avant_novembre_2026(self):
+        """L'historique importé n'est pas une dette : la facturation démarre en novembre."""
+        student = self.make_user(RoleKey.ETUDIANT, 'avant-novembre@test.local')
+        session = CourseSession.objects.create(
+            course=self.course,
+            starts_at=dt.date(2026, 1, 1),
+            ends_at=dt.date(2026, 12, 31),
+            status=CourseSession.Status.ACTIVE,
+        )
+        enrollment = Enrollment.objects.create(
+            student=student,
+            session=session,
+            status=Enrollment.Status.ACTIVE,
+            start_date=dt.date(2026, 1, 1),
+            monthly_tariff_amount=20000,
+            tariff_amount=240000,
+            net_amount=240000,
+        )
+        self.assertEqual(enrollment.billing_periods(), [(2026, 11), (2026, 12)])
+        self.assertEqual(enrollment.monthly_amount_due(2026, 10), 0)
+        self.assertEqual(enrollment.monthly_amount_due(2026, 11), 20000)
+        self.assertEqual(enrollment.total_due, 40000)
+
+        # Une mensualité déjà réglée en octobre reste en base, sans être exigée à nouveau.
+        Payment.objects.create(
+            enrollment=enrollment, amount=20000, method=Payment.Method.CASH,
+            status=Payment.Status.COMPLETED, motif=Payment.Motif.MONTHLY,
+            period_year=2026, period_month=10, recorded_by=self.assistant,
+        )
+        self.assertEqual(enrollment.total_paid, 20000)
+        self.assertEqual(enrollment.balance_due, 20000)
 
     def test_un_mois_d_avance_se_date_du_jour_present(self):
         """Régler un mois à venir est une avance, pas un argent déjà entré.
@@ -1776,30 +1810,30 @@ class GrilleDesMoisTests(AccountingTestBase):
             timezone.localdate(paiement.transaction.occurred_at), self.today)
 
     def test_un_mois_deja_regle_ne_se_recoche_pas(self):
-        self.client.post(self.url, self.mois_payload(mois=['5'], montant_5='30000'))
+        self.client.post(self.url, self.mois_payload(mois=['11'], montant_11='30000'))
         avant = Payment.objects.count()
-        page = self.client.post(self.url, self.mois_payload(mois=['5'], montant_5='30000'))
+        page = self.client.post(self.url, self.mois_payload(mois=['11'], montant_11='30000'))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'déjà soldé')
         self.assertEqual(Payment.objects.count(), avant)
 
     def test_le_mois_regle_une_annee_ne_blocque_pas_l_annee_suivante(self):
         self.client.post(self.url, self.mois_payload(
-            annee=str(self.annee), mois=['6'], montant_6='30000'))
+            annee=str(self.annee), mois=['11'], montant_11='30000'))
         page = self.client.post(self.url, self.mois_payload(
-            annee=str(self.annee + 1), mois=['6'], montant_6='30000'))
+            annee=str(self.annee + 1), mois=['11'], montant_11='30000'))
         self.assertEqual(page.status_code, 302)
-        self.assertEqual(Payment.objects.filter(period_month=6).count(), 2)
+        self.assertEqual(Payment.objects.filter(period_month=11).count(), 2)
 
     def test_un_mois_coche_sans_montant_est_refuse(self):
-        page = self.client.post(self.url, self.mois_payload(mois=['7']))
+        page = self.client.post(self.url, self.mois_payload(mois=['11']))
         self.assertEqual(page.status_code, 200)
         self.assertContains(page, 'indiquez le montant')
         self.assertEqual(Payment.objects.count(), 0)
 
     def test_la_grille_ne_peut_pas_encaisser_plus_que_le_reste_du(self):
         page = self.client.post(self.url, self.mois_payload(
-            mois=['1', '2', '3', '4'],
+            annee=str(self.annee + 1), mois=['1', '2', '3', '4'],
             montant_1='30000', montant_2='30000',
             montant_3='30000', montant_4='30000'))
         self.assertEqual(page.status_code, 200)
@@ -1824,15 +1858,15 @@ class GrilleDesMoisTests(AccountingTestBase):
         self.client.post(reverse('core:dashboard:payment-create'),
                          self.payment_payload(amount='30000',
                                               motif=Payment.Motif.MONTHLY,
-                                              period_month='9',
+                                              period_month='11',
                                               period_year=str(self.annee)))
         page = self.client.get(self.url, {'enrollment': self.enrollment.pk})
-        self.assertEqual(len(Payment.objects.filter(period_month=9)), 1)
-        self.assertContains(page, 'Mensualité de septembre')
+        self.assertEqual(len(Payment.objects.filter(period_month=11)), 1)
+        self.assertContains(page, 'Mensualité de novembre')
 
         bloque = self.client.post(self.url, self.mois_payload(
-            mois=['9'], montant_9='30000'))
-        self.assertEqual(Payment.objects.filter(period_month=9).count(), 1)
+            mois=['11'], montant_11='30000'))
+        self.assertEqual(Payment.objects.filter(period_month=11).count(), 1)
 
     def test_la_base_accepte_plusieurs_reglements_partiels_du_meme_mois(self):
         Payment.objects.create(
