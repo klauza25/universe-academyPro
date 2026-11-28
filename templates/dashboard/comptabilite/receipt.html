@@ -71,7 +71,6 @@
         <p class="amount">{{ payment.amount }} {{ plateforme.devise }}</p>
 
         <div class="grid">
-            <div><span>{% translate "Net dû" %}</span>{{ enrollment.net_amount }} {{ plateforme.devise }}</div>
             <div><span>{% translate "Total payé" %}</span>{{ enrollment.total_paid }} {{ plateforme.devise }}</div>
             <div><span>{% translate "Reste à payer" %}</span>{{ enrollment.balance_due }} {{ plateforme.devise }}</div>
             <div><span>{% translate "Statut du dossier" %}</span>{{ enrollment.payment_state }}</div>

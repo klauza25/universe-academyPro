@@ -16,7 +16,6 @@
 {% translate "Modifier la fiche" as act_modifier %}
 {% translate "Nouvelle inscription" as act_inscription %}
 {% translate "Retour" as act_retour %}
-{% translate "Total dû" as lbl_total_du %}
 {% translate "Total payé" as lbl_total_paye %}
 {% translate "Solde restant" as lbl_solde %}
 {% translate "Documents" as lbl_documents %}
@@ -39,8 +38,7 @@
     </div>
 </div>
 
-<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-5">
-    {% include "dashboard/_stat.html" with label=lbl_total_du value=total_due icon="wallet" tone="indigo" hint=plateforme.devise %}
+<div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 mb-5">
     {% include "dashboard/_stat.html" with label=lbl_total_paye value=total_paid icon="credit-card" tone="green" hint=hint_payes %}
     {% include "dashboard/_stat.html" with label=lbl_solde value=balance icon="trending-up" tone="amber" hint=plateforme.devise %}
     {% include "dashboard/_stat.html" with label=lbl_documents value=documents|length icon="file-text" tone="sky" hint=hint_pieces %}
@@ -72,13 +70,12 @@
         <h2 class="ua-section-title mb-4">{% translate "Formations et inscriptions" %}</h2>
         <div class="ua-table-wrap">
             <table class="ua-table">
-                <thead><tr><th>{% translate "Formation" %}</th><th>{% translate "Date début" %}</th><th>{% translate "Net dû" %}</th><th>{% translate "Payé" %}</th><th>{% translate "Solde" %}</th><th>{% translate "Statut" %}</th><th></th></tr></thead>
+                <thead><tr><th>{% translate "Formation" %}</th><th>{% translate "Date début" %}</th><th>{% translate "Payé" %}</th><th>{% translate "Solde" %}</th><th>{% translate "Statut" %}</th><th></th></tr></thead>
                 <tbody>
                     {% for enrollment in enrollments %}
                     <tr>
                         <td class="ua-cell-title">{{ enrollment.session.course.title }}</td>
                         <td>{{ enrollment.start_date|date:"d/m/Y"|default:"—" }}</td>
-                        <td>{{ enrollment.net_amount }} {{ plateforme.devise }}</td>
                         <td>{{ enrollment.total_paid }} {{ plateforme.devise }}</td>
                         <td>{{ enrollment.balance_due }} {{ plateforme.devise }}</td>
                         <td>
@@ -89,7 +86,7 @@
                         <td><a class="ua-btn ua-btn-ghost ua-btn-sm" href="{% url 'core:dashboard:enrollment-detail' enrollment.id %}">{% translate "Détail" %}</a></td>
                     </tr>
                     {% empty %}
-                    <tr><td colspan="7" class="ua-empty">{% translate "Aucune inscription." %}</td></tr>
+                    <tr><td colspan="6" class="ua-empty">{% translate "Aucune inscription." %}</td></tr>
                     {% endfor %}
                 </tbody>
             </table>
