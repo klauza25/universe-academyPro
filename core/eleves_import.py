@@ -7,11 +7,10 @@ ressemblants, cases de mois douteuses.
 
 Règles validées par la direction (rapport ``docs/donnees``, section 10) : une fiche = un compte ;
 un onglet, ou un de ses blocs, = un groupe ; le tarif vient du catalogue posé par la vague 1 ;
-l'import ne porte que l'année courante : toutes les mensualités de janvier au mois en cours
-sont réglées — cases du Sheet remplies ou non — au tarif manuel de l'application, et les frais
-d'inscription de 10 000 FCFA sont posés pour chaque formation. À partir du mois suivant,
-l'assistant saisit les encaissements à la main. Les mois antérieurs à novembre 2026 ne
-deviennent pas des échéances (voir ``core.periodes``).
+la présence d'un encaissement vient des cases remplies, jamais d'une moyenne. Le montant de la
+mensualité reste celui du tarif manuel de l'application ; les frais d'inscription ne sont pas
+créés par l'import. Les mois antérieurs à novembre 2026 sont importés quand ils sont réglés,
+mais ne deviennent pas des échéances (voir ``core.periodes``).
 """
 from __future__ import annotations
 
@@ -36,10 +35,6 @@ MOTIF_TERME = re.compile(r'(termin|fini|diplome|gradue|abandon|arre)', re.I)
 # L'e-mail sert d'identifiant de connexion : une fiche sans adresse en reçoit une de repli,
 # dont le suffixe signale au secrétariat qu'elle reste à remplacer.
 SUFFIXE_SANSDRESSE = '@sans-adresse.local'
-
-# Position fixe par direction : identique pour toutes les formations, payée par
-# chaque étudiant du classeur, y compris quand il suit plusieurs groupes.
-MONTANT_INSCRIPTION = 10000
 
 
 # ---------------------------------------------------------------------------
@@ -87,26 +82,6 @@ def ajouter_mois(jour: dt.date, nombre: int) -> dt.date:
                                                29 if annee % 4 == 0 and
                                                (annee % 100 != 0 or annee % 400 == 0) else 28)
     return dt.date(annee, mois, min(jour.day, dernier))
-
-
-def mois_a_payer(debut: dt.date | None, aujourd_hui: dt.date) -> list[tuple[int, int]]:
-    """Mensualités réglées de janvier de l'année courante au mois courant inclus.
-
-    L'année visée est celle de ``aujourd_hui`` : rien n'est importé pour les années
-    précédentes, même si l'élève est inscrit depuis plus longtemps. Rien n'est non
-    plus importé pour les mois à venir — l'assistant les saisira au guichet.
-    """
-    premier = dt.date(aujourd_hui.year, 1, 1)
-    if debut:
-        premier = max(premier, debut.replace(day=1))
-    courant = dt.date(aujourd_hui.year, aujourd_hui.month, 1)
-    if premier > courant:
-        return []
-    mois = []
-    while premier <= courant:
-        mois.append((premier.year, premier.month))
-        premier = ajouter_mois(premier, 1)
-    return mois
 
 
 # ---------------------------------------------------------------------------
@@ -399,30 +374,44 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
         par_dossier[dossier] = inscription
         plan.inscriptions.append(inscription)
 
-        # Frais d'inscription : position fixe pour toutes les formations, réglée
-        # par chaque étudiant du classeur, une fois par formation suivie. La case
-        # du Sheet ne fixe ni le montant ni le principe.
-        debut_effectif = inscription.date_debut or groupe.debut
-        plan.paiements.append(Paiement(
-            inscription=inscription, montant=MONTANT_INSCRIPTION, jour=debut_effectif,
-            motif="Frais d'inscription",
-            note=(f'{MARQUE} — Frais d\'inscription — {groupe.classeur}, '
-                  f'onglet {groupe.onglet}, ligne {ligne.ligne}'),
-        ))
-
-        # Jusqu'au mois courant, tout est réglé : la mensualité est écrite au
-        # tarif manuel même si la case est vide ou douteuse. Les cases ne servent
-        # plus à décider d'un encaissement. À partir du mois suivant, l'assistant
-        # saisit les paiements dans l'application.
+        if ligne.frais_inscription:
+            # Les frais d'inscription sont encaissés au guichet, pas inférés du
+            # classeur : la colonne sert seulement d'information pour la direction.
+            ecarts.append(('frais d\'inscription non importés', groupe.onglet,
+                           f'{ligne.nom} — {ligne.frais_inscription:,} FCFA'.replace(',', ' ')
+                           + ' à saisir manuellement'))
         mensuel_manuel = tarifs[titre]['mensuel']
-        for annee, numero in mois_a_payer(debut_effectif, aujourd_hui):
+        for numero, libelle, montant, statut_montant, brut in ligne.mois:
+            if montant is None:
+                if statut_montant in ('ambigu', 'texte') and brut:
+                    ecarts.append(('case de mois non chiffrée', groupe.onglet,
+                                   f'{ligne.nom} — {libelle} = « {brut} »'))
+                continue
+            annee = (outils.annee_du_mois(numero, ligne.date_inscription)
+                     or outils.annee_du_mois(numero, groupe.debut)
+                     or groupe.debut.year)
+            jour = dt.date(annee, numero, 1)
+            if jour > aujourd_hui:
+                # Une case chiffrée pour un mois qui n'est pas encore commencé
+                # annonce le plan de la promotion, elle ne prouve pas que
+                # l'argent est entré. Rien n'est porté en paiement : la ligne est
+                # signalée et la direction dira s'il s'agit d'une avance.
+                ecarts.append(('mensualité d\'un mois non encore commencé',
+                               groupe.onglet,
+                               f'{ligne.nom} — {libelle} {annee} : '
+                               f'{montant:,} FCFA'.replace(',', ' ')
+                               + ' ne sont pas encore encaissés'))
+                continue
+            if montant != mensuel_manuel:
+                ecarts.append(('montant du Sheet remplacé', groupe.onglet,
+                               f'{ligne.nom} — {libelle} {annee} : '
+                               f'{montant:,} FCFA lus, '.replace(',', ' ')
+                               + f'{mensuel_manuel:,} FCFA retenus au tarif manuel'
+                               .replace(',', ' ')))
             plan.paiements.append(Paiement(
-                inscription=inscription, montant=mensuel_manuel,
-                jour=dt.date(annee, numero, 1), motif='Mensualité',
-                annee=annee, mois=numero,
-                note=(f'{MARQUE} — {numero:02d}/{annee} — {groupe.onglet} '
-                      f'ligne {ligne.ligne}'),
-            ))
+                inscription=inscription, montant=mensuel_manuel, jour=jour,
+                motif='Mensualité', annee=annee, mois=numero,
+                note=f'{MARQUE} — {libelle} {annee} — {groupe.onglet} ligne {ligne.ligne}'))
 
         if ligne.mensuel_prevu and not (programme.BORNE_MENSUELLE[0]
                                         <= ligne.mensuel_prevu <= programme.BORNE_MENSUELLE[1]):

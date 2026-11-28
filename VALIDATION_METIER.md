@@ -277,12 +277,11 @@ production.
   rien. Sur « Paiements par mois », cocher un mois à venir reste possible —
   c'est une avance — mais la recette se date au jour présent : `paid_at` porte
   le jour où l'argent est entré, `period_year`/`period_month` le mois couvert.
-  À l'import des classeurs, seuls les mois de janvier au mois courant de
-  l'année en cours sont portés en paiements, que la case soit remplie ou non :
-  tout est réglé jusqu'à ce mois. Les frais d'inscription sont de 10 000 FCFA
-  pour toute formation, une fois par dossier. Les mois à venir ne sont pas
-  importés — l'assistant les saisit au guichet à partir du mois suivant.
-  Les écritures déjà enregistrées avant cette règle ne sont pas retouchées.
+  À l'import des classeurs, une case chiffrée pour un mois qui n'est pas encore
+  commencé annonce le plan de la promotion, elle ne prouve pas un encaissement :
+  la ligne est signalée (« mensualité d'un mois non encore commencé ») et rien
+  n'est porté en paiement. Les écritures déjà enregistrées avant cette règle ne
+  sont pas retouchées ; l'audit les signale.
 - **Le solde d'une caisse ne passe jamais sous zéro** : la loi est une seule
   fonction, `CashAccount.decouvert()`, appelée par l'écran (`core.caisse.juger`),
   par le service d'écriture (`poster`, `annuler`, `ajuster`, `reinitialiser`,

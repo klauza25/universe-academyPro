@@ -121,65 +121,60 @@ class PreparationDuPlanTests(SimpleTestCase):
         plan = self.plan([ligne], [fiche()], classeur='Gestion des étudiants.xlsx')
         self.assertEqual(len(plan.inscriptions), 1)
         self.assertEqual(len(plan.groupes), 1)
-        # Frais d'inscription à 10 000 et mensualité du mois courant, au tarif manuel.
-        self.assertEqual([p.montant for p in plan.paiements], [10000, 25000])
-        self.assertEqual([p.motif for p in plan.paiements],
-                         ["Frais d'inscription", 'Mensualité'])
-        self.assertNotIn("frais d'inscription non importés", [e[0] for e in plan.ecarts])
+        # Le seul encaissement importé est la mensualité, au tarif manuel.
+        self.assertEqual([p.montant for p in plan.paiements], [25000])
+        self.assertIn("frais d'inscription non importés", [e[0] for e in plan.ecarts])
 
-    def test_seule_l_annee_courante_est_importee(self):
+    def test_le_mois_d_inscription_place_la_premiere_mensualite_de_l_annee_suivante(self):
         ligne = Ligne(date_inscription=dt.date(2025, 10, 20),
                       mois=[une_case_mois(11, 'NOVEMBRE', 25000), une_case_mois(1, 'JANVIER', 25000)])
         plan = self.plan([ligne], [fiche()])
-        # Rien de 2025 : janvier à novembre de l'année courante, tous réglés.
+        # L'historique est importé : un mois réglé avant novembre 2026 reste en base.
         jours = sorted(p.jour for p in plan.paiements if p.motif == 'Mensualité')
-        self.assertEqual(jours, [dt.date(2026, mois, 1) for mois in range(1, 12)])
+        self.assertEqual(jours, [dt.date(2025, 11, 1), dt.date(2026, 1, 1)])
 
-    def test_aucun_mois_futur_n_est_importe(self):
-        """Les cases d'octobre à avril annoncent le plan ; seul octobre-novembre est dû.
+    def test_un_chiffre_de_mois_futur_ne_vaut_pas_encaissement(self):
+        """La grille annonce les mois à venir : elle ne prouve pas l'argent reçu.
 
-        À partir de décembre, l'assistant saisit les encaissements dans l'application.
+        Une promotion ouverte en octobre 2026 avec des cases remplies jusqu'en
+        avril 2027 écrivait cinq paiements datés dans le futur, donc un trop-perçu
+        qui n'existait pas. La ligne se signale, elle ne s'écrit pas.
         """
         ligne = Ligne(date_inscription=dt.date(2026, 10, 15),
                       mois=[une_case_mois(12, 'DECEMBRE', 30000),
                             une_case_mois(1, 'JANVIER', 30000),
                             une_case_mois(4, 'AVRIL', 30000)])
         plan = self.plan([ligne], [fiche(date=dt.date(2026, 10, 15))])
-        self.assertEqual([(p.jour, p.montant) for p in plan.paiements], [
-            (dt.date(2026, 10, 15), 10000),
-            (dt.date(2026, 10, 1), 25000),
-            (dt.date(2026, 11, 1), 25000),
-        ])
-        self.assertNotIn("mensualité d'un mois non encore commencé",
-                         [e[0] for e in plan.ecarts])
+        self.assertEqual(plan.paiements, [])
+        self.assertIn("mensualité d'un mois non encore commencé",
+                      [e[0] for e in plan.ecarts])
+        signalees = [e[2] for e in plan.ecarts
+                     if e[0] == "mensualité d'un mois non encore commencé"]
+        self.assertEqual(len(signalees), 3)
+        self.assertIn('AVRIL 2027', signalees[2])
 
-    def test_les_frais_d_inscription_sont_toujours_a_10000(self):
-        """Position fixe pour toutes les formations, même sans case dans le Sheet."""
-        for frais in (None, 10000, 15000):
-            with self.subTest(frais=frais):
-                ligne = Ligne(date_inscription=dt.date(2026, 3, 5),
-                              frais_inscription=frais, mois=[])
-                plan = self.plan([ligne], [fiche()])
-                inscription = plan.paiements[0]
-                self.assertEqual(inscription.montant, 10000)
-                self.assertEqual(inscription.motif, "Frais d'inscription")
-                self.assertEqual(inscription.jour, dt.date(2026, 3, 5))
-                self.assertEqual(len(plan.paiements), 10)  # + mars à novembre
-                self.assertNotIn("frais d'inscription non importés",
-                                 [e[0] for e in plan.ecarts])
+    def test_les_frais_d_inscription_du_sheet_ne_sont_pas_importes(self):
+        """Ils s'encaissent au guichet : le classeur ne crée pas d'écriture d'argent."""
+        ligne = Ligne(date_inscription=dt.date(2026, 3, 5), frais_inscription=10000, mois=[])
+        plan = self.plan([ligne], [fiche()])
+        self.assertEqual(plan.paiements, [])
+        signale = [e for e in plan.ecarts if e[0] == "frais d'inscription non importés"]
+        self.assertEqual(len(signale), 1)
+        self.assertIn('10 000 FCFA', signale[0][2])
+        self.assertIn('à saisir manuellement', signale[0][2])
 
-    def test_les_mois_de_l_annee_courante_sont_importes_au_tarif_manuel(self):
-        """La case du Sheet ne fixe ni le montant ni le principe du paiement."""
+    def test_les_mois_historiques_sont_importes_au_tarif_manuel(self):
+        """Tout l'historique est conservé, mais la case du Sheet ne fixe pas le montant."""
         ligne = Ligne(date_inscription=dt.date(2025, 9, 10), mois=[
             une_case_mois(10, 'OCTOBRE', 88000),
             une_case_mois(11, 'NOVEMBRE', 99999),
         ])
         plan = self.plan([ligne], [fiche()])
-        self.assertEqual(plan.paiements[0].montant, 10000)
-        self.assertEqual([(p.jour, p.montant) for p in plan.paiements[1:]], [
-            (dt.date(2026, mois, 1), 25000) for mois in range(1, 12)
+        self.assertEqual([(p.jour, p.montant) for p in plan.paiements], [
+            (dt.date(2025, 10, 1), 25000),
+            (dt.date(2025, 11, 1), 25000),
         ])
-        self.assertNotIn('montant du Sheet remplacé', [e[0] for e in plan.ecarts])
+        self.assertEqual([e[0] for e in plan.ecarts].count('montant du Sheet remplacé'), 2)
 
     def test_deux_blocs_d_un_onglet_sont_deux_promotions(self):
         plan = self.plan([
@@ -189,33 +184,6 @@ class PreparationDuPlanTests(SimpleTestCase):
         self.assertEqual(len(plan.groupes), 2)
         self.assertEqual(len(plan.inscriptions), 2)
 
-    def test_un_eleve_peut_suivre_plusieurs_formations(self):
-        """Un même compte, plusieurs groupes : un dossier et 10 000 par formation."""
-        plan = self.plan([
-            Ligne(onglet='Anglais', date_inscription=dt.date(2026, 10, 5), mois=[]),
-            Ligne(onglet='Bureautique', date_inscription=dt.date(2026, 10, 5), mois=[]),
-        ], [fiche()], appariement_=appariement(bureautique=('Bureautique', 'exact')))
-        self.assertEqual(len(plan.comptes), 1)
-        self.assertEqual(len(plan.inscriptions), 2)
-        for titre, mensuel in (('Anglais', 25000), ('Bureautique', 20000)):
-            with self.subTest(titre=titre):
-                paiements = [p for p in plan.paiements
-                             if p.inscription.groupe.titre == titre]
-                self.assertEqual([p.montant for p in paiements
-                                  if p.motif == "Frais d'inscription"], [10000])
-                self.assertEqual([p.montant for p in paiements
-                                  if p.motif == 'Mensualité'], [mensuel, mensuel])
-
-    def test_mois_a_payer_ne_depasse_pas_l_annee_courante(self):
-        mois = import_eleves.mois_a_payer
-        self.assertEqual(mois(dt.date(2025, 9, 10), AUJOURD_HUI),
-                         [(2026, m) for m in range(1, 12)])
-        self.assertEqual(mois(dt.date(2026, 10, 15), AUJOURD_HUI),
-                         [(2026, 10), (2026, 11)])
-        self.assertEqual(mois(dt.date(2027, 1, 5), AUJOURD_HUI), [])
-        self.assertEqual(mois(None, AUJOURD_HUI),
-                         [(2026, m) for m in range(1, 12)])
-
     def test_un_eleve_en_double_dans_le_meme_groupe_est_ignore_et_signale(self):
         plan = self.plan([
             Ligne(date_inscription=dt.date(2026, 9, 10),
@@ -224,8 +192,7 @@ class PreparationDuPlanTests(SimpleTestCase):
                   nom='KIMBEMBU Grace', ligne=9, mois=[une_case_mois(11, 'NOVEMBRE', 25000)]),
         ])
         self.assertEqual(len(plan.inscriptions), 1)
-        # Un seul dossier : 10 000 + septembre, octobre et novembre.
-        self.assertEqual(len(plan.paiements), 4)
+        self.assertEqual(len(plan.paiements), 1)  # une seule mensualité reprise, aucun frais importé
         self.assertIn('élève en double dans le même groupe',
                       [type_ for type_, _o, _q in plan.ecarts])
 
@@ -251,11 +218,11 @@ class PreparationDuPlanTests(SimpleTestCase):
         plan = self.plan([Ligne(onglet='Anglais')], classeur='Autre chose.xlsx')
         self.assertEqual(plan.inscriptions, [])
 
-    def test_une_case_douteuse_ne_change_rien_a_l_encaissement(self):
+    def test_une_case_de_mois_douteuse_ne_devient_pas_un_paiement(self):
         plan = self.plan([Ligne(mois=[une_case_mois(11, 'NOVEMBRE', None, 'ambigu',
                                                     'MAI-JUIN juil 75000')])])
-        self.assertEqual([p.montant for p in plan.paiements], [10000, 25000])
-        self.assertNotIn('case de mois non chiffrée', [e[0] for e in plan.ecarts])
+        self.assertEqual(plan.paiements, [])
+        self.assertIn('case de mois non chiffrée', [e[0] for e in plan.ecarts])
 
     def test_un_groupe_sans_date_se_pose_au_premier_jour_du_mois(self):
         plan = self.plan([Ligne(date_inscription=None, mois=[])])
@@ -279,20 +246,20 @@ class PreparationDuPlanTests(SimpleTestCase):
 
     def test_un_trop_percu_se_signale_sans_se_corriger(self):
         inscrit = dt.date(2026, 9, 10)
-        # La case du Sheet est ignorée : la mensualité posée est celle du tarif
-        # manuel, et l'écart avec le Sheet n'est plus signalé.
+        # Une case aberrante ne crée pas de trop-perçu : la mensualité posée est
+        # celle du tarif manuel, et l'écart avec le Sheet est seulement signalé.
         plan = self.plan([Ligne(date_inscription=inscrit,
                                  mois=[une_case_mois(10, 'OCTOBRE', 150000)])],
                          tarifs={'Anglais': {'frais': 225000, 'duree': 9, 'mensuel': 25000}})
-        self.assertEqual([p.montant for p in plan.paiements],
-                         [10000, 25000, 25000, 25000])
+        self.assertEqual([p.montant for p in plan.paiements], [25000])
         self.assertNotIn('trop-perçu', [e[0] for e in plan.ecarts])
-        self.assertNotIn('montant du Sheet remplacé', [e[0] for e in plan.ecarts])
-        # Le trop-perçu vient de la somme des mensualités au tarif manuel.
-        plan = self.plan([Ligne(date_inscription=inscrit, mois=[])],
-                        tarifs={'Anglais': {'frais': 40000, 'duree': 9, 'mensuel': 25000}})
-        self.assertEqual([p.montant for p in plan.paiements],
-                         [10000, 25000, 25000, 25000])
+        self.assertIn('montant du Sheet remplacé', [e[0] for e in plan.ecarts])
+        # Un vrai trop-perçu vient de la somme des mensualités au tarif manuel.
+        plan = self.plan([Ligne(date_inscription=inscrit, mois=[
+            une_case_mois(10, 'OCTOBRE', 25000),
+            une_case_mois(11, 'NOVEMBRE', 25000),
+        ])], tarifs={'Anglais': {'frais': 40000, 'duree': 9, 'mensuel': 25000}})
+        self.assertEqual([p.montant for p in plan.paiements], [25000, 25000])
         self.assertIn('trop-perçu', [e[0] for e in plan.ecarts])
 
     # -- identités --------------------------------------------------------
@@ -407,13 +374,11 @@ class EcritureEnBaseTests(TestCase):
         self.assertEqual(CourseSession.objects.filter(course=self.cours).count(), 1)
         dossier = Enrollment.objects.get(student=eleve)
         self.assertEqual(dossier.net_amount, 225000)
-        self.assertEqual(sorted(p.amount for p in dossier.payments.all()),
-                         [10000, 25000, 25000])
-        self.assertTrue(dossier.payments.filter(
-            motif=Payment.Motif.ENROLLMENT, amount=10000).exists())
+        self.assertEqual([p.amount for p in dossier.payments.all()], [25000])
+        self.assertFalse(dossier.payments.filter(motif=Payment.Motif.ENROLLMENT).exists())
         self.assertEqual(CashTransaction.objects.filter(
-            category__name='Paiements des étudiants').count(), 3)
-        self.assertEqual(self.solde(), 60000)
+            category__name='Paiements des étudiants').count(), 1)
+        self.assertEqual(self.solde(), 25000)
 
     def test_une_fiche_sans_adresse_recoit_une_adresse_de_repli_a_remplacer(self):
         self.importer([Ligne(nom='TEKELE Valencia')],
@@ -444,8 +409,8 @@ class EcritureEnBaseTests(TestCase):
                              mois=[une_case_mois(11, 'NOVEMBRE', 25000)])],
                       [fiche()], '--ecrire', '--efface')
         self.assertEqual(Enrollment.objects.count(), 1)
-        self.assertEqual(Payment.objects.count(), 3)
-        self.assertEqual(self.solde(), 60000)
+        self.assertEqual(Payment.objects.count(), 1)
+        self.assertEqual(self.solde(), 25000)
 
     def test_efface_ne_supprime_rien_quand_la_base_vient_de_l_import(self):
         compte = User.objects.create_user(email='brivah@test.local', password='x',
@@ -496,10 +461,10 @@ class EcritureEnBaseTests(TestCase):
         self.importer([Ligne(mois=[])], [fiche()], '--ecrire', '--efface')
         self.assertEqual(Enrollment.objects.count(), 1)  # celle du classeur, pas la démo
         self.assertFalse(Enrollment.objects.filter(student=eleve).exists())
-        self.assertEqual(Payment.objects.count(), 2)  # 10 000 + mensualité de novembre
+        self.assertEqual(Payment.objects.count(), 0)  # aucun frais importé du classeur
         self.assertEqual(CashTransaction.objects.filter(label='Ordinateur').count(), 1)
         self.assertEqual(CashTransaction.objects.filter(
-            category__name='Paiements des étudiants').count(), 2)
+            category__name='Paiements des étudiants').count(), 0)
 
     def test_le_compte_retrouve_garde_son_role_et_son_adresse(self):
         existant = User.objects.create_user(email='brivah@test.local', password='motdepasse',
