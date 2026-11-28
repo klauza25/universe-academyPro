@@ -13,6 +13,7 @@ from django.test import SimpleTestCase, TestCase
 
 from core import data_tools as outils
 from core import eleves_import as import_eleves
+from core.utils import compte_reel_a_paiements, doublon_importe
 from core.models import (
     AccountStatus, CashAccount, CashTransaction, Course, CourseSession, Enrollment,
     Payment, Role, RoleKey, TransactionCategory, User,
@@ -477,3 +478,35 @@ class EcritureEnBaseTests(TestCase):
         # Une approbation déjà accordée ne se défait pas en relançant l'import.
         self.assertEqual(existant.account_status, AccountStatus.ACTIVE)
         self.assertEqual(Enrollment.objects.filter(student=existant).count(), 1)
+
+    def test_les_doublons_se_reconnaissent_par_le_nom_et_les_encaissements(self):
+        """Même nom, accent ou casse en moins : seule la caisse tranche le doublon."""
+        reel = User.objects.create_user(
+            email='noellie@universe.academy', password='x',
+            first_name='noéllie', last_name='Etali', account_status=AccountStatus.ACTIVE)
+        importe = User.objects.create_user(
+            email='noellie-etali-1@sans-adresse.local', password='x',
+            first_name='Noellie', last_name='ETALI', account_status=AccountStatus.DISABLED)
+        session = CourseSession.objects.create(
+            course=self.cours, starts_at=dt.date(2026, 10, 12),
+            ends_at=dt.date(2027, 7, 12), schedule='Anglais — doublon', status='ACTIVE')
+
+        dossier_importe = Enrollment.objects.create(
+            student=importe, session=session, net_amount=120000)
+        Payment.objects.create(enrollment=dossier_importe, amount=30000,
+                               method=Payment.Method.CASH,
+                               status=Payment.Status.COMPLETED)
+        self.assertEqual(doublon_importe(reel), importe)
+        self.assertIsNone(doublon_importe(importe))
+        self.assertIsNone(compte_reel_a_paiements('noéllie', 'Etali'))
+
+        dossier_reel = Enrollment.objects.create(
+            student=reel, session=session, net_amount=180000)
+        Payment.objects.create(enrollment=dossier_reel, amount=25000,
+                               method=Payment.Method.CASH,
+                               status=Payment.Status.COMPLETED)
+        self.assertEqual(compte_reel_a_paiements('Noellie', 'ETALI'), reel)
+
+        Payment.objects.all().delete()
+        self.assertIsNone(doublon_importe(reel))
+        self.assertIsNone(compte_reel_a_paiements('Noellie', 'ETALI'))

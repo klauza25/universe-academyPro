@@ -8,7 +8,7 @@ from django.urls import reverse
 
 from core.models import (
     AccessRequest, AccountStatus, AuditLog, CourseSession, Enrollment,
-    Notification, RoleKey, User,
+    Notification, Payment, RoleKey, User,
 )
 
 from .base import BusinessTestBase, TEST_PASSWORD
@@ -357,6 +357,38 @@ class AccessApprovalTests(BusinessTestBase):
         self.assertEqual(second.status, AccessRequest.Status.APPROVED)
         self.assertEqual(
             Enrollment.objects.filter(student=self.pending).count(), 1)
+
+    def test_student_approval_refuses_a_paid_imported_duplicate(self):
+        """Un compte importé du même nom porte l'argent : on exige le rapprochement."""
+        self.access_request.requested_role = RoleKey.ETUDIANT
+        self.access_request.save(update_fields=['requested_role'])
+        doublon = User.objects.create_user(
+            email='postulant-1@sans-adresse.local', password='x',
+            first_name='Postulant', last_name='Test',
+            account_status=AccountStatus.ACTIVE)
+        dossier = Enrollment.objects.create(
+            student=doublon, session=self.session, net_amount=180000)
+        Payment.objects.create(enrollment=dossier, amount=30000,
+                               method=Payment.Method.CASH,
+                               status=Payment.Status.COMPLETED)
+
+        response = self.approve(RoleKey.ETUDIANT)
+        self.assertRedirects(
+            response, reverse('core:dashboard:access-requests'),
+            fetch_redirect_response=False)
+        self.access_request.refresh_from_db()
+        self.pending.refresh_from_db()
+        self.assertEqual(self.access_request.status, AccessRequest.Status.PENDING)
+        self.assertEqual(
+            self.pending.account_status, AccountStatus.PENDING_APPROVAL)
+        self.assertFalse(Enrollment.objects.filter(student=self.pending).exists())
+
+        # Un homonyme sans encaissement n'est pas un doublon : l'approbation suit son cours.
+        Payment.objects.all().delete()
+        self.approve(RoleKey.ETUDIANT)
+        self.access_request.refresh_from_db()
+        self.assertEqual(self.access_request.status, AccessRequest.Status.APPROVED)
+        self.assertEqual(Enrollment.objects.filter(student=self.pending).count(), 1)
 
     def test_non_student_approval_ignores_the_group_field(self):
         self.approve(RoleKey.FORMATEUR)

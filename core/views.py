@@ -43,7 +43,8 @@ from .decorators import (
     super_admin_required, user_management_required,
 )
 from .utils import (
-    enrollments_waiting_validation, log_audit, notifier_changement_statut_bourse,
+    doublon_importe, enrollments_waiting_validation, log_audit,
+    notifier_changement_statut_bourse,
     outstanding_receivables,
     salaire_formateur as calculer_salaire_formateur,
     salaires_formateurs as calculer_salaires_formateurs,
@@ -1027,6 +1028,20 @@ def access_request_review(request, request_id):
             )
             return redirect('core:dashboard:access-requests')
         group = approval_form.cleaned_data['session']
+
+        # Un élève peut déjà exister sous un compte importé du classeur, porteur
+        # des encaissements. Approuver son nouveau compte créerait une inscription
+        # vide et le tableau de bord afficherait « payé 0 » : on exige d'abord le
+        # rapprochement des deux comptes par le secrétariat.
+        if role_key == RoleKey.ETUDIANT:
+            doublon = doublon_importe(ar.user)
+            if doublon:
+                messages.error(
+                    request,
+                    _("Un compte importé au même nom existe déjà avec des paiements (%(email)s). Rapprochez les deux comptes au secrétariat avant d'approuver.")
+                    % {'email': doublon.email},
+                )
+                return redirect('core:dashboard:access-requests')
 
         # Un compte étudiant est nécessairement inscrit : le groupe est donc
         # exigé à la validation, sauf si l'étudiant a déjà une inscription.

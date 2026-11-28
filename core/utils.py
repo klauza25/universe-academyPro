@@ -9,6 +9,8 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from . import parametres
+from .data_tools import cle_personne
+from .eleves_import import SUFFIXE_SANSDRESSE
 from .models import (
     AccountStatus, AuditLog, CourseSession, Enrollment, Notification, Payment,
     RoleKey, ScholarshipApplication, User,
@@ -35,6 +37,56 @@ def students_count(*, only_active: bool = False):
     if only_active:
         comptes = comptes.filter(account_status=AccountStatus.ACTIVE)
     return comptes.distinct().count()
+
+
+def doublon_importe(user):
+    """Compte importé du même élève, encore porteur de paiements validés.
+
+    L'import précède souvent l'ouverture du compte par l'élève : deux comptes
+    portant le même nom coexistent alors. Tant que l'argent n'a pas été rapproché,
+    approuver le second compte créerait une inscription vide dont le tableau de
+    bord afficherait « total payé : 0 » alors que les encaissements existent.
+    La clé de nom tolère la casse et les accents, mais pas l'approximation : un
+    homonyme sans paiement n'est pas un doublon.
+    """
+    return doublon_pour_nom(user.first_name, user.last_name, exclure=user.pk)
+
+
+def doublon_pour_nom(prenom, nom, *, exclure=None):
+    """Compte importé du même nom, encore porteur de paiements validés."""
+    cle = cle_personne(f'{prenom} {nom}')
+    if not cle:
+        return None
+    candidats = User.objects.filter(
+        email__endswith=SUFFIXE_SANSDRESSE,
+        enrollments__payments__status=Payment.Status.COMPLETED,
+    )
+    if exclure:
+        candidats = candidats.exclude(pk=exclure)
+    for candidat in candidats.distinct():
+        if cle_personne(f'{candidat.first_name} {candidat.last_name}') == cle:
+            return candidat
+    return None
+
+
+def compte_reel_a_paiements(prenom, nom):
+    """Compte ouvert par l'élève lui-même, déjà porteur d'encaissements.
+
+    Symétrique de ``doublon_pour_nom`` : sert à l'import, qui ne doit pas ouvrir
+    un second compte au même nom alors que l'élève a déjà payé sur le sien.
+    """
+    cle = cle_personne(f'{prenom} {nom}')
+    if not cle:
+        return None
+    candidats = User.objects.exclude(
+        email__endswith=SUFFIXE_SANSDRESSE
+    ).filter(
+        enrollments__payments__status=Payment.Status.COMPLETED,
+    ).distinct()
+    for candidat in candidats:
+        if cle_personne(f'{candidat.first_name} {candidat.last_name}') == cle:
+            return candidat
+    return None
 
 
 def platform_counts():

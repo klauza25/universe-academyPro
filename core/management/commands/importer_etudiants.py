@@ -29,6 +29,7 @@ from django.utils.text import slugify
 from django.utils import timezone
 
 from core import eleves_import as import_eleves
+from core.utils import compte_reel_a_paiements
 from core.models import (
     AccountStatus, Attendance, CashAccount, CashTransaction, Course, CourseSession,
     Enrollment, Payment, Role, RoleKey, TransactionCategory, User, UserRole,
@@ -79,6 +80,21 @@ class Command(BaseCommand):
         plan = import_eleves.preparer(
             analyseur, self._tarifs(), self._comptes_existants(),
             analyseur._appariement(), classeur)
+        doublons = []
+        for compte in plan.comptes:
+            if not compte.a_creer:
+                continue
+            reel = compte_reel_a_paiements(compte.prenom, compte.nom)
+            if reel:
+                doublons.append((compte.affiche or compte.cle, reel.email))
+        if doublons:
+            self.stdout.write(self.style.WARNING(
+                '\nDoublons à trancher avant import : '
+                + ' ; '.join(f'{nom} -> {email}' for nom, email in doublons)))
+            if options['ecrire']:
+                raise CommandError(
+                    'Un élève a déjà un compte porteur de paiements : rapprochez '
+                    'les deux comptes avant d\'importer, rien n\'a été écrit.')
         self._decrire(plan, classeur, options)
 
         purge = self._inventaire_effacement()
