@@ -209,7 +209,7 @@ ROLE_PAR_EN_TETE = (
     ('commentaire', re.compile(r'commentai', re.I)),
     ('option', re.compile(r'^(option|formation)$', re.I)),
     ('duree', re.compile(r'dur[ée]e', re.I)),
-    ('cout', re.compile(r'co[ûu]t', re.I)),
+    ('cout', re.compile(r'co[ûùu]t', re.I)),
     ('training', re.compile(r'training', re.I)),
     ('nom', re.compile(r'(nom|prenoms?)', re.I)),
 )
@@ -264,6 +264,7 @@ def decouper_blocs(onglet: str, lignes: list[list]) -> list[Bloc]:
     if not lignes:
         return []
     ligne_en_tete = None
+    nom_implicite = False
     for index in range(min(4, len(lignes))):
         en_tete_brut = lignes[index]
         colonnes_nom = [c for c, v in enumerate(en_tete_brut) if role_de_en_tete(v) == 'nom']
@@ -273,9 +274,20 @@ def decouper_blocs(onglet: str, lignes: list[list]) -> list[Bloc]:
             ligne_en_tete = index
             break
     if ligne_en_tete is None:
+        # « Call center » titre sa première colonne « vb;l;; » : le nom n'est pas
+        # annoncé, mais la date et les deux colonnes de frais le sont. Les noms
+        # sont alors lus dans la première colonne, sans rien inventer d'autre.
+        for index in range(min(4, len(lignes))):
+            roles = [role_de_en_tete(v) for v in lignes[index]]
+            if 'frais_inscription' in roles and 'frais_mensuels' in roles:
+                ligne_en_tete, nom_implicite = index, True
+                break
+    if ligne_en_tete is None:
         return []
 
     en_tete, nb_lignes = _en_tete_fusionne(lignes, ligne_en_tete)
+    if nom_implicite:
+        en_tete[0] = 'NOM & Prénoms'
     debuts = [c for c, v in enumerate(en_tete) if role_de_en_tete(v) == 'nom']
     blocs: list[Bloc] = []
     for position, colonne_nom in enumerate(debuts):
@@ -331,6 +343,9 @@ class LigneInscription:
     commentaire: str
     annees: list
     anomalies: list
+    option: str = ''
+    cout_total: int | None = None
+    duree: str = ''
 
 
 def _cellule(ligne: list, colonne):
@@ -380,6 +395,8 @@ def extraire_ligne(bloc: Bloc, ligne: list, numero_ligne: int) -> LigneInscripti
 
     frais, statut_frais, brut_frais = parse_montant(_cellule(ligne, bloc.colonnes.get('frais_inscription')))
     mensuel, statut_mensuel, brut_mensuel = parse_montant(_cellule(ligne, bloc.colonnes.get('frais_mensuels')))
+    cout, statut_cout, brut_cout = parse_montant(_cellule(ligne, bloc.colonnes.get('cout')))
+    duree = normaliser_texte(_cellule(ligne, bloc.colonnes.get('duree')))
 
     mois = []
     annees = set()
@@ -407,6 +424,8 @@ def extraire_ligne(bloc: Bloc, ligne: list, numero_ligne: int) -> LigneInscripti
         anomalies.append(('frais_inscription_douteux', f'« {brut_frais} »'))
     if statut_mensuel not in ('vide', 'ok', 'nul', 'ok_texte'):
         anomalies.append(('frais_mensuel_douteux', f'« {brut_mensuel} »'))
+    if statut_cout not in ('vide', 'ok', 'nul', 'ok_texte'):
+        anomalies.append(('cout_total_douteux', f'« {brut_cout} »'))
 
     return LigneInscription(
         onglet=bloc.onglet, bloc=bloc.libelle, ligne=numero_ligne, nom=nom,
@@ -415,6 +434,7 @@ def extraire_ligne(bloc: Bloc, ligne: list, numero_ligne: int) -> LigneInscripti
         frais_inscription=frais, frais_statut=statut_frais,
         mensuel_prevu=mensuel, mois=mois, commentaire=commentaire,
         annees=sorted(a for a in annees if a), anomalies=anomalies,
+        option=option, cout_total=cout, duree=duree,
     )
 
 

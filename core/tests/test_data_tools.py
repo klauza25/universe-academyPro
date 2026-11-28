@@ -96,6 +96,38 @@ class DecoupageTest(SimpleTestCase):
         self.assertEqual(outils.extraire_ligne(blocs[0], onglet[1], 2).nom, 'GNEKOUMOU LIBALA L')
         self.assertEqual(outils.extraire_ligne(blocs[1], onglet[1], 2).nom, 'KISSITA Emmanuelle')
 
+    def test_un_onglet_sans_titre_de_nom_est_quand_meme_lu(self):
+        """« Call center » intitule sa première colonne « vb;l;; » : les noms y sont tout de même lus."""
+        onglet = [
+            ['vb;l;;', "Date d'inscription", "Frais d'inscription", 'Frais mensuels',
+             'OCTOBRE', 'NOVEMBRE', 'Commentaire'],
+            [],
+            ['BOKOUABELA Atiroite Zoé', dt.datetime(2026, 10, 8), 10000.0, 40000.0,
+             40000.0, 20000.0, ''],
+        ]
+        blocs = outils.decouper_blocs('Call center', onglet)
+        self.assertEqual(len(blocs), 1)
+        self.assertEqual(blocs[0].colonnes['nom'], 0)
+        inscription = outils.extraire_ligne(blocs[0], onglet[2], 3)
+        self.assertEqual(inscription.nom, 'BOKOUABELA Atiroite Zoé')
+        self.assertEqual(inscription.mois[0][2], 40000)
+        self.assertEqual(inscription.mois[1][2], 20000)
+
+    def test_le_cout_total_du_registre_est_lu_sans_devenir_un_paiement(self):
+        onglet = [
+            ['', 'NOM & Prénoms', "Date d'inscription", 'OPTION', 'Durée', 'sta',
+             'coùt total', 'Novembre', 'Commentaire'],
+            [],
+            [1.0, 'NANGUERBAYE Irene', dt.datetime(2026, 7, 28), 'ANGLAIS', '2 mois',
+             'formation terminée', 50000.0, None, ''],
+        ]
+        bloc = outils.decouper_blocs('ANCIENS ETUDIANTS', onglet)[0]
+        inscription = outils.extraire_ligne(bloc, onglet[2], 3)
+        self.assertEqual(inscription.cout_total, 50000)
+        self.assertEqual(inscription.option, 'ANGLAIS')
+        self.assertEqual(inscription.duree, '2 mois')
+        self.assertEqual([m[2] for m in inscription.mois], [None])
+
     def test_un_nom_eclate_se_reconstitue(self):
         onglet = [
             ['Nbre', "Date d'inscription", 'NOM & Prénoms', "Frais d'inscription", 'Frais mensuels',

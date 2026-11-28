@@ -5,12 +5,16 @@ lit les classeurs avec ``analyser_donnees``, appelle ``preparer()`` puis pose le
 Ce module décide aussi ce qui ne doit surtout pas être écrit : doublons, intitulés seulement
 ressemblants, cases de mois douteuses.
 
-Règles validées par la direction (rapport ``docs/donnees``, section 10) : une fiche = un compte ;
-un onglet, ou un de ses blocs, = un groupe ; le tarif vient du catalogue posé par la vague 1 ;
-la présence d'un encaissement vient des cases remplies, jamais d'une moyenne. Le montant de la
-mensualité reste celui du tarif manuel de l'application ; les frais d'inscription ne sont pas
-créés par l'import. Les mois antérieurs à novembre 2026 sont importés quand ils sont réglés,
-mais ne deviennent pas des échéances (voir ``core.periodes``).
+Règles validées par la direction le 28/11/2026 : une fiche = un compte ; un onglet, ou un de
+ses blocs, = un groupe ; une case de mois chiffrée devient un paiement **au montant exact lu**,
+même s'il sort de la bande de contrôle — l'écart est signalé séparément, jamais corrigé. Les
+cases ambiguës et les mois non encore commencés ne créent rien et sont signalés. Les frais
+d'inscription et le « coût total » du registre des anciens restent à la saisie manuelle : le
+classeur ne dit pas qu'ils ont été encaissés. Le registre « ANCIENS ETUDIANTS » est repris
+ligne par ligne grâce à sa colonne OPTION ; « Call center », « A.Comptable », les salariés et
+le boost sont repris dans l'analyse, « Equipe Romard » seul reste écarté. Les mois antérieurs
+à novembre 2026 sont importés quand ils sont réglés, mais ne deviennent pas des échéances
+(voir ``core.periodes``).
 """
 from __future__ import annotations
 
@@ -26,11 +30,29 @@ MARQUE = programme.MARQUE
 
 # Un intitulé d'onglet n'est retenu que s'il désigne une formation du catalogue sans aucun
 # doute. « probable » (FRANCAIS ≈ « Francais A2 ») reste à trancher par la direction.
-NIVEAUX_RETENUS = ('exact', 'importee', 'fondu', 'promotion')
+NIVEAUX_RETENUS = ('exact', 'importee', 'fondu', 'promotion', 'a_creer')
 
 MOTIF_ADRESSE = re.compile(r'^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$')
 MOTIF_LETTRE = re.compile(r'[A-Za-zÀ-Þ]')
-MOTIF_TERME = re.compile(r'(termin|fini|diplome|gradue|abandon|arre)', re.I)
+MOTIF_TERME = re.compile(r'(termin|tremin|fini|diplome|gradue|abandon|arre)', re.I)
+MOTIF_NON_TERME = re.compile(r'\b(non|pas)\s+(tremin|termin|fini)', re.I)
+
+
+def formation_terminee(commentaire: str) -> bool:
+    """« formation terminée » oui, « non terminée / non treminée » non."""
+    if not commentaire:
+        return False
+    if MOTIF_NON_TERME.search(commentaire):
+        return False
+    return bool(MOTIF_TERME.search(commentaire))
+
+
+def cle_formation(ligne, cle_onglet: str) -> tuple[str, str]:
+    """La formation d'une ligne : l'onglet, ou la colonne OPTION du registre des anciens."""
+    option = getattr(ligne, 'option', '')
+    if cle_onglet == 'anciens etudiants' and option:
+        return outils.cle_personne(option), option
+    return cle_onglet, ligne.onglet
 
 # L'e-mail sert d'identifiant de connexion : une fiche sans adresse en reçoit une de repli,
 # dont le suffixe signale au secrétariat qu'elle reste à remplacer.
@@ -301,6 +323,10 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
     aujourd_hui = aujourd_hui or dt.date.today()
     plan = Plan()
     ecarts = plan.ecarts
+    # Une formation déclarée mais pas encore au catalogue est prévue avec la même
+    # règle que ``importer_formations`` : la prévisualisation reste complète, et
+    # l'écriture refusera les groupes dont la Course n'a pas été créée.
+    tarifs_prets = dict(tarifs)
 
     classeur_par_onglet = {onglet: nom for nom, onglet, *_ in analyse.suivis['stats']}
     lignes = [l for l in analyse.suivis['inscriptions']
@@ -309,21 +335,40 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
     retenues = []
     for ligne in lignes:
         cle_onglet = outils.cle_personne(ligne.onglet)
-        titre, niveau = appariement.get(cle_onglet, (None, None))
+        cle_form, libelle_form = cle_formation(ligne, cle_onglet)
+        titre, niveau = appariement.get(cle_form, (None, None))
         if niveau == 'registre':
-            plan.ecartes.append(('registre d\'anciens, pas une formation', ligne.onglet, ligne.nom))
+            plan.ecartes.append(('ancien sans formation précisée', ligne.onglet,
+                                 f'{ligne.nom} — colonne OPTION vide'))
             continue
         if titre is None or niveau not in NIVEAUX_RETENUS:
             plan.ecartes.append(('formation non confirmée', ligne.onglet,
-                                 f'{ligne.nom} — appariement « {niveau or "aucun"} »'))
+                                 f'{ligne.nom} — « {libelle_form} » : '
+                                 f'appariement « {niveau or "aucun"} »'))
             continue
-        if titre not in tarifs:
-            plan.ecartes.append(('formation absente du catalogue', ligne.onglet, ligne.nom))
+        if titre not in tarifs_prets and niveau == 'a_creer':
+            declaree = programme.FORMATIONS.get(cle_form)
+            if declaree:
+                mensuel = programme.mensuel_observee(
+                    getattr(analyse, 'catalogue', {}) or {}, cle_form, declaree[2])
+                tarifs_prets[titre] = {
+                    'frais': mensuel * programme.DUREE_MOIS,
+                    'duree': programme.DUREE_MOIS,
+                    'mensuel': mensuel,
+                }
+                ecarts.append(('formation déclarée à créer au catalogue', ligne.onglet,
+                               (f'« {libelle_form} » : {titre}, '
+                                f'{declaree[2]:,} FCFA/mois dans le Sheet, '
+                                f'tarif du catalogue {mensuel:,} FCFA/mois sur '
+                                f'{programme.DUREE_MOIS} mois').replace(',', ' ')))
+        if titre not in tarifs_prets:
+            plan.ecartes.append(('formation absente du catalogue', ligne.onglet,
+                                 f'{ligne.nom} — « {libelle_form} » visait {titre}'))
             continue
-        retenues.append((ligne, titre, cle_onglet))
+        retenues.append((ligne, titre, cle_form, libelle_form))
 
     une_ligne_par_eleve: dict[str, object] = {}
-    for ligne, _titre, _cle in retenues:
+    for ligne, _titre, _cle, _libelle in retenues:
         une_ligne_par_eleve.setdefault(ligne.cle, ligne)
     fiches = souche_fiches(analyse.base['lignes'])
     plan.fiches = len(fiches)
@@ -331,13 +376,13 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
                                    index_des_comptes(existants), ecarts)
 
     groupes: dict[str, Groupe] = {}
-    for ligne, titre, cle_onglet in retenues:
-        cle = f'{cle_onglet}|{ligne.bloc}'
+    for ligne, titre, cle_form, _libelle in retenues:
+        cle = f'{cle_form}|{ligne.bloc}'
         if cle in groupes:
             continue
-        dates = [l.date_inscription for l, t, c in retenues if f'{c}|{l.bloc}' == cle
+        dates = [l.date_inscription for l, t, c, _ in retenues if f'{c}|{l.bloc}' == cle
                  if l.date_inscription]
-        tarif = tarifs[titre]
+        tarif = tarifs_prets[titre]
         if dates:
             debut, déduit = min(dates), False
         else:
@@ -349,13 +394,13 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
             cle=cle, onglet=ligne.onglet, classeur=classeur_par_onglet.get(ligne.onglet, classeur),
             titre=titre, debut=debut, fin=fin, mensuelle=tarif['mensuel'],
             statut='COMPLETED' if fin < aujourd_hui else 'ACTIVE',
-            effectif=sum(1 for l, t, c in retenues if f'{c}|{l.bloc}' == cle),
+            effectif=sum(1 for l, t, c, _ in retenues if f'{c}|{l.bloc}' == cle),
             debut_deduit=déduit,
         )
 
     par_dossier: dict[tuple, Inscription] = {}
-    for ligne, titre, cle_onglet in retenues:
-        groupe = groupes[f'{cle_onglet}|{ligne.bloc}']
+    for ligne, titre, cle_form, _libelle in retenues:
+        groupe = groupes[f'{cle_form}|{ligne.bloc}']
         compte = plan.compte_de(ligne.cle)
         dossier = (compte.cle, groupe.cle)
         if dossier in par_dossier:
@@ -366,8 +411,8 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
             continue
         inscription = Inscription(
             compte=compte, groupe=groupe, date_debut=ligne.date_inscription,
-            tarif=tarifs[titre]['frais'], net=tarifs[titre]['frais'],
-            statut='COMPLETED' if MOTIF_TERME.search(ligne.commentaire) else 'ACTIVE',
+            tarif=tarifs_prets[titre]['frais'], net=tarifs_prets[titre]['frais'],
+            statut='COMPLETED' if formation_terminee(ligne.commentaire) else 'ACTIVE',
             note=(f'{MARQUE} — {groupe.classeur}, onglet {groupe.onglet}, ligne {ligne.ligne}'
                   + (f' | {ligne.commentaire}' if ligne.commentaire else '')),
         )
@@ -380,7 +425,12 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
             ecarts.append(('frais d\'inscription non importés', groupe.onglet,
                            f'{ligne.nom} — {ligne.frais_inscription:,} FCFA'.replace(',', ' ')
                            + ' à saisir manuellement'))
-        mensuel_manuel = tarifs[titre]['mensuel']
+        if getattr(ligne, 'cout_total', None):
+            # « coût total » annonce un prix, pas un encaissement : la direction
+            # tranche au guichet, l'import n'en fait pas une recette.
+            ecarts.append(('coût total non importé', groupe.onglet,
+                           f'{ligne.nom} — {ligne.cout_total:,} FCFA'.replace(',', ' ')
+                           + ' à saisir manuellement'))
         for numero, libelle, montant, statut_montant, brut in ligne.mois:
             if montant is None:
                 if statut_montant in ('ambigu', 'texte') and brut:
@@ -402,14 +452,14 @@ def preparer(analyse, tarifs: dict, existants: list, appariement: dict, classeur
                                f'{montant:,} FCFA'.replace(',', ' ')
                                + ' ne sont pas encore encaissés'))
                 continue
-            if montant != mensuel_manuel:
-                ecarts.append(('montant du Sheet remplacé', groupe.onglet,
+            if not (programme.BORNE_MENSUELLE[0] <= montant <= programme.BORNE_MENSUELLE[1]):
+                # Le chiffre est gardé tel quel : le signaler permet à la direction
+                # de corriger la case, pas de substituer un tarif inventé.
+                ecarts.append(('mensualité du Sheet hors de la bande', groupe.onglet,
                                f'{ligne.nom} — {libelle} {annee} : '
-                               f'{montant:,} FCFA lus, '.replace(',', ' ')
-                               + f'{mensuel_manuel:,} FCFA retenus au tarif manuel'
-                               .replace(',', ' ')))
+                               f'{montant:,} FCFA'.replace(',', ' ')))
             plan.paiements.append(Paiement(
-                inscription=inscription, montant=mensuel_manuel, jour=jour,
+                inscription=inscription, montant=montant, jour=jour,
                 motif='Mensualité', annee=annee, mois=numero,
                 note=f'{MARQUE} — {libelle} {annee} — {groupe.onglet} ligne {ligne.ligne}'))
 

@@ -34,6 +34,9 @@ class Ligne:
     mensuel_prevu: int | None = 25000
     mois: list = field(default_factory=list)
     commentaire: str = ''
+    option: str = ''
+    cout_total: int | None = None
+    duree: str = ''
 
     def __post_init__(self):
         self.cle = outils.cle_personne(self.nom)
@@ -103,6 +106,13 @@ class LecturesDuClasseurTests(SimpleTestCase):
         self.assertFalse(import_eleves.adresse_valide('Formation en anglais et francais'))
         self.assertTrue(import_eleves.adresse_valide('Brivah.Test@X.COM'))
 
+    def test_une_formation_non_terminee_n_est_pas_marquee_terminee(self):
+        self.assertTrue(import_eleves.formation_terminee('formation terminée'))
+        self.assertTrue(import_eleves.formation_terminee('Terminé Dernier mois non payé'))
+        self.assertFalse(import_eleves.formation_terminee('non terminée'))
+        self.assertFalse(import_eleves.formation_terminee('non treminée'))
+        self.assertFalse(import_eleves.formation_terminee(''))
+
     def test_les_mois_se_comptent_a_partir_de_la_date_d_inscription(self):
         self.assertEqual(import_eleves.ajouter_mois(dt.date(2026, 1, 31), 1), dt.date(2026, 2, 28))
         self.assertEqual(import_eleves.ajouter_mois(dt.date(2024, 1, 31), 1), dt.date(2024, 2, 29))
@@ -121,7 +131,7 @@ class PreparationDuPlanTests(SimpleTestCase):
         plan = self.plan([ligne], [fiche()], classeur='Gestion des étudiants.xlsx')
         self.assertEqual(len(plan.inscriptions), 1)
         self.assertEqual(len(plan.groupes), 1)
-        # Le seul encaissement importé est la mensualité, au tarif manuel.
+        # Le seul encaissement importé est la mensualité, au montant lu dans la case.
         self.assertEqual([p.montant for p in plan.paiements], [25000])
         self.assertIn("frais d'inscription non importés", [e[0] for e in plan.ecarts])
 
@@ -163,18 +173,28 @@ class PreparationDuPlanTests(SimpleTestCase):
         self.assertIn('10 000 FCFA', signale[0][2])
         self.assertIn('à saisir manuellement', signale[0][2])
 
-    def test_les_mois_historiques_sont_importes_au_tarif_manuel(self):
-        """Tout l'historique est conservé, mais la case du Sheet ne fixe pas le montant."""
+    def test_les_mois_historiques_sont_importes_au_montant_exact_du_sheet(self):
+        """Même hors bande, la case est écrite telle quelle et l'écart est signalé."""
         ligne = Ligne(date_inscription=dt.date(2025, 9, 10), mois=[
             une_case_mois(10, 'OCTOBRE', 88000),
             une_case_mois(11, 'NOVEMBRE', 99999),
         ])
         plan = self.plan([ligne], [fiche()])
         self.assertEqual([(p.jour, p.montant) for p in plan.paiements], [
-            (dt.date(2025, 10, 1), 25000),
-            (dt.date(2025, 11, 1), 25000),
+            (dt.date(2025, 10, 1), 88000),
+            (dt.date(2025, 11, 1), 99999),
         ])
-        self.assertEqual([e[0] for e in plan.ecarts].count('montant du Sheet remplacé'), 2)
+        self.assertEqual([e[0] for e in plan.ecarts].count(
+            'mensualité du Sheet hors de la bande'), 2)
+
+    def test_un_montant_dans_la_bande_mais_different_du_tarif_est_ecrit_sans_ecart(self):
+        """Le tarif manuel ne remplace plus une case pourtant conforme à la bande."""
+        ligne = Ligne(mois=[une_case_mois(11, 'NOVEMBRE', 20000)])
+        plan = self.plan([ligne], [fiche()])
+        self.assertEqual([p.montant for p in plan.paiements], [20000])
+        types = [e[0] for e in plan.ecarts]
+        self.assertNotIn('mensualité du Sheet hors de la bande', types)
+        self.assertNotIn('montant du Sheet remplacé', types)
 
     def test_deux_blocs_d_un_onglet_sont_deux_promotions(self):
         plan = self.plan([
@@ -202,11 +222,49 @@ class PreparationDuPlanTests(SimpleTestCase):
         self.assertEqual(plan.inscriptions, [])
         self.assertEqual(plan.ecartes[0][0], 'formation non confirmée')
 
-    def test_un_registre_d_anciens_n_est_pas_une_promotion(self):
-        plan = self.plan([Ligne(onglet='ANCIENS ETUDIANTS')],
+    def test_le_registre_des_anciens_se_rattache_par_l_option(self):
+        """Le onglet est un registre, mais chaque ligne nomme sa formation dans OPTION."""
+        ligne = Ligne(onglet='ANCIENS ETUDIANTS', option='ANGLAIS',
+                      date_inscription=dt.date(2026, 7, 28))
+        plan = self.plan([ligne], appariement_=appariement(
+            **{'anciens etudiants': (None, 'registre')}))
+        self.assertEqual(len(plan.inscriptions), 1)
+        self.assertEqual(plan.groupes[0].titre, 'Anglais')
+        self.assertEqual(plan.ecartes, [])
+
+    def test_un_ancien_sans_option_est_signale_sans_rattachement(self):
+        plan = self.plan([Ligne(onglet='ANCIENS ETUDIANTS', nom='IBOVI Sadie')],
                          appariement_=appariement(**{'anciens etudiants': (None, 'registre')}))
         self.assertEqual(plan.inscriptions, [])
-        self.assertEqual(plan.ecartes[0][0], "registre d'anciens, pas une formation")
+        self.assertEqual(plan.ecartes[0][0], 'ancien sans formation précisée')
+
+    def test_non_terminee_ne_passe_pas_en_dossier_termine(self):
+        ligne = Ligne(onglet='ANCIENS ETUDIANTS', option='ANGLAIS',
+                      commentaire='non treminée')
+        plan = self.plan([ligne], appariement_=appariement(
+            **{'anciens etudiants': (None, 'registre')}))
+        self.assertEqual(plan.inscriptions[0].statut, 'ACTIVE')
+
+    def test_une_formation_declaree_a_creer_est_prevue_sans_course(self):
+        """« Call center » entre dans la prévisualisation, mais l'écriture exigera sa Course."""
+        ligne = Ligne(onglet='Call center', mois=[une_case_mois(11, 'NOVEMBRE', 20000)])
+        plan = self.plan([ligne], [fiche()], tarifs=dict(TARIFS), appariement_=appariement(
+            **{'call center': ('Call center', 'a_creer')}))
+        self.assertEqual(len(plan.inscriptions), 1)
+        self.assertEqual(plan.groupes[0].titre, 'Call center')
+        self.assertEqual([p.montant for p in plan.paiements], [20000])
+        signale = [e for e in plan.ecarts if e[0] == 'formation déclarée à créer au catalogue']
+        self.assertEqual(len(signale), 1)
+        self.assertIn('40 000 FCFA/mois', signale[0][2])
+
+    def test_le_cout_total_du_registre_reste_a_la_saisie_manuelle(self):
+        ligne = Ligne(onglet='ANCIENS ETUDIANTS', option='ANGLAIS', cout_total=50000)
+        plan = self.plan([ligne], appariement_=appariement(
+            **{'anciens etudiants': (None, 'registre')}))
+        self.assertEqual(plan.paiements, [])
+        signale = [e for e in plan.ecarts if e[0] == 'coût total non importé']
+        self.assertEqual(len(signale), 1)
+        self.assertIn('50 000 FCFA', signale[0][2])
 
     def test_une_formation_absente_du_catalogue_est_signalee(self):
         plan = self.plan([Ligne(onglet='Chinois')],
@@ -246,15 +304,15 @@ class PreparationDuPlanTests(SimpleTestCase):
 
     def test_un_trop_percu_se_signale_sans_se_corriger(self):
         inscrit = dt.date(2026, 9, 10)
-        # Une case aberrante ne crée pas de trop-perçu : la mensualité posée est
-        # celle du tarif manuel, et l'écart avec le Sheet est seulement signalé.
+        # Une case aberrante est conservée telle quelle et signalée ; elle ne
+        # devient pas un trop-perçu quand elle reste sous le net du dossier.
         plan = self.plan([Ligne(date_inscription=inscrit,
                                  mois=[une_case_mois(10, 'OCTOBRE', 150000)])],
                          tarifs={'Anglais': {'frais': 225000, 'duree': 9, 'mensuel': 25000}})
-        self.assertEqual([p.montant for p in plan.paiements], [25000])
+        self.assertEqual([p.montant for p in plan.paiements], [150000])
         self.assertNotIn('trop-perçu', [e[0] for e in plan.ecarts])
-        self.assertIn('montant du Sheet remplacé', [e[0] for e in plan.ecarts])
-        # Un vrai trop-perçu vient de la somme des mensualités au tarif manuel.
+        self.assertIn('mensualité du Sheet hors de la bande', [e[0] for e in plan.ecarts])
+        # Un vrai trop-perçu vient de la somme des mensualités du Sheet.
         plan = self.plan([Ligne(date_inscription=inscrit, mois=[
             une_case_mois(10, 'OCTOBRE', 25000),
             une_case_mois(11, 'NOVEMBRE', 25000),
@@ -350,11 +408,11 @@ class EcritureEnBaseTests(TestCase):
         for cle in (RoleKey.ETUDIANT, RoleKey.ASSISTANT_ADMIN):
             Role.objects.get_or_create(key=cle, defaults={'label': cle.label})
 
-    def importer(self, lignes, fiches=(), *arguments):
+    def importer(self, lignes, fiches=(), *arguments, appariement_=None):
         analyse = Analyse(lignes=lignes, fiches=fiches,
                           stats=[('Gestion des étudiants.xlsx', l.onglet, 1, 1, [])
                                  for l in lignes],
-                          appariement=appariement())
+                          appariement=appariement_ or appariement())
         import core.management.commands.importer_etudiants as commande
         commande.Analyseur = lambda: ChargeurDeClasseur(analyse)
         call_command('importer_etudiants', '--classeur', 'Gestion des étudiants.xlsx',
@@ -362,6 +420,15 @@ class EcritureEnBaseTests(TestCase):
 
     def solde(self):
         return CashAccount.objects.get(pk=self.caisse.pk).balance
+
+    def test_une_formation_declaree_sans_course_bloque_lecriture(self):
+        with self.assertRaisesMessage(CommandError, 'Call center'):
+            self.importer([Ligne(onglet='Call center',
+                                 mois=[une_case_mois(11, 'NOVEMBRE', 20000)])],
+                          [fiche()], '--ecrire', appariement_=appariement(
+                              **{'call center': ('Call center', 'a_creer')}))
+        self.assertEqual(Enrollment.objects.count(), 0)
+        self.assertEqual(Payment.objects.count(), 0)
 
     def test_l_import_cree_comptes_groupes_inscriptions_et_encaissements(self):
         self.importer([Ligne(date_inscription=dt.date(2026, 10, 12),

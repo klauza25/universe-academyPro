@@ -10,7 +10,8 @@ from collections import Counter
 DUREE_MOIS = 9
 FRAIS_INSCRIPTION = 10000
 
-# Bande retenue par la direction : toute mensualité lue ou déclarée y est ramenée.
+# Bande de contrôle : une mensualité lue hors de ces limites est signalée, mais
+# le chiffre du Sheet est écrit tel quel — le remplacer inventerait un montant.
 BORNE_MENSUELLE = (20000, 25000)
 
 # Marque posée dans la description des lignes créées par l'import : elle permet de
@@ -38,6 +39,10 @@ FORMATIONS = {
     'caisse de gestion': ('Gestion de caisse', 'Gestion', 25000),
     'fiscalite': ('Fiscalité', 'Gestion', 25000),
     'des entreprises fiscalite': ('Fiscalité des entreprises', 'Gestion', 25000),
+    # Intitulé de l'onglet « Call center » : le Sheet porte 40 000 FCFA/mois mais
+    # pas de durée. La durée générale de DUREE_MOIS reste la règle déclarée du
+    # catalogue ; l'absence de durée propre est signalée dans le rapport.
+    'call center': ('Call center', 'Non classé', 40000),
 }
 
 # « RH » est le même enseignement que « A. Ressources Humaines », écrit plus court.
@@ -45,6 +50,9 @@ FORMATIONS = {
 FUSIONS = {
     'rh': 'a humaines ressources',
     'anglais francais': 'anglais',
+    # Orthographes relevées dans la colonne OPTION du registre des anciens.
+    'bure': 'bureautique',
+    'bureautiaue': 'bureautique',
 }
 
 # Un onglet de promotion n'est pas une formation : il renseigne la mensualité de sa parente

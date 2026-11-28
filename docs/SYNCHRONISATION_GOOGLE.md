@@ -113,17 +113,38 @@ Le classement est volontairement prudent :
   (`importer_feuille`) ;
 - tout le reste → `inconnu`, signalé sans être importé.
 
-Règles d'argent retenues pour les élèves :
+Règles d'argent retenues pour les élèves (réalignement du 28/11/2026) :
 
-- un mois rempli du classeur crée un paiement, y compris dans le passé : l'historique
-  est importé, pas effacé ;
-- le montant enregistré est le tarif manuel du dossier, jamais le chiffre ambigu de
-  la case ; un écart entre les deux est signalé dans le rapport ;
-- les frais d'inscription ne sont pas importés : ils s'encaissent au guichet, une
-  seule fois par dossier ;
+- un mois chiffré du classeur crée un paiement, y compris dans le passé :
+  l'historique est importé, pas effacé ;
+- **le montant écrit est celui de la case du Sheet**, même s'il sort de la bande
+  de contrôle 20 000–25 000 FCFA. L'écart est signalé dans le rapport, jamais
+  remplacé par le tarif manuel ni arrondi ;
+- une case ambiguë ou un mois qui n'est pas encore commencé ne crée rien et est
+  signalé : aucun montant n'est inventé ;
+- les frais d'inscription et le « coût total » du registre des anciens ne sont
+  pas importés : une colonne de prix ne prouve pas un encaissement, le guichet
+  tranche et saisit la recette ;
 - aucun mois antérieur à novembre 2026 ne devient une échéance à régler. Les
   paiements déjà réglés avant cette date restent en base, mais le calcul du reste
   à payer démarre en novembre 2026.
+
+Périmètre du 28/11/2026 : tous les onglets et feuilles sont repris, y compris
+`ANCIENS ETUDIANTS` (rattaché ligne par ligne via sa colonne `OPTION`), `FRANCAIS`,
+`A.Comptable`, `Call center`, les fiches des salariés et le boost. `Equipe Romard`
+seul reste écarté. `Call center` est déclaré au catalogue avec 40 000 FCFA/mois,
+mais sa durée propre manque : la durée déclarée de 9 mois est appliquée et le
+point est signalé. Tant que la `Course` correspondante n'existe pas en base,
+`importer_etudiants --ecrire` refuse d'écrire et demande d'abord
+`importer_formations --ecrire`.
+
+> **Production Universe Academy : aucune écriture sans accord explicite.** Le
+> 28/11/2026, seuls le code, les tests et le rapport ont été préparés. Avant tout
+> `--ecrire` : sauvegarder `db.sqlite3`, vérifier l'état réel du serveur (une
+> tâche planifiée ayant tourné avec la révision annulée `f308ec0` peut avoir écrit
+> des montants fictifs) et obtenir la validation de la direction. Ne pas lancer
+> `--efface` sans décision explicite : cela supprimerait le dossier Bureautique
+> de Noellie et ses 370 000 FCFA saisis manuellement.
 
 Les fichiers sont reçus dans `docs/donnees/import_<date>/` (dossier ignoré par
 git) et le rapport dans `RAPPORT_ANALYSE.md` du même dossier. Au passage

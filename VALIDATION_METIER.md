@@ -282,6 +282,14 @@ production.
   la ligne est signalée (« mensualité d'un mois non encore commencé ») et rien
   n'est porté en paiement. Les écritures déjà enregistrées avant cette règle ne
   sont pas retouchées ; l'audit les signale.
+- **Règle d'import du 28/11/2026 — la case du Sheet fait foi** : une mensualité
+  chiffrée est écrite au montant exact lu, même hors de la bande de contrôle
+  20 000–25 000 FCFA ; l'écart est signalé séparément, sans substitution par le
+  tarif manuel. Les frais d'inscription et le « coût total » du registre des
+  anciens restent à la saisie manuelle au guichet. `ANCIENS ETUDIANTS` est repris
+  via sa colonne `OPTION`, `Call center` est déclaré mais sa durée propre manque,
+  et `Equipe Romard` reste écarté. Aucune écriture en production n'a été faite
+  lors du réalignement : code, tests et rapport seulement.
 - **Le solde d'une caisse ne passe jamais sous zéro** : la loi est une seule
   fonction, `CashAccount.decouvert()`, appelée par l'écran (`core.caisse.juger`),
   par le service d'écriture (`poster`, `annuler`, `ajuster`, `reinitialiser`,

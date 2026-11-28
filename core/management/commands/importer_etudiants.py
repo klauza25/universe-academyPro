@@ -1,11 +1,13 @@
 """Vague 2 de l'import : les élèves du classeur de gestion des étudiants.
 
 Relit ``docs/donnees`` avec les règles de ``analyser_donnees``, prépare les lignes avec
-``core.eleves_import`` puis écrit : comptes étudiants, groupes par onglet, inscriptions au
-tarif du catalogue et mensualités repérées dans les cases, au montant du tarif manuel. Les frais
-d'inscription restent à la saisie manuelle au guichet ; les mois antérieurs à novembre 2026
-peuvent être importés quand ils sont réglés, sans devenir des échéances. Les décisions sont dans
-``core/eleves_import.py``, pas ici.
+``core.eleves_import`` puis écrit : comptes étudiants, groupes par onglet ou par option du
+registre, inscriptions au tarif du catalogue et mensualités **au montant exact lu dans la
+case**. Une valeur hors de la bande de contrôle est signalée, pas remplacée ; les cases
+ambiguës et les mois à venir ne créent rien. Les frais d'inscription et le « coût total » du
+registre restent à la saisie manuelle au guichet ; les mois antérieurs à novembre 2026 peuvent
+être importés quand ils sont réglés, sans devenir des échéances. Tout est repris sauf
+« Equipe Romard ». Les décisions sont dans ``core/eleves_import.py``, pas ici.
 
     python manage.py importer_etudiants                       # prévisualisation, rien n'est écrit
     python manage.py importer_etudiants --efface              # montre aussi ce que « effacer » couvre
@@ -209,6 +211,16 @@ class Command(BaseCommand):
 
     # ------------------------------------------------------------------
     def _ecrire(self, plan, options) -> Counter:
+        # Une formation déclarée dans le programme peut être prévue dans la
+        # prévisualisation, mais son groupe ne peut être écrit sans sa ``Course``.
+        absentes = sorted({g.titre for g in plan.groupes
+                           if not Course.objects.filter(title__iexact=g.titre).exists()})
+        if absentes:
+            raise CommandError(
+                'Formation(s) déclarée(s) mais absente(s) du catalogue : '
+                + ', '.join(absentes)
+                + '. Lancez d\'abord `manage.py importer_formations --ecrire` '
+                  'après accord et sauvegarde ; rien n\'a été écrit.')
         agent = User.objects.filter(email__iexact=options['agent']).first()
         caisse = CashAccount.objects.filter(name=options['caisse']).first()
         if caisse is None:

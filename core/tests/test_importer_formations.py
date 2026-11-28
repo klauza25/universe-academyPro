@@ -9,6 +9,7 @@ from django.core.management.base import CommandError
 from django.test import SimpleTestCase
 
 from core import programme_import as programme
+from core.management.commands.analyser_donnees import Command as Analyseur
 from core.management.commands.importer_formations import Command
 
 
@@ -77,6 +78,13 @@ class DeclarationTests(SimpleTestCase):
         self.assertEqual(programme.FORMATIONS['avance excel'][0], 'Excel avancé')
         self.assertEqual(
             programme.FORMATIONS['de gestion informatique'][0], 'Informatique de gestion')
+
+    def test_une_formation_declaree_absente_du_catalogue_est_a_creer(self):
+        self.assertEqual(Analyseur._appariement_declare('call center', {}),
+                         ('Call center', 'a_creer'))
+        self.assertEqual(
+            Analyseur._appariement_declare('call center', {'call center': 'Call center'}),
+            ('Call center', 'importee'))
 
     def test_anglais_francais_est_fondu_dans_anglais(self):
         self.assertEqual(programme.FUSIONS['anglais francais'], 'anglais')

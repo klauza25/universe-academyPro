@@ -115,8 +115,9 @@ class Command(BaseCommand):
         ecritures = self.journal['ecritures']
         entrees = sum(e.montant or 0 for e in ecritures if 'entr' in outils.sans_accents(e.sens).lower())
         appariees = self._appariement()
-        a_creer = [cle for cle, (titre, niveau) in appariees.items()
-                   if titre is None and niveau != 'registre']
+        a_creer = [cle for cle, (_titre, niveau) in appariees.items() if niveau == 'a_creer']
+        sans_titre = [cle for cle, (titre, niveau) in appariees.items()
+                      if titre is None and niveau != 'registre']
         rattaches = sum(1 for _t, niveau in appariees.values()
                         if niveau in ('promotion', 'fondu', 'registre'))
         importees = sum(1 for _t, niveau in appariees.values() if niveau == 'importee')
@@ -134,7 +135,8 @@ class Command(BaseCommand):
             f'- Base Étudiants : {len(self.base["lignes"])} fiches.',
             f'- Formations rencontrées : {len(self.catalogue)} intitulés — {importees} titres posés '
             f'par la vague 1, {rattaches} promotions ou alias rattachés à une formation, '
-            f'{len(a_creer)} encore sans titre.',
+            f'{len(a_creer)} déclarée(s) à créer ({", ".join(a_creer) or "aucune"}), '
+            f'{len(sans_titre)} encore sans titre.',
             f'- Points douteux : {len(self.suivis["anomalies"]) + len(self.journal["doutes"])}.',
             '',
             'Les décisions attendues sont listées en section 10 du rapport.',
@@ -589,6 +591,12 @@ class Command(BaseCommand):
                     donnees['inscription'][inscription.frais_inscription] += 1
                 if inscription.mensuel_prevu:
                     donnees['mensualite'][inscription.mensuel_prevu] += 1
+            # Le registre des anciens nomme la formation dans sa colonne OPTION :
+            # elle doit être appariée comme un intitulé observé, sinon la ligne
+            # serait écartée faute de correspondance au catalogue.
+            option = getattr(inscription, 'option', '')
+            if option and outils.cle_personne(option) != outils.cle_personne(inscription.onglet):
+                entree(option)
         for ecriture in self.journal['ecritures']:
             donnees = entree(ecriture.formation)
             if donnees:
@@ -623,8 +631,12 @@ class Command(BaseCommand):
     def _appariement_declare(cle: str, connus: dict) -> tuple:
         """Ce que le programme d'import décide pour un intitulé que le catalogue ne reconnaît pas."""
         declaree = programme.FORMATIONS.get(cle)
-        if declaree and declaree[0].lower() in connus:
-            return (declaree[0], 'importee')
+        if declaree:
+            if declaree[0].lower() in connus:
+                return (declaree[0], 'importee')
+            # Déclarée dans le programme d'import, mais pas encore créée dans le
+            # catalogue : le titre est certain, la ligne ne peut pas être écrite.
+            return (declaree[0], 'a_creer')
         fusion = programme.FUSIONS.get(cle)
         if fusion:
             return (programme.FORMATIONS[fusion][0], 'fondu')
@@ -637,13 +649,15 @@ class Command(BaseCommand):
 
     def _section_formations(self):
         appariees = self._appariement()
-        a_creer = [c for c, (titre, niveau) in appariees.items()
-                   if titre is None and niveau != 'registre']
+        a_creer = [c for c, (_titre, niveau) in appariees.items() if niveau == 'a_creer']
+        sans_titre = [c for c, (titre, niveau) in appariees.items()
+                      if titre is None and niveau != 'registre']
         lignes = [
             '## 6. Formations : ce que disent les classeurs, ce que contient le catalogue',
             '',
             f'{len(self.catalogue)} intitulés rencontrés dans les classeurs (onglets, fiches, '
-            f'journal). **{len(a_creer)} ne correspondent à aucune formation du catalogue.**',
+            f'journal). **{len(a_creer)} formation(s) déclarée(s) à créer** '
+            f'({", ".join(a_creer) or "aucune"}) ; **{len(sans_titre)} sans titre**.',
             '',
             '| Intitulé observé | Lignes de suivi | Écritures de caisse | Fiches | '
             'Frais d\'inscription vus | Mensualités vues | Correspondance au catalogue |',
@@ -663,6 +677,8 @@ class Command(BaseCommand):
                 correspondence = f'« {titre} » (même enseignement, écrit court)'
             elif niveau == 'promotion':
                 correspondence = f'« {titre} » — promotion : devient un groupe, pas une formation'
+            elif niveau == 'a_creer':
+                correspondence = f'« {titre} » — déclarée, à créer au catalogue avant écriture'
             else:
                 correspondence = f'proche de « {titre} » (à confirmer)'
             lignes.append(
@@ -685,16 +701,16 @@ class Command(BaseCommand):
             ]
         lignes += [
             '',
-            'Les classeurs encaissent **10 000 FCFA à l\'inscription puis 20 000 à 25 000 FCFA '
-            'par mois**. Règle retenue : '
-            f'{programme.DUREE_MOIS} mois par formation, frais = mensualité pratiquée × durée, '
-            + (f'et une bande de {programme.BORNE_MENSUELLE[0]:,} à '
-               f'{programme.BORNE_MENSUELLE[1]:,} FCFA : un tarif lu hors de cette plage y est '
-               'ramené. ').replace(',', ' ')
-            + 'Le catalogue posé par `seed_demo` suivait déjà cette logique — 60 000 = 3 × 20 000, '
-              '120 000 = 6 × 20 000, 50 000 = 2 × 25 000. Aucune de ces lignes n\'a été retouchée. '
-            'Les nouvelles formations viennent d\'être créées par `manage.py importer_formations`, '
-            'qui lit la mensualité dans les encaissements de l\'onglet plutôt que de l\'inventer.',
+            'Les classeurs portent des frais d\'inscription de 5 000 à 40 000 FCFA et des '
+            'mensualités le plus souvent comprises entre 20 000 et 25 000 FCFA. Règle retenue '
+            'le 28/11/2026 : **la case chiffrée est écrite telle quelle**, y compris hors de '
+            f'la bande de contrôle {programme.BORNE_MENSUELLE[0]:,}–'
+            f'{programme.BORNE_MENSUELLE[1]:,} FCFA ; l\'écart est signalé, jamais remplacé par '
+            'un tarif. '.replace(',', ' ')
+            + 'Les frais d\'inscription et le « coût total » du registre restent à la saisie '
+            'manuelle : une colonne de prix ne prouve pas un encaissement. '
+            f'{programme.DUREE_MOIS} mois par formation reste la durée déclarée du catalogue ; '
+            'l\'onglet « Call center » ne précise pas la sienne et est signalé.',
             '',
         ]
         return '\n'.join(lignes)
@@ -800,11 +816,15 @@ class Command(BaseCommand):
                 + (f' ; statuts : {", ".join(f"{k}×{v}" for k, v in bourses["statuts"].most_common())}'
                    if bourses['statuts'] else '') + '.',
             ]
+        boost = [f'{nom} → {onglet} ({total} lignes)' for nom, onglet, total in annexes['autres']
+                 if 'boost' in onglet.lower()]
         lignes += [
-            '- **Rapport de boost** : grille de prospection commerciale, sans données d\'élèves '
-            'exploitables telles quelles.',
-            '- **Equipe Romard** : suivi d\'une équipe de vente à l\'étranger (intitulés en turc, '
-            'ex. « Sayfa2 »), sans lien avec l\'école. Je propose de ne pas l\'importer.',
+            '- **Boost** : ' + ('; '.join(boost) if boost else
+                                'aucune ligne exploitable dans les classeurs reçus '
+                                '(`Réponses au formulaire 1` est vide)')
+            + '. Aucun montant d\'élève à en tirer.',
+            '- **Equipe Romard** : écartée par décision de la direction, absente des deux '
+            'classeurs reçus le 28/11/2026.',
             '',
         ]
         if annexes['autres']:
@@ -837,6 +857,7 @@ class Command(BaseCommand):
             'montant_improbable': 'case de mois remplie par un numéro de ligne, pas un montant',
             'frais_inscription_douteux': 'frais d\'inscription non chiffrés',
             'frais_mensuel_douteux': 'mensualité prévue non chiffrée',
+            'cout_total_douteux': '« coût total » du registre non chiffré',
             'montant_lecture': 'montants de caisse non chiffrés',
             'date_lecture': 'écritures de caisse chiffrées sans date',
         }
@@ -851,8 +872,9 @@ class Command(BaseCommand):
     def _section_decisions(self):
         appariees = self._appariement()
         a_creer = sorted({
-            donnees['label'] for cle, donnees in self.catalogue.items()
-            if appariees[cle][0] is None and appariees[cle][1] != 'registre'
+            appariees[cle][0] or donnees['label'] for cle, donnees in self.catalogue.items()
+            if appariees[cle][1] == 'a_creer'
+            or (appariees[cle][0] is None and appariees[cle][1] != 'registre')
         })
         fiches = [f for f in self.base['lignes'] if f['complet']]
         return '\n'.join([
@@ -863,12 +885,12 @@ class Command(BaseCommand):
             'les dossiers, paiements et entrées de caisse qui ne portent pas la marque de l\'import ; '
             'les sorties de caisse, les comptes et le catalogue restent. Une copie de `db.sqlite3` '
             'dans `backups/` est exigée avant l\'écriture.',
-            (f'2. **{len(a_creer)} formations à créer** : {", ".join(a_creer)}. Rien n\'a été '
-             'écrit pour elles.' if a_creer else
-             '2. **Formations** : acquises — 13 lignes créées le 02/11/2026 par '
-             '`manage.py importer_formations` (9 mois, mensualité lue dans les encaissements de '
-             'l\'onglet, bornée à la bande 20 000–25 000 FCFA). Les intitulés de promotion deviennent '
-             'des groupes (`CourseSession`) à la vague des inscriptions.'),
+            (f'2. **{len(a_creer)} formation(s) à créer au catalogue** : '
+             f'{", ".join(a_creer)}. « Call center » porte 40 000 FCFA dans le Sheet, sans durée '
+             'propre : la durée déclarée de 9 mois est appliquée et le point est signalé. '
+             'Aucune ligne n\'a été écrite lors du réalignement.' if a_creer else
+             '2. **Formations** : le catalogue est repris tel quel. '
+             'Les promotions deviennent des groupes (`CourseSession`) à la vague des inscriptions.'),
             (f'3. **Identité des élèves** : {len(fiches)} lignes de fiches individuelles pour les '
              'noms des onglets ; les comptes sans adresse reçoivent une adresse de repli '
              '« @sans-adresse.local » que le secrétariat remplace. Aucun mot de passe : '
@@ -879,25 +901,32 @@ class Command(BaseCommand):
              'ni mot de passe, marqués « dossier incomplet », à finir par le secrétariat.'),
             '4. **Un élève, plusieurs formations** : une inscription par onglet, donc plusieurs '
             "dossiers pour un même compte ; aucun tarif déjà encaissé n'est retouché.",
-            '5. **Source des paiements** : la vague 2 retient les cases des onglets de suivi '
-            '(frais d\'inscription et mensualités réellement saisis). Le journal de caisse '
-            '(section 2) sera comparé à part : les feuilles de contrôle mensuel (section 8) sont '
-            'le même argent et ne seront pas repassées. Les cases ambiguës restent non saisies, '
-            'avec une liste à régulariser.',
+            '5. **Source des paiements** : la vague 2 reprend chaque case de mois chiffrée '
+            '**au montant exact lu**, même hors de la bande 20 000–25 000 FCFA ; l\'écart est '
+            'signalé. Les frais d\'inscription et le « coût total » du registre restent au '
+            'guichet. Les cases ambiguës et les mois non encore commencés ne créent rien. Le '
+            'journal de caisse (section 2) reste comparé à part ; les feuilles de contrôle '
+            'mensuel (section 8) sont le même argent et ne sont pas repassées.',
             '6. **Mois et années** : dans les onglets, les colonnes ne portent que le nom du '
             'mois ; l\'année est déduite de la date d\'inscription. Le journal, lui, indique '
             '« Mois payé » et « De l\'année » : c\'est lui qui fera foi à la réconciliation.',
             '7. **Orthographe de la marque** : la direction a posé « Universe Academy » dans les '
             'réglages de l\'établissement ; écrans, reçus et lettres imprimées s\'y règlent.',
-            '8. **Equipe Romard** : sans lien avec l\'école ; à écarter.',
-            '9. **Registre des anciens et « FRANCAIS »** : 26 lignes du registre des anciens et '
-            'l\'onglet FRANCAIS sont écartés faute d\'appariement certain avec le catalogue ; '
-            'une décision de la direction les ferait entrer.',
+            '8. **Périmètre du 28/11/2026** : tout est repris — « ANCIENS ETUDIANTS » ligne par '
+            'ligne via sa colonne OPTION, « FRANCAIS », « A.Comptable », « Call center » (3 '
+            'lignes chiffrées), les fiches des salariés, le boost et les feuilles de contrôle. '
+            '« Equipe Romard » seul reste écarté, sans lien avec l\'école.',
+            '9. **Informations manquantes signalées** : « A.Comptable » ne contient aucun nom ; '
+            'le boost et « Feuille 9 » sont vides ; « Call center » n\'a pas de durée propre et '
+            'sa formation vient d\'être déclarée au catalogue ; les anciens sans OPTION (3 '
+            'lignes) ne peuvent pas être rattachés ; les identités sans fiche, sans adresse ou '
+            'partagées sont listées sans fusion automatique.',
             '',
             'Import par vagues, une copie de `db.sqlite3` dans `backups/` avant chacune. '
             '**Vague 1 (formations) et vague 2 (élèves, groupes, inscriptions, encaissements) '
-            'écrites le 02/11/2026.** Reste : la réconciliation avec le journal de caisse. Les '
-            'points 1 à 3 et 9 sont tranchés côté écriture ; les points 5, 6, 7 et 8 attendent '
-            'une réponse de la direction.',
+            'écrites le 02/11/2026, puis réalignées sur les Sheet le 28/11/2026.** Aucune écriture '
+            'en production n\'a été faite lors du réalignement : code, tests et rapport seulement. '
+            'Restent à trancher : la durée de « Call center », les 3 anciens sans OPTION, '
+            'les 8 cases ambiguës et les 6 cases futures, avec le journal de caisse.',
             '',
         ])
