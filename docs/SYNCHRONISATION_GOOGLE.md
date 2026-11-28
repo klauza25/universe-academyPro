@@ -115,15 +115,18 @@ Le classement est volontairement prudent :
 
 Règles d'argent retenues pour les élèves :
 
-- un mois rempli du classeur crée un paiement, y compris dans le passé : l'historique
-  est importé, pas effacé ;
-- le montant enregistré est le tarif manuel du dossier, jamais le chiffre ambigu de
-  la case ; un écart entre les deux est signalé dans le rapport ;
-- les frais d'inscription ne sont pas importés : ils s'encaissent au guichet, une
-  seule fois par dossier ;
-- aucun mois antérieur à novembre 2026 ne devient une échéance à régler. Les
-  paiements déjà réglés avant cette date restent en base, mais le calcul du reste
-  à payer démarre en novembre 2026.
+- l'import ne porte que l'année courante : de janvier au mois en cours inclus,
+  toutes les mensualités sont réglées, même si la case du classeur est vide ou
+  douteuse ; l'historique des années précédentes n'est pas importé ;
+- le montant enregistré est toujours le tarif manuel du dossier, jamais le
+  chiffre de la case ; les mois à venir ne sont pas importés — à partir du mois
+  suivant, l'assistant saisit les encaissements dans l'application ;
+- les frais d'inscription sont de 10 000 FCFA pour toutes les formations et
+  réglés par chaque étudiant du classeur, une fois par formation suivie ;
+- un étudiant peut suivre plusieurs formations : chaque groupe donne un dossier
+  distinct avec ses propres paiements ;
+- aucun mois antérieur à novembre 2026 ne devient une échéance à régler : le
+  calcul du reste à payer démarre en novembre 2026.
 
 Les fichiers sont reçus dans `docs/donnees/import_<date>/` (dossier ignoré par
 git) et le rapport dans `RAPPORT_ANALYSE.md` du même dossier. Au passage
